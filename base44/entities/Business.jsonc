@@ -1,0 +1,107 @@
+{
+  "name": "Business",
+  "type": "object",
+  "properties": {
+    "owner_id": {
+      "type": "string",
+      "description": "User id of the business owner / fleet manager who manages this account"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Registered company name"
+    },
+    "industry": {
+      "type": "string",
+      "description": "Industry the business operates in",
+      "enum": [
+        "Logistics",
+        "Retail",
+        "Manufacturing",
+        "Agriculture",
+        "Construction",
+        "Other"
+      ]
+    },
+    "contact_email": {
+      "type": "string",
+      "description": "Primary business contact email"
+    },
+    "contact_phone": {
+      "type": "string",
+      "description": "Primary business contact phone"
+    },
+    "address": {
+      "type": "string",
+      "description": "Business physical address"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Company logo image URL"
+    },
+    "tax_id": {
+      "type": "string",
+      "description": "Business registration / tax number"
+    },
+    "status": {
+      "type": "string",
+      "description": "Account status",
+      "enum": [
+        "active",
+        "suspended",
+        "pending"
+      ],
+      "default": "active"
+    },
+    "monthly_budget": {
+      "type": "number",
+      "description": "Optional monthly transport spend cap in USD",
+      "default": 0
+    }
+  },
+  "required": [
+    "owner_id",
+    "company_name"
+  ],
+  "security": {
+    "read": "auth",
+    "update": "owner",
+    "delete": "admin",
+    "list": "auth"
+  },
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.owner_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.owner_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "actor_id": {
+      "type": "string",
+      "description": "User id who performed the action, or 'system'"
+    },
+    "actor_name": {
+      "type": "string",
+      "description": "Display name of the actor"
+    },
+    "action": {
+      "type": "string",
+      "description": "Action identifier, e.g. commission_charged, refund_approved, wallet_topup"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Type of entity affected"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "Id of the affected entity"
+    },
+    "details": {
+      "type": "string",
+      "description": "Human-readable description of the event"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Internal reference / invoice number"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Monetary amount involved, if any",
+      "default": 0
+    }
+  },
+  "required": [
+    "action",
+    "details"
+  ],
+  "security": {
+    "read": "admin",
+    "update": "admin",
+    "delete": "admin",
+    "list": "admin"
+  }
+}

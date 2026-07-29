@@ -1,0 +1,104 @@
+{
+  "name": "ReturnLoad",
+  "type": "object",
+  "properties": {
+    "driver_id": {
+      "type": "string",
+      "description": "User id of the driver offering the return load"
+    },
+    "driver_profile_id": {
+      "type": "string",
+      "description": "DriverProfile id of the driver"
+    },
+    "driver_name": {
+      "type": "string",
+      "description": "Driver display name"
+    },
+    "driver_photo_url": {
+      "type": "string",
+      "description": "Driver profile photo snapshot"
+    },
+    "verified": {
+      "type": "boolean",
+      "description": "Whether the driver was admin-verified at listing time",
+      "default": false
+    },
+    "vehicle_type": {
+      "type": "string",
+      "description": "Vehicle type for this return trip",
+      "enum": [
+        "Motorcycle",
+        "Pickup",
+        "1 Ton Truck",
+        "3 Ton Truck",
+        "5 Ton Truck",
+        "10 Ton Truck",
+        "Articulated Truck"
+      ]
+    },
+    "origin": {
+      "type": "string",
+      "description": "Where the driver is returning from"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Where the driver is returning to"
+    },
+    "departure_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the return trip departs"
+    },
+    "available_capacity_kg": {
+      "type": "number",
+      "description": "Available cargo capacity in kilograms"
+    },
+    "price": {
+      "type": "number",
+      "description": "Asking price in USD for the available space"
+    },
+    "cargo_notes": {
+      "type": "string",
+      "description": "Notes on compatible cargo / restrictions"
+    },
+    "status": {
+      "type": "string",
+      "description": "Listing status",
+      "enum": [
+        "open",
+        "booked",
+        "closed",
+        "cancelled"
+      ],
+      "default": "open"
+    },
+    "accepted_booking_id": {
+      "type": "string",
+      "description": "The accepted ReturnLoadBooking id"
+    },
+    "accepted_customer_id": {
+      "type": "string",
+      "description": "Customer whose booking was accepted"
+    },
+    "accepted_customer_name": {
+      "type": "string",
+      "description": "Accepted customer display name"
+    }
+  },
+  "required": [
+    "driver_id",
+    "driver_name",
+    "vehicle_type",
+    "origin",
+    "destination",
+    "departure_date",
+    "available_capacity_kg",
+    "price"
+  ],
+  "security": {
+    "read": "auth",
+    "update": "owner",
+    "delete": "owner",
+    "list": "auth"
+  }
+}

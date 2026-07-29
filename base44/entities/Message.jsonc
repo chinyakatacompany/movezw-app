@@ -1,0 +1,73 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "The conversation this message belongs to"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "The User id who sent the message"
+    },
+    "text": {
+      "type": "string",
+      "description": "Message text content"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Optional shared image URL"
+    },
+    "is_read": {
+      "type": "boolean",
+      "description": "Whether the recipient has read the message",
+      "default": false
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_id"
+  ],
+  "security": {
+    "read": "auth",
+    "update": "auth",
+    "delete": "owner",
+    "list": "auth"
+  },
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

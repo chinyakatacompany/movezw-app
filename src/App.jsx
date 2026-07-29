@@ -1,0 +1,199 @@
+import { Toaster } from "@/components/ui/toaster"
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClientInstance } from '@/lib/query-client'
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import PageNotFound from './lib/PageNotFound';
+import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ScrollToTop from './components/ScrollToTop';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import RoleGuard from '@/components/RoleGuard';
+import AppLayout from '@/components/AppLayout';
+import AdminLayout from '@/components/AdminLayout';
+import Landing from '@/pages/Landing';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
+import RoleHome from '@/pages/RoleHome';
+import CustomerDashboard from '@/pages/CustomerDashboard';
+import CreateRequest from '@/pages/CreateRequest';
+import RequestDetail from '@/pages/RequestDetail';
+import CustomerHistory from '@/pages/CustomerHistory';
+import DriverDashboard from '@/pages/DriverDashboard';
+import DriverOnboarding from '@/pages/DriverOnboarding';
+import DriverJobDetail from '@/pages/DriverJobDetail';
+import DriverHistory from '@/pages/DriverHistory';
+import AdminDashboard from '@/pages/AdminDashboard';
+import AdminVerification from '@/pages/AdminVerification';
+import AdminUsers from '@/pages/AdminUsers';
+import AdminJobs from '@/pages/AdminJobs';
+import AdminReports from '@/pages/AdminReports';
+import AdminAnalytics from '@/pages/AdminAnalytics';
+import AdminFinance from '@/pages/AdminFinance';
+import Notifications from '@/pages/Notifications';
+import Profile from '@/pages/Profile';
+import PaymentHistory from '@/pages/PaymentHistory';
+import Support from '@/pages/Support';
+import VehicleManagement from '@/pages/VehicleManagement';
+import Terms from '@/pages/Terms';
+import Messages from '@/pages/Messages';
+import Chat from '@/pages/Chat';
+import Wallet from '@/pages/Wallet';
+import BusinessOnboarding from '@/pages/BusinessOnboarding';
+import BusinessDashboard from '@/pages/BusinessDashboard';
+import BusinessLayout from '@/components/BusinessLayout';
+import ReturnMarketplace from '@/pages/ReturnMarketplace';
+import DriverReturnLoads from '@/pages/DriverReturnLoads';
+
+const AuthenticatedApp = () => {
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+
+  // Show loading spinner while checking app public settings or auth
+  if (isLoadingPublicSettings || isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  // Handle authentication errors
+  if (authError) {
+    if (authError.type === 'user_not_registered') {
+      return <UserNotRegisteredError />;
+    } else if (authError.type === 'auth_required') {
+      // Redirect to login automatically
+      navigateToLogin();
+      return null;
+    }
+  }
+
+  // Render the main app
+  return (
+    <Routes>
+      <Route path="/landing" element={<Landing />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Role-based entry */}
+      <Route path="/" element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />
+      }>
+        <Route index element={<RoleHome />} />
+      </Route>
+
+      {/* Customer area */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={
+          <RoleGuard allow={["customer"]}>
+            <AppLayout />
+          </RoleGuard>
+        }>
+          <Route path="/customer" element={<CustomerDashboard />} />
+          <Route path="/customer/new" element={<CreateRequest />} />
+          <Route path="/customer/request/:id" element={<RequestDetail />} />
+          <Route path="/customer/history" element={<CustomerHistory />} />
+          <Route path="/customer/notifications" element={<Notifications />} />
+          <Route path="/customer/profile" element={<Profile role="customer" />} />
+        </Route>
+      </Route>
+
+      {/* Driver area */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={
+          <RoleGuard allow={["driver"]}>
+            <AppLayout />
+          </RoleGuard>
+        }>
+          <Route path="/driver" element={<DriverDashboard />} />
+          <Route path="/driver/onboarding" element={<DriverOnboarding />} />
+          <Route path="/driver/job/:id" element={<DriverJobDetail />} />
+          <Route path="/driver/history" element={<DriverHistory />} />
+          <Route path="/driver/notifications" element={<Notifications />} />
+          <Route path="/driver/profile" element={<Profile role="driver" />} />
+          <Route path="/vehicle-management" element={<VehicleManagement />} />
+        </Route>
+      </Route>
+
+      {/* Shared (customer + driver) area */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={
+          <RoleGuard allow={["customer", "driver"]}>
+            <AppLayout />
+          </RoleGuard>
+        }>
+          <Route path="/payment-history" element={<PaymentHistory />} />
+          <Route path="/support" element={<Support />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/wallet" element={<Wallet />} />
+          <Route path="/return-loads" element={<ReturnMarketplace />} />
+          <Route path="/return-loads/manage" element={<DriverReturnLoads />} />
+        </Route>
+      </Route>
+
+      {/* Business / Fleet management area */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/business/onboarding" element={<BusinessOnboarding />} />
+        <Route element={
+          <RoleGuard allow={["business"]}>
+            <BusinessLayout />
+          </RoleGuard>
+        }>
+          <Route path="/business" element={<BusinessDashboard />} />
+        </Route>
+      </Route>
+
+      {/* Chat (full-screen, no app shell) */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route path="/chat/:id" element={<RoleGuard allow={["customer", "driver"]}><Chat /></RoleGuard>} />
+      </Route>
+
+      {/* Admin area */}
+      <Route element={
+        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
+        <Route element={
+          <RoleGuard allow={["admin"]}>
+            <AdminLayout />
+          </RoleGuard>
+        }>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/verification" element={<AdminVerification />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/jobs" element={<AdminJobs />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/finance" element={<AdminFinance />} />
+        </Route>
+      </Route>
+
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
+  );
+};
+
+
+function App() {
+
+  return (
+    <AuthProvider>
+      <QueryClientProvider client={queryClientInstance}>
+        <Router>
+          <ScrollToTop />
+          <AuthenticatedApp />
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
+    </AuthProvider>
+  )
+}
+
+export default App

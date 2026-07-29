@@ -1,0 +1,128 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "wallet_id": {
+      "type": "string",
+      "description": "The wallet this transaction affects"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Owner user id (denormalized for queries)"
+    },
+    "type": {
+      "type": "string",
+      "description": "Transaction category",
+      "enum": [
+        "topup",
+        "escrow_hold",
+        "escrow_release",
+        "credit",
+        "commission",
+        "payout",
+        "refund",
+        "payment"
+      ]
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount in USD (positive)"
+    },
+    "direction": {
+      "type": "string",
+      "description": "Effect on balance",
+      "enum": [
+        "in",
+        "out"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "description": "Processing status",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "method": {
+      "type": "string",
+      "description": "Payment method used (ecocash, onemoney, zipit, visa, mastercard, bank, wallet, cod)"
+    },
+    "gateway": {
+      "type": "string",
+      "description": "Payment gateway identifier (placeholder for future integration)"
+    },
+    "gateway_ref": {
+      "type": "string",
+      "description": "Reference returned by a real gateway once connected"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Internal reference / invoice number"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Associated transport request if any"
+    },
+    "commission": {
+      "type": "number",
+      "description": "Platform commission portion (for credit/escrow_release)",
+      "default": 0
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional human note"
+    }
+  },
+  "required": [
+    "wallet_id",
+    "user_id",
+    "type",
+    "amount",
+    "direction"
+  ],
+  "security": {
+    "read": "owner",
+    "update": "owner",
+    "delete": "admin",
+    "list": "owner"
+  },
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
