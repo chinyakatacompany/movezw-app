@@ -79,9 +79,9 @@ const AuthenticatedApp = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
-      {/* Role-based entry */}
+      {/* Role-based entry: logged-in users go to their dashboard, everyone else sees the landing page */}
       <Route path="/" element={
-        <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />
+        <ProtectedRoute unauthenticatedElement={<Landing />} />
       }>
         <Route index element={<RoleHome />} />
       </Route>
