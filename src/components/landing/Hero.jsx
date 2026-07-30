@@ -61,8 +61,8 @@ export default function Hero() {
         <div className="relative">
           <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-border aspect-[4/3] bg-blue-100">
             <img
-              src="https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=1200&q=80"
-              alt="Pickup truck ready for transport jobs"
+              src="https://i.pinimg.com/1200x/91/df/2d/91df2daeccdea36c1b9193caac81547a.jpg"
+              alt="Pickup truck loaded and ready for a transport job"
               className="w-full h-full object-cover"
               loading="lazy" />
             
