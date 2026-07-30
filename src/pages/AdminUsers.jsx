@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Users, Loader2, Search, Ban, CheckCircle2, Mail, Phone } from "lucide-react";
 import { formatDate } from "@/lib/movezw";
@@ -11,14 +11,22 @@ export default function AdminUsers() {
   const [q, setQ] = useState("");
 
   const load = () => {
-    base44.entities.User.list("-created_date").then(setUsers).catch(() => setUsers([]));
+    supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load users:", error);
+        setUsers(data || []);
+      });
   };
 
   useEffect(() => { load(); }, []);
 
   const toggleSuspend = async (u) => {
     try {
-      await base44.entities.User.update(u.id, { is_suspended: !u.is_suspended });
+      const { error } = await supabase.from("profiles").update({ is_suspended: !u.is_suspended }).eq("id", u.id);
+      if (error) throw error;
       toast({ title: u.is_suspended ? "User reactivated" : "User suspended" });
       load();
     } catch (e) {
@@ -27,7 +35,7 @@ export default function AdminUsers() {
   };
 
   const filtered = (users || []).filter((u) =>
-    !q || (u.email || "").toLowerCase().includes(q.toLowerCase()) || (u.full_name || "").toLowerCase().includes(q.toLowerCase())
+    !q || (u.full_name || "").toLowerCase().includes(q.toLowerCase()) || (u.phone || "").toLowerCase().includes(q.toLowerCase())
   );
 
   return (
@@ -40,7 +48,7 @@ export default function AdminUsers() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by name or email..."
+          placeholder="Search by name or phone..."
           className="w-full h-10 pl-10 pr-3 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
@@ -68,7 +76,7 @@ export default function AdminUsers() {
                   )}>{u.role || "customer"}</span>
                   {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700">Suspended</span>}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
               </div>
               <Button
                 size="sm"

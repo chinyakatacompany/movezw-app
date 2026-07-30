@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,21 +27,15 @@ export default function Support() {
   const submit = async (e) => {
     e.preventDefault();
     setSending(true);
-    try {
-      await base44.integrations.Core.SendEmail({
-        to: "support@movezw.co.zw",
-        subject: `Support: ${subject || "MoveZW enquiry"}`,
-        body: `From: ${user?.full_name || "User"} (${user?.email || "—"})\n\n${message}`,
-      });
-      setSent(true);
-      setSubject("");
-      setMessage("");
-    } catch (err) {
-      // best-effort: still confirm to user
-      setSent(true);
-    } finally {
-      setSending(false);
-    }
+    // No backend email service is connected yet, so this opens the user's own
+    // mail app with the message pre-filled rather than sending silently.
+    const body = `From: ${user?.full_name || "User"} (${user?.email || "—"})\n\n${message}`;
+    const mailto = `mailto:support@movezw.co.zw?subject=${encodeURIComponent(`Support: ${subject || "MoveZW enquiry"}`)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+    setSent(true);
+    setSubject("");
+    setMessage("");
+    setSending(false);
   };
 
   return (
@@ -81,8 +74,8 @@ export default function Support() {
         {sent ? (
           <div className="flex flex-col items-center text-center py-6">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-2" />
-            <p className="text-sm font-medium text-foreground">Message sent</p>
-            <p className="text-xs text-muted-foreground mt-1">Our team will reply to your email shortly.</p>
+            <p className="text-sm font-medium text-foreground">Your email app should have opened</p>
+            <p className="text-xs text-muted-foreground mt-1">Send it from there and our team will reply as soon as they can.</p>
             <Button variant="outline" size="sm" className="mt-4" onClick={() => setSent(false)}>Send another</Button>
           </div>
         ) : (

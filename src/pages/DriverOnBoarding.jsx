@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,22 @@ import { VEHICLE_TYPES, VEHICLE_ICONS } from "@/lib/movezw";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
+async function uploadDocument(file) {
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+  const { error } = await supabase.storage.from("documents").upload(fileName, file);
+  if (error) throw error;
+  const { data } = supabase.storage.from("documents").getPublicUrl(fileName);
+  return data.publicUrl;
+}
+
 function DocField({ label, value, onChange, required }) {
   const [uploading, setUploading] = useState(false);
   const handle = async (file) => {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      onChange(file_url);
+      const url = await uploadDocument(file);
+      onChange(url);
     } catch (e) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
     } finally {
@@ -68,9 +76,15 @@ export default function DriverOnboarding() {
 
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1)
-      .then((r) => {
-        const p = r[0];
+    supabase
+      .from("driver_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load driver profile:", error);
+        const p = data?.[0];
         if (p) {
           setExisting(p);
           setForm({
@@ -100,7 +114,8 @@ export default function DriverOnboarding() {
     }
     setSaving(true);
     try {
-      try { await base44.auth.updateMe({ role: "driver" }); } catch (_) {}
+      const { error: roleErr } = await supabase.from("profiles").update({ role: "driver" }).eq("id", user.id);
+      if (roleErr) console.error("Failed to set driver role:", roleErr);
       const payload = {
         user_id: user.id,
         full_name: form.full_name,
@@ -114,9 +129,13 @@ export default function DriverOnboarding() {
         verification_status: existing?.verification_status === "approved" ? "approved" : "pending",
       };
       if (existing) {
-        await base44.entities.DriverProfile.update(existing.id, payload);
+        const { error } = await supabase.from("driver_profiles").update(payload).eq("id", existing.id);
+        if (error) throw error;
       } else {
-        await base44.entities.DriverProfile.create({ ...payload, rating_avg: 0, rating_count: 0, completed_jobs: 0 });
+        const { error } = await supabase
+          .from("driver_profiles")
+          .insert({ ...payload, rating_avg: 0, rating_count: 0, completed_jobs: 0 });
+        if (error) throw error;
       }
       sessionStorage.removeItem("movzw_signup_role");
       toast({ title: existing ? "Profile updated" : "Application submitted!", description: "Our team will verify your documents shortly." });
@@ -154,8 +173,8 @@ export default function DriverOnboarding() {
               </div>
               <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                 const f = e.target.files?.[0]; if (!f) return;
-                const { file_url } = await base44.integrations.Core.UploadFile({ file: f });
-                set("profile_picture_url", file_url);
+                const url = await uploadDocument(f);
+                set("profile_picture_url", url);
               }} />
             </label>
           </div>

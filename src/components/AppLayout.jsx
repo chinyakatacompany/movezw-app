@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Home, Plus, Truck, Bell, User as UserIcon, LogOut, MessageCircle, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,9 +33,15 @@ export default function AppLayout() {
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
-    base44.entities.Notification.filter({ user_id: user.id, is_read: false }, "-created_date", 1)
-      .then((r) => active && setUnread(r.length))
-      .catch(() => {});
+    supabase
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false)
+      .then(({ count, error }) => {
+        if (error) console.error("Failed to load unread count:", error);
+        if (active) setUnread(count || 0);
+      });
     return () => { active = false; };
   }, [user?.id, location.pathname]);
 

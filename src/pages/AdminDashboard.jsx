@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Users, BadgeCheck, Package, CheckCircle2, Clock, ArrowRight, TrendingUp } from "lucide-react";
 import { formatMoney, formatDate, StatusBadge } from "@/lib/movezw";
 import PageHeader from "@/components/shared/PageHeader";
@@ -17,23 +17,23 @@ export default function AdminDashboard() {
     let active = true;
     (async () => {
       try {
-        const [users, pendTop, pendAll, recent, activeJobs, done] = await Promise.all([
-          base44.entities.User.list(),
-          base44.entities.DriverProfile.filter({ verification_status: "pending" }, "-created_date", 5),
-          base44.entities.DriverProfile.filter({ verification_status: "pending" }),
-          base44.entities.TransportRequest.filter({}, "-created_date", 8),
-          base44.entities.TransportRequest.filter({ status: { $in: ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"] } }),
-          base44.entities.TransportRequest.filter({ status: "completed" }),
+        const [{ count: userCount }, pendTop, pendAll, recent, activeJobs, done] = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("driver_profiles").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(5),
+          supabase.from("driver_profiles").select("id", { count: "exact", head: true }).eq("verification_status", "pending"),
+          supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(8),
+          supabase.from("transport_requests").select("id", { count: "exact", head: true }).in("status", ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"]),
+          supabase.from("transport_requests").select("id", { count: "exact", head: true }).eq("status", "completed"),
         ]);
         if (!active) return;
         setStats({
-          users: users.length,
-          pendingDrivers: pendAll.length,
-          activeJobs: activeJobs.length,
-          completed: done.length,
+          users: userCount || 0,
+          pendingDrivers: pendAll.count || 0,
+          activeJobs: activeJobs.count || 0,
+          completed: done.count || 0,
         });
-        setPending(pendTop);
-        setRecentJobs(recent);
+        setPending(pendTop.data || []);
+        setRecentJobs(recent.data || []);
       } catch {
         setPending([]);
         setRecentJobs([]);
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
                   <Package className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{r.cargo_type} · {r.pickup_location} → {r.destination}</p>
-                    <p className="text-xs text-muted-foreground">{r.customer_name || "Customer"} · {formatDate(r.created_date)}</p>
+                    <p className="text-xs text-muted-foreground">{r.customer_name || "Customer"} · {formatDate(r.created_at)}</p>
                   </div>
                   <StatusBadge status={r.status} />
                   <span className="text-sm font-semibold text-primary hidden sm:inline whitespace-nowrap">{formatMoney(r.accepted_price || r.budget)}</span>

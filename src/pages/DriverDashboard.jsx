@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Shield, Loader2, Star, TrendingUp, AlertCircle } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
@@ -19,11 +19,37 @@ export default function DriverDashboard() {
 
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1).then((r) => {
-      setProfile(r[0] || null);
-    });
-    base44.entities.TransportRequest.filter({ status: "open" }, "-created_date", 30).then(setOpenRequests).catch(() => setOpenRequests([]));
-    base44.entities.TransportRequest.filter({ accepted_driver_id: user.id, status: { $in: ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"] } }, "-created_date", 20).then(setMyJobs).catch(() => setMyJobs([]));
+    supabase
+      .from("driver_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load driver profile:", error);
+        setProfile(data?.[0] || null);
+      });
+    supabase
+      .from("transport_requests")
+      .select("*")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(30)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load open requests:", error);
+        setOpenRequests(data || []);
+      });
+    supabase
+      .from("transport_requests")
+      .select("*")
+      .eq("accepted_driver_id", user.id)
+      .in("status", ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"])
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load active jobs:", error);
+        setMyJobs(data || []);
+      });
   }, [user?.id]);
 
   const [toggling, setToggling] = useState(false);
@@ -32,10 +58,16 @@ export default function DriverDashboard() {
   const updateAvailability = async (status) => {
     setToggling(true);
     try {
-      const updated = await base44.entities.DriverProfile.update(profile.id, {
-        availability_status: status,
-        last_available_at: status === "online" ? new Date().toISOString() : profile.last_available_at,
-      });
+      const { data: updated, error } = await supabase
+        .from("driver_profiles")
+        .update({
+          availability_status: status,
+          last_available_at: status === "online" ? new Date().toISOString() : profile.last_available_at,
+        })
+        .eq("id", profile.id)
+        .select()
+        .single();
+      if (error) throw error;
       setProfile({ ...profile, ...updated });
       toast({
         title: `You're ${AVAILABILITY_LABELS[status]}`,

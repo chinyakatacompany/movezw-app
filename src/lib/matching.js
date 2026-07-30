@@ -1,4 +1,5 @@
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
+import { createNotification } from "@/lib/movezw";
 
 export const AVAILABILITY = {
   online: "online",
@@ -91,20 +92,23 @@ export function findMatchingDrivers(request, drivers) {
 // Fetch drivers, match against a request, and notify the top matches.
 // Best-effort, client-side; designed to move to a backend function later.
 export async function notifyMatchingDriversForRequest(request, limit = 10) {
-  const drivers = await base44.entities.DriverProfile
-    .filter({}, "-created_date", 200)
-    .catch(() => []);
-  const matched = findMatchingDrivers(request, drivers).slice(0, limit);
+  const { data: drivers, error } = await supabase
+    .from("driver_profiles")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) console.error("Failed to load drivers for matching:", error);
+  const matched = findMatchingDrivers(request, drivers || []).slice(0, limit);
   const budgetLabel = request.budget ? `$${request.budget}` : "flexible budget";
   await Promise.all(
     matched.map((d) =>
-      base44.entities.Notification.create({
-        user_id: d.user_id,
-        type: "job_assigned",
-        title: "New job match nearby",
-        message: `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
-        link: `/driver/job/${request.id}`,
-      }).catch(() => null)
+      createNotification(
+        d.user_id,
+        "job_assigned",
+        "New job match nearby",
+        `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
+        `/driver/job/${request.id}`
+      )
     )
   );
   return matched.length;

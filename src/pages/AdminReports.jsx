@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Users, Package, BadgeCheck, CheckCircle2, Star } from "lucide-react";
 import { formatDate } from "@/lib/movezw";
 
@@ -22,20 +22,23 @@ export default function AdminReports() {
 
   useEffect(() => {
     (async () => {
-      const [users, profiles, jobs] = await Promise.all([
-        base44.entities.User.list().catch(() => []),
-        base44.entities.DriverProfile.list().catch(() => []),
-        base44.entities.TransportRequest.filter({}, "-created_date", 200).catch(() => []),
+      const [{ count: userCount }, { data: profiles }, { data: jobs }] = await Promise.all([
+        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("driver_profiles").select("*"),
+        supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(200),
       ]);
-      const completed = jobs.filter((j) => j.status === "completed");
+      const users = { length: userCount || 0 };
+      const jobsList = jobs || [];
+      const completed = jobsList.filter((j) => j.status === "completed");
       const totalValue = completed.reduce((s, j) => s + (j.accepted_price || 0), 0);
-      const rated = profiles.filter((p) => p.rating_count > 0);
+      const driverProfiles = profiles || [];
+      const rated = driverProfiles.filter((p) => p.rating_count > 0);
       const avgRating = rated.length ? rated.reduce((s, p) => s + (p.rating_avg || 0), 0) / rated.length : 0;
       setData({
         users: users.length,
-        drivers: profiles.length,
-        approvedDrivers: profiles.filter((p) => p.verification_status === "approved").length,
-        jobs: jobs.length,
+        drivers: driverProfiles.length,
+        approvedDrivers: driverProfiles.filter((p) => p.verification_status === "approved").length,
+        jobs: jobsList.length,
         completed: completed.length,
         totalValue,
         avgRating: avgRating.toFixed(1),

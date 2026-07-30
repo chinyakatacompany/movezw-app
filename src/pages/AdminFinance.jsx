@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import {
   Wallet, TrendingUp, Lock, RotateCcw, FileText, Settings as SettingsIcon,
@@ -50,14 +50,14 @@ function buildLedger(jobs, refunds, rate) {
     const price = j.accepted_price || 0;
     if (!price) return;
     const comm = Math.round(price * rate * 100) / 100;
-    const date = formatDate(j.updated_date || j.created_date);
+    const date = formatDate(j.updated_at || j.created_at);
     const desc = `${j.cargo_type}: ${j.pickup_location} → ${j.destination}`;
     if (j.status === "completed") rows.push([date, "Commission", shortId(j.id), desc, comm, "Realised"]);
     else if (["collected", "in_transit", "delivered"].includes(j.status)) rows.push([date, "Escrow hold", shortId(j.id), desc, comm, "Pending"]);
   });
   refunds.forEach((r) => {
     if (["paid", "approved"].includes(r.status)) {
-      rows.push([formatDate(r.requested_at || r.created_date), "Refund", shortId(r.id), r.reason, -(r.amount || 0), r.status === "paid" ? "Refunded" : "Approved"]);
+      rows.push([formatDate(r.requested_at), "Refund", shortId(r.id), r.reason, -(r.amount || 0), r.status === "paid" ? "Refunded" : "Approved"]);
     }
   });
   return rows.sort((a, b) => (b[0] < a[0] ? -1 : 1));
@@ -74,15 +74,15 @@ export default function AdminFinance() {
 
   const load = async () => {
     try {
-      const [allJobs, allRefunds, allAudits, config] = await Promise.all([
-        base44.entities.TransportRequest.filter({}, "-created_date", 1000).catch(() => []),
-        base44.entities.RefundRequest.filter({}, "-created_date", 200).catch(() => []),
-        base44.entities.AuditLog.filter({}, "-created_date", 200).catch(() => []),
+      const [{ data: allJobs }, { data: allRefunds }, { data: allAudits }, config] = await Promise.all([
+        supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(1000),
+        supabase.from("refund_requests").select("*").order("requested_at", { ascending: false }).limit(200),
+        supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
         getCommissionConfig(),
       ]);
-      setJobs(allJobs);
-      setRefunds(allRefunds);
-      setAudits(allAudits);
+      setJobs(allJobs || []);
+      setRefunds(allRefunds || []);
+      setAudits(allAudits || []);
       setCfg(config);
     } finally {
       setLoading(false);
@@ -119,7 +119,7 @@ export default function AdminFinance() {
     }
     const byDay = {};
     (jobs || []).filter((j) => j.status === "completed").forEach((j) => {
-      const k = j.updated_date ? new Date(j.updated_date).toISOString().slice(0, 10) : null;
+      const k = j.updated_at ? new Date(j.updated_at).toISOString().slice(0, 10) : null;
       if (k) byDay[k] = (byDay[k] || 0) + (j.accepted_price || 0) * rate;
     });
     return days.map((d) => {
@@ -256,7 +256,7 @@ export default function AdminFinance() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm">{a.details}</p>
-                    <p className="text-[11px] text-muted-foreground">{formatDate(a.created_date)} · {a.actor_name || "System"}{a.reference ? ` · Ref ${a.reference}` : ""}{a.amount ? ` · ${formatMoney(a.amount)}` : ""}</p>
+                    <p className="text-[11px] text-muted-foreground">{formatDate(a.created_at)} · {a.actor_name || "System"}{a.reference ? ` · Ref ${a.reference}` : ""}{a.amount ? ` · ${formatMoney(a.amount)}` : ""}</p>
                   </div>
                 </div>
               ))}

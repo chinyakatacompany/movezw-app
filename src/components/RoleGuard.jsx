@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useEffect, useState } from "react";
 
 // Guards a route so only the given role(s) may access it.
@@ -21,16 +21,30 @@ export default function RoleGuard({ allow, children }) {
     const tasks = [];
     if (allow.includes("driver")) {
       tasks.push(
-        base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1)
-          .then((r) => active && setHasProfile(r[0] || null))
-          .catch(() => active && setHasProfile(null))
+        supabase
+          .from("driver_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .then(({ data, error }) => {
+            if (error) console.error("Failed to load driver profile:", error);
+            if (active) setHasProfile(data?.[0] || null);
+          })
       );
     }
     if (allow.includes("business")) {
       tasks.push(
-        base44.entities.Business.filter({ owner_id: user.id }, "-created_date", 1)
-          .then((r) => active && setHasBusiness(r[0] || null))
-          .catch(() => active && setHasBusiness(null))
+        supabase
+          .from("businesses")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .then(({ data, error }) => {
+            if (error) console.error("Failed to load business account:", error);
+            if (active) setHasBusiness(data?.[0] || null);
+          })
       );
     }
     Promise.all(tasks).finally(() => active && setChecking(false));

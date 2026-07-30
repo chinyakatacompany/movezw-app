@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { MessageCircle, Loader2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -17,45 +17,53 @@ export default function Messages() {
   const load = async () => {
     if (!user?.id) return;
     try {
-      const [asCustomer, asDriver] = await Promise.all([
-        base44.entities.Conversation.filter({ customer_id: user.id }, "-last_message_at", 100),
-        base44.entities.Conversation.filter({ driver_id: user.id }, "-last_message_at", 100),
+      const [{ data: asCustomer }, { data: asDriver }] = await Promise.all([
+        supabase.from("conversations").select("*").eq("customer_id", user.id).order("last_message_at", { ascending: false }).limit(100),
+        supabase.from("conversations").select("*").eq("driver_id", user.id).order("last_message_at", { ascending: false }).limit(100),
       ]);
-      const merged = [...asCustomer, ...asDriver];
+      const merged = [...(asCustomer || []), ...(asDriver || [])];
       // dedupe
       const seen = new Map();
       merged.forEach((c) => seen.set(c.id, c));
-      setConversations([...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_date) - new Date(a.last_message_at || a.created_date)));
+      setConversations([...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
     } catch (e) {
-      /* ignore */
+      console.error("Failed to load conversations:", e);
     }
     setLoading(false);
   };
 
   useEffect(() => {
+    if (!user?.id) return;
     load();
-    // Real-time: refresh conversation list when any conversation changes
-    const unsubConv = base44.entities.Conversation.subscribe(() => load());
-    const unsubMsg = base44.entities.Message.subscribe(() => load());
-    return () => { unsubConv?.(); unsubMsg?.(); };
+    // Real-time: refresh conversation list when any conversation or message changes
+    const channel = supabase
+      .channel(`messages-list-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line
   }, [user?.id]);
 
   useEffect(() => {
     if (conversations.length === 0) return;
-    base44.entities.Message
-      .filter({ is_read: false }, "-created_date", 200)
-      .then((msgs) => {
+    supabase
+      .from("messages")
+      .select("*")
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(200)
+      .then(({ data: msgs, error }) => {
+        if (error) { console.error("Failed to load unread counts:", error); return; }
         const map = {};
-        msgs.forEach((m) => {
+        (msgs || []).forEach((m) => {
           if (m.sender_id === user.id) return;
           const conv = conversations.find((c) => c.id === m.conversation_id);
           if (!conv) return;
           map[m.conversation_id] = (map[m.conversation_id] || 0) + 1;
         });
         setUnread(map);
-      })
-      .catch(() => {});
+      });
   }, [conversations, user?.id]);
 
   const filtered = useMemo(() => {
@@ -100,7 +108,7 @@ export default function Messages() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold truncate">{otherName || "Conversation"}</p>
-                    <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(c.last_message_at || c.created_date)}</span>
+                    <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(c.last_message_at || c.created_at)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{c.request_label}</p>
                   <p className={`text-xs mt-0.5 truncate ${count ? "text-foreground font-medium" : "text-muted-foreground"}`}>

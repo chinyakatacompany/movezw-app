@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,16 @@ export default function Profile({ role }) {
 
   useEffect(() => {
     if (role === "driver" && user?.id) {
-      base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1)
-        .then((r) => setProfile(r[0] || null))
-        .catch(() => {});
+      supabase
+        .from("driver_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .then(({ data, error }) => {
+          if (error) console.error("Failed to load driver profile:", error);
+          setProfile(data?.[0] || null);
+        });
     }
   }, [role, user?.id]);
 

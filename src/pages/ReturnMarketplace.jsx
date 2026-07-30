@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Loader2, Package } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
@@ -47,14 +47,20 @@ export default function ReturnMarketplace() {
     let active = true;
     (async () => {
       try {
-        const open = await base44.entities.ReturnLoad.filter({ status: "open" }, "departure_date", 200).catch(() => []);
+        const { data: open, error: loadErr } = await supabase
+          .from("return_loads")
+          .select("*")
+          .eq("status", "open")
+          .order("departure_date", { ascending: true })
+          .limit(200);
+        if (loadErr) throw loadErr;
         if (!active) return;
-        setLoads(open);
-        const profileIds = [...new Set(open.map((l) => l.driver_profile_id).filter(Boolean))];
+        setLoads(open || []);
+        const profileIds = [...new Set((open || []).map((l) => l.driver_profile_id).filter(Boolean))];
         const pMap = {};
         if (profileIds.length) {
-          const ps = await base44.entities.DriverProfile.filter({ id: { $in: profileIds } }, "-created_date", 200).catch(() => []);
-          ps.forEach((p) => { pMap[p.id] = p; });
+          const { data: ps } = await supabase.from("driver_profiles").select("*").in("id", profileIds).limit(200);
+          (ps || []).forEach((p) => { pMap[p.id] = p; });
         }
         if (active) setProfiles(pMap);
       } catch {
@@ -97,7 +103,7 @@ export default function ReturnMarketplace() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.ReturnLoadBooking.create({
+      const { error } = await supabase.from("return_load_bookings").insert({
         return_load_id: booking.id,
         driver_id: booking.driver_id,
         customer_id: user.id,
@@ -108,6 +114,7 @@ export default function ReturnMarketplace() {
         message: bForm.message || undefined,
         status: "pending",
       });
+      if (error) throw error;
       await createNotification(
         booking.driver_id, "new_offer",
         "New return load booking request",

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ export default function BusinessOnboarding() {
     e.preventDefault();
     setLoading(true);
     try {
-      await base44.entities.Business.create({
+      const { error } = await supabase.from("businesses").insert({
         owner_id: user.id,
         company_name: form.company_name,
         industry: form.industry,
@@ -38,6 +38,7 @@ export default function BusinessOnboarding() {
         tax_id: form.tax_id || undefined,
         status: "active",
       });
+      if (error) throw error;
       sessionStorage.removeItem("movzw_signup_role");
       toast({ title: "Business account created", description: "Welcome to MoveZW Business." });
       navigate("/business");

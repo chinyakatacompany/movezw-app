@@ -55,7 +55,7 @@ export default function RefundQueue({ refunds = [], adminId, onChanged }) {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold">{formatMoney(r.amount)} refund</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{r.reason}</p>
-                    <p className="text-[11px] text-muted-foreground mt-1">Requested {formatDate(r.requested_at || r.created_date)} · Job {String(r.request_id || "").slice(-6).toUpperCase()}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Requested {formatDate(r.requested_at)} · Job {String(r.request_id || "").slice(-6).toUpperCase()}</p>
                   </div>
                   <span className={cn("text-[10px] px-2 py-0.5 rounded-full shrink-0", statusStyle.pending)}>Pending</span>
                 </div>
@@ -88,7 +88,7 @@ export default function RefundQueue({ refunds = [], adminId, onChanged }) {
               <div key={r.id} className="p-3.5 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{formatMoney(r.amount)} · {r.reason}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(r.decided_at || r.requested_at || r.created_date)}{r.admin_note ? ` · ${r.admin_note}` : ""}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(r.decided_at || r.requested_at)}{r.admin_note ? ` · ${r.admin_note}` : ""}</p>
                 </div>
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full", statusStyle[r.status] || "bg-muted")}>{r.status}</span>
               </div>

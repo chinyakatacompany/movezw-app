@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Loader2, Search, X, CheckCircle2, Ban } from "lucide-react";
 import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange } from "@/lib/movezw";
@@ -20,10 +20,12 @@ export default function AdminJobs() {
   const [confirm, setConfirm] = useState(null);
 
   const load = () => {
-    base44.entities.TransportRequest
-      .filter(filter === "all" ? {} : { status: filter }, "-created_date", 100)
-      .then(setJobs)
-      .catch(() => setJobs([]));
+    let query = supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(100);
+    if (filter !== "all") query = query.eq("status", filter);
+    query.then(({ data, error }) => {
+      if (error) console.error("Failed to load jobs:", error);
+      setJobs(data || []);
+    });
   };
 
   useEffect(() => {
@@ -60,11 +62,13 @@ export default function AdminJobs() {
       await Promise.all(
         targets.map(async (j) => {
           if (type === "cancel") {
-            await base44.entities.TransportRequest.update(j.id, { status: "cancelled" });
+            const { error } = await supabase.from("transport_requests").update({ status: "cancelled" }).eq("id", j.id);
+            if (error) throw error;
             try { await processCancellationRefund({ request: j, actorId: user.id }); } catch { /* best-effort */ }
             try { await notifyJobStatusChange(j, "cancelled", user.id); } catch { /* best-effort */ }
           } else if (type === "complete") {
-            await base44.entities.TransportRequest.update(j.id, { status: "completed" });
+            const { error } = await supabase.from("transport_requests").update({ status: "completed" }).eq("id", j.id);
+            if (error) throw error;
             if (j.accepted_driver_id) {
               try { await processJobCompletion({ driverId: j.accepted_driver_id, request: j, acceptedPrice: j.accepted_price, actorId: user.id }); } catch { /* best-effort */ }
               try { await notifyJobStatusChange(j, "completed", user.id); } catch { /* best-effort */ }
@@ -142,7 +146,7 @@ export default function AdminJobs() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{j.cargo_type} · {j.pickup_location} → {j.destination}</p>
-                  <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_date)}</p>
+                  <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_at)}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-semibold text-primary">{formatMoney(j.accepted_price || j.budget)}</p>

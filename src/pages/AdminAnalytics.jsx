@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -20,15 +20,15 @@ function buildSeries(days, jobs, users) {
   const shipmentByDay = {};
   const revenueByDay = {};
   jobs.forEach((j) => {
-    const k = j.created_date ? dayKey(new Date(j.created_date)) : null;
+    const k = j.created_at ? dayKey(new Date(j.created_at)) : null;
     if (k) shipmentByDay[k] = (shipmentByDay[k] || 0) + 1;
   });
   completed.forEach((j) => {
-    const k = j.updated_date ? dayKey(new Date(j.updated_date)) : null;
+    const k = j.updated_at ? dayKey(new Date(j.updated_at)) : null;
     if (k) revenueByDay[k] = (revenueByDay[k] || 0) + (j.accepted_price || 0);
   });
   const userTimes = users
-    .map((u) => (u.created_date ? new Date(u.created_date).getTime() : 0))
+    .map((u) => (u.created_at ? new Date(u.created_at).getTime() : 0))
     .sort((a, b) => a - b);
   return days.map((d) => {
     const k = dayKey(d);
@@ -70,10 +70,12 @@ export default function AdminAnalytics() {
     let active = true;
     (async () => {
       try {
-        const [jobs, users] = await Promise.all([
-          base44.entities.TransportRequest.filter({}, "-created_date", 500).catch(() => []),
-          base44.entities.User.list().catch(() => []),
+        const [{ data: jobsData }, { data: usersData }] = await Promise.all([
+          supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(500),
+          supabase.from("profiles").select("*"),
         ]);
+        const jobs = jobsData || [];
+        const users = usersData || [];
         if (!active) return;
         const days = [];
         for (let i = 29; i >= 0; i--) {

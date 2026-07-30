@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, Check, X, Loader2, FileText, Car, Star } from "lucide-react";
 import { StatusBadge, StarRating, formatDate } from "@/lib/movezw";
@@ -15,10 +15,12 @@ export default function AdminVerification() {
   const [acting, setActing] = useState(null);
 
   const load = () => {
-    base44.entities.DriverProfile
-      .filter(filter === "all" ? {} : { verification_status: filter }, "-created_date", 50)
-      .then(setProfiles)
-      .catch(() => setProfiles([]));
+    let query = supabase.from("driver_profiles").select("*").order("created_at", { ascending: false }).limit(50);
+    if (filter !== "all") query = query.eq("verification_status", filter);
+    query.then(({ data, error }) => {
+      if (error) console.error("Failed to load driver profiles:", error);
+      setProfiles(data || []);
+    });
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
@@ -26,10 +28,14 @@ export default function AdminVerification() {
   const decide = async (profile, decision) => {
     setActing(profile.id);
     try {
-      await base44.entities.DriverProfile.update(profile.id, {
-        verification_status: decision,
-        verification_note: note || (decision === "approved" ? "Documents verified." : "Please re-upload clear documents."),
-      });
+      const { error } = await supabase
+        .from("driver_profiles")
+        .update({
+          verification_status: decision,
+          verification_note: note || (decision === "approved" ? "Documents verified." : "Please re-upload clear documents."),
+        })
+        .eq("id", profile.id);
+      if (error) throw error;
       await createNotification(profile.user_id, "verification", decision === "approved" ? "You're verified! ✅" : "Verification update", decision === "approved" ? "Your driver account is approved. You can now receive jobs." : "Your documents need attention. Please re-upload.", "/driver");
       toast({ title: decision === "approved" ? "Driver approved" : "Driver rejected" });
       setSelected(null);

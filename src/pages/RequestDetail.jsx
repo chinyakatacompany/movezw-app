@@ -6,6 +6,7 @@ import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, Me
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
+import { getOrCreateConversation } from "@/lib/messaging";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -39,14 +40,38 @@ export default function RequestDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  // Live-refresh this page as the driver progresses the job (en route, collected,
+  // etc.) or new offers come in, so the customer doesn't need to check notifications.
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`request-detail-${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "transport_requests", filter: `id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "offers", filter: `request_id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "offers", filter: `request_id=eq.${id}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    /* eslint-disable-next-line */
+  }, [id]);
+
   useEffect(() => {
     if (!request?.status || request.status !== "completed" || !user?.id) return;
     supabase.from("ratings").select("id").eq("request_id", request.id).eq("customer_id", user.id)
       .then(({ data }) => setAlreadyRated((data || []).length > 0));
   }, [request?.id, request?.status, user?.id]);
 
-  const openChat = () => {
-    toast({ title: "Messaging coming soon", description: "Chat is being rebuilt — check back shortly." });
+  const openChat = async () => {
+    try {
+      const conv = await getOrCreateConversation({
+        request,
+        driverId: request.accepted_driver_id,
+        driverName: acceptedOffer?.driver_name,
+        customerName: request.customer_name,
+      });
+      navigate(`/chat/${conv.id}`);
+    } catch (e) {
+      toast({ title: "Could not open chat", description: e.message, variant: "destructive" });
+    }
   };
 
   const acceptOffer = async (offer) => {

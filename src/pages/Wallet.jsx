@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import {
   ArrowLeft, Wallet as WalletIcon, Loader2, ArrowDownLeft, ArrowUpRight,
   Download, Banknote, TrendingUp, Percent, CheckCircle2, Clock, X, AlertTriangle, Plus,
 } from "lucide-react";
-import { PAYMENT_METHODS, formatMoney, formatDate, EmptyState } from "@/lib/movezw";
+import { PAYMENT_METHODS, formatMoney, formatDate, EmptyState, createNotification } from "@/lib/movezw";
 import { ensureWallet, requestPayout, requestTopUp, claimRefund as claimRefundFn, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -52,24 +52,33 @@ export default function Wallet() {
     try {
       const w = await ensureWallet(user.id);
       setWallet(w);
-      const [txs, pays] = await Promise.all([
-        base44.entities.Transaction.filter({ user_id: user.id }, "-created_date", 100),
-        isDriver ? base44.entities.Payout.filter({ driver_id: user.id }, "-created_date", 50) : Promise.resolve([]),
+      const [{ data: txs }, { data: pays }] = await Promise.all([
+        supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100),
+        isDriver
+          ? supabase.from("payouts").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(50)
+          : Promise.resolve({ data: [] }),
       ]);
-      setTransactions(txs);
-      setPayouts(pays);
+      setTransactions(txs || []);
+      setPayouts(pays || []);
       try {
         const cfg = await getCommissionConfig();
         setLowThreshold(cfg.low_balance_threshold ?? 5);
       } catch { /* ignore */ }
       if (isDriver) {
         try {
-          const rrs = await base44.entities.RefundRequest.filter({ driver_id: user.id, status: { $in: ["pending", "approved"] } }, "-created_date", 50);
-          setRefundReqs(rrs);
+          const { data: rrs } = await supabase
+            .from("refund_requests")
+            .select("*")
+            .eq("driver_id", user.id)
+            .in("status", ["pending", "approved"])
+            .order("requested_at", { ascending: false })
+            .limit(50);
+          setRefundReqs(rrs || []);
         } catch { /* ignore */ }
       }
     } catch (e) {
-      /* ignore */
+      console.error("Failed to load wallet:", e);
+      toast({ title: "Could not load wallet", description: e.message, variant: "destructive" });
     }
     setLoading(false);
   };
@@ -87,13 +96,7 @@ export default function Wallet() {
         destination: payoutDest,
       });
       try {
-        await base44.entities.Notification.create({
-          user_id: user.id,
-          type: "admin",
-          title: "Payout requested",
-          message: `Your payout of ${formatMoney(payoutAmount)} to ${payoutMethod} is being processed.`,
-          link: "/wallet",
-        });
+        await createNotification(user.id, "admin", "Payout requested", `Your payout of ${formatMoney(payoutAmount)} to ${payoutMethod} is being processed.`, "/wallet");
       } catch (_) {}
       toast({ title: "Payout requested", description: `${formatMoney(payoutAmount)} to ${payoutMethod}` });
       setShowPayout(false);
@@ -142,8 +145,16 @@ export default function Wallet() {
     [transactions]
   );
 
-  if (loading || !wallet) {
+  if (loading) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+  }
+
+  if (!wallet) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        Could not load your wallet. Please try again shortly.
+      </div>
+    );
   }
 
   return (
@@ -255,7 +266,7 @@ export default function Wallet() {
                       <StatusIcon className="w-3 h-3" /> {t.status}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{t.reference || t.method} · {formatDate(t.created_date)}</p>
+                  <p className="text-xs text-muted-foreground truncate">{t.reference || t.method} · {formatDate(t.created_at)}</p>
                   {t.commission > 0 && <p className="text-[11px] text-muted-foreground">Commission {formatMoney(t.commission)}</p>}
                 </div>
                 <div className="text-right shrink-0">
@@ -278,7 +289,7 @@ export default function Wallet() {
                 <Banknote className="w-5 h-5 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{formatMoney(p.amount)} · {p.method}</p>
-                  <p className="text-xs text-muted-foreground truncate">{p.destination || "—"} · {formatDate(p.created_date)}</p>
+                  <p className="text-xs text-muted-foreground truncate">{p.destination || "—"} · {formatDate(p.created_at)}</p>
                 </div>
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full", p.status === "completed" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>{p.status}</span>
               </div>
@@ -298,7 +309,7 @@ export default function Wallet() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{formatMoney(rr.amount)} · {rr.reason}</p>
-                  <p className="text-xs text-muted-foreground truncate">{formatDate(rr.requested_at || rr.created_date)} · {rr.status}</p>
+                  <p className="text-xs text-muted-foreground truncate">{formatDate(rr.requested_at)} · {rr.status}</p>
                 </div>
                 {rr.status === "approved" ? (
                   <Button size="sm" disabled={claiming === rr.id} onClick={() => claimRefundHandler(rr)}>

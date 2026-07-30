@@ -49,7 +49,7 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
           )}
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            {timeAgo(request.created_date)}
+            {timeAgo(request.created_at)}
           </span>
         </div>
         {rightSlot}

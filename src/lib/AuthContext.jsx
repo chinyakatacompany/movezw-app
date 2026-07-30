@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { toast as sonnerToast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext();
@@ -41,11 +42,25 @@ export const AuthProvider = ({ children }) => {
 
       if (error) throw error;
 
+      // Register.jsx stashes the phone number entered at signup here since it
+      // isn't part of the auth payload; persist it into the profile once, on
+      // the first login after email confirmation.
+      let phone = profile?.phone || '';
+      const pendingPhone = sessionStorage.getItem('movzw_signup_phone');
+      if (pendingPhone && !phone) {
+        const { error: phoneErr } = await supabase
+          .from('profiles')
+          .update({ phone: pendingPhone })
+          .eq('id', authUser.id);
+        if (!phoneErr) phone = pendingPhone;
+        sessionStorage.removeItem('movzw_signup_phone');
+      }
+
       setUser({
         id: authUser.id,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
-        phone: profile?.phone || '',
+        phone,
         role: profile?.role || 'customer',
         is_suspended: profile?.is_suspended || false,
       });
@@ -83,6 +98,32 @@ export const AuthProvider = ({ children }) => {
     setIsLoadingPublicSettings(false);
     await checkUserAuth();
   };
+
+  // Pop up a dismissible toast the moment a new notification row is inserted
+  // for this user. Reusing the same toast id means a fresh popup replaces
+  // whatever's currently showing instead of stacking up.
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`notifications-popup-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const n = payload.new;
+          sonnerToast(n.title, {
+            id: 'notification-popup',
+            description: n.message,
+            action: n.link ? { label: 'View', onClick: () => { window.location.href = n.link; } } : undefined,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
 
   const logout = async () => {
     await supabase.auth.signOut();

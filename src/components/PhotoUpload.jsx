@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { UploadCloud, X, ImagePlus, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { cn } from "@/lib/utils";
 
 export default function PhotoUpload({ value = [], onChange, max = 5, label = "Add photos" }) {
@@ -14,8 +14,11 @@ export default function PhotoUpload({ value = [], onChange, max = 5, label = "Ad
     try {
       const uploaded = [];
       for (const file of toUpload) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        uploaded.push(file_url);
+        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+        const { error } = await supabase.storage.from("documents").upload(fileName, file);
+        if (error) throw error;
+        const { data } = supabase.storage.from("documents").getPublicUrl(fileName);
+        uploaded.push(data.publicUrl);
       }
       onChange([...value, ...uploaded]);
     } catch (e) {
@@ -33,37 +36,20 @@ export default function PhotoUpload({ value = [], onChange, max = 5, label = "Ad
         {value.map((url, i) => (
           <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted group">
             <img src={url} alt={`cargo ${i + 1}`} className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={() => removeAt(i)}
-              className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
-            >
+            <button type="button" onClick={() => removeAt(i)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}
         {value.length < max && (
-          <label
-            className={cn(
-              "aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors",
-              uploading && "pointer-events-none opacity-60"
-            )}
-          >
-            {uploading ? (
-              <Loader2 className="w-5 h-5 text-primary animate-spin" />
-            ) : (
+          <label className={cn("aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1.5 cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors", uploading && "pointer-events-none opacity-60")}>
+            {uploading ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : (
               <>
                 <ImagePlus className="w-5 h-5 text-muted-foreground" />
                 <span className="text-[10px] text-muted-foreground font-medium">{label}</span>
               </>
             )}
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
+            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
           </label>
         )}
       </div>

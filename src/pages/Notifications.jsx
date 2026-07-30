@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Bell, Loader2, Check } from "lucide-react";
 import { EmptyState, timeAgo } from "@/lib/movezw";
@@ -12,22 +12,28 @@ export default function Notifications() {
 
   const load = () => {
     if (!user?.id) return;
-    base44.entities.Notification
-      .filter({ user_id: user.id }, "-created_date", 50)
-      .then(setItems)
-      .catch(() => setItems([]));
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load notifications:", error);
+        setItems(data || []);
+      });
   };
 
   useEffect(() => { load(); }, [user?.id]);
 
   const markRead = async (n) => {
     if (n.is_read) return;
-    await base44.entities.Notification.update(n.id, { is_read: true });
+    await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
     load();
   };
 
   const markAllRead = async () => {
-    await base44.entities.Notification.updateMany({ user_id: user.id, is_read: false }, { $set: { is_read: true } });
+    await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
     load();
   };
 
@@ -65,7 +71,7 @@ export default function Notifications() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold">{n.title}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">{n.message}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">{timeAgo(n.created_date)}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">{timeAgo(n.created_at)}</p>
                 </div>
                 {n.link && (
                   <Link to={n.link} onClick={(e) => e.stopPropagation()} className="text-xs text-primary font-medium shrink-0 mt-1">View</Link>

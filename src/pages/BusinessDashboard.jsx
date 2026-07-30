@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import {
   Package, CheckCircle2, Gauge, DollarSign, Truck, Users, Wrench, Plus, X, Building2, TrendingUp, ArrowRight,
@@ -62,16 +62,24 @@ export default function BusinessDashboard() {
   const [dForm, setDForm] = useState({ full_name: "", phone: "", vehicle_type: "Pickup", location_area: "" });
 
   const loadAll = async (bizId) => {
-    const [d, v] = await Promise.all([
-      base44.entities.DriverProfile.filter({ business_id: bizId }, "-created_date", 200).catch(() => []),
-      base44.entities.FleetVehicle.filter({ business_id: bizId }, "-created_date", 200).catch(() => []),
+    const [{ data: d, error: dErr }, { data: v, error: vErr }] = await Promise.all([
+      supabase.from("driver_profiles").select("*").eq("business_id", bizId).order("created_at", { ascending: false }).limit(200),
+      supabase.from("fleet_vehicles").select("*").eq("business_id", bizId).order("created_at", { ascending: false }).limit(200),
     ]);
-    setDrivers(d);
-    setVehicles(v);
-    const driverUserIds = d.map((x) => x.user_id).filter((id) => id && !id.startsWith("roster_"));
+    if (dErr) console.error("Failed to load drivers:", dErr);
+    if (vErr) console.error("Failed to load vehicles:", vErr);
+    setDrivers(d || []);
+    setVehicles(v || []);
+    const driverUserIds = (d || []).map((x) => x.user_id).filter(Boolean);
     if (driverUserIds.length) {
-      const j = await base44.entities.TransportRequest.filter({ accepted_driver_id: { $in: driverUserIds } }, "-created_date", 100).catch(() => []);
-      setJobs(j);
+      const { data: j, error: jErr } = await supabase
+        .from("transport_requests")
+        .select("*")
+        .in("accepted_driver_id", driverUserIds)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (jErr) console.error("Failed to load fleet jobs:", jErr);
+      setJobs(j || []);
     } else {
       setJobs([]);
     }
@@ -81,9 +89,15 @@ export default function BusinessDashboard() {
     let active = true;
     (async () => {
       try {
-        const biz = await base44.entities.Business.filter({ owner_id: user.id }, "-created_date", 1).catch(() => []);
+        const { data: biz, error: bizErr } = await supabase
+          .from("businesses")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (bizErr) throw bizErr;
         if (!active) return;
-        const b = biz[0] || null;
+        const b = biz?.[0] || null;
         setBusiness(b);
         if (b) await loadAll(b.id);
       } catch {
@@ -112,7 +126,7 @@ export default function BusinessDashboard() {
     const days = [];
     for (let i = 29; i >= 0; i--) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - i); days.push(d); }
     const byDay = {};
-    jobs.forEach((j) => { const k = j.created_date ? dayKey(new Date(j.created_date)) : null; if (k) byDay[k] = (byDay[k] || 0) + 1; });
+    jobs.forEach((j) => { const k = j.created_at ? dayKey(new Date(j.created_at)) : null; if (k) byDay[k] = (byDay[k] || 0) + 1; });
     return days.map((d) => ({ date: dayKey(d).slice(5), deliveries: byDay[dayKey(d)] || 0 }));
   }, [jobs]);
 
@@ -121,14 +135,19 @@ export default function BusinessDashboard() {
     if (!vForm.plate_number) return;
     setSaving(true);
     try {
-      const created = await base44.entities.FleetVehicle.create({
-        business_id: business.id,
-        vehicle_type: vForm.vehicle_type,
-        plate_number: vForm.plate_number,
-        model: vForm.model || undefined,
-        capacity_kg: Number(vForm.capacity_kg) || undefined,
-        status: "active",
-      });
+      const { data: created, error } = await supabase
+        .from("fleet_vehicles")
+        .insert({
+          business_id: business.id,
+          vehicle_type: vForm.vehicle_type,
+          plate_number: vForm.plate_number,
+          model: vForm.model || undefined,
+          capacity_kg: Number(vForm.capacity_kg) || undefined,
+          status: "active",
+        })
+        .select()
+        .single();
+      if (error) throw error;
       setVehicles((p) => [created, ...p]);
       setShowAddVehicle(false);
       setVForm({ vehicle_type: "Pickup", plate_number: "", model: "", capacity_kg: "" });
@@ -145,15 +164,23 @@ export default function BusinessDashboard() {
     if (!dForm.full_name) return;
     setSaving(true);
     try {
-      const created = await base44.entities.DriverProfile.create({
-        user_id: `roster_${Date.now()}`,
-        business_id: business.id,
-        full_name: dForm.full_name,
-        phone: dForm.phone || undefined,
-        vehicle_type: dForm.vehicle_type,
-        location_area: dForm.location_area || undefined,
-        verification_status: "pending",
-      });
+      const { data: created, error } = await supabase
+        .from("driver_profiles")
+        .insert({
+          // Roster drivers who haven't signed up yet don't have a real auth
+          // account; a random placeholder id keeps the column's uuid type happy
+          // and will simply never match a real accepted_driver_id on a job.
+          user_id: crypto.randomUUID(),
+          business_id: business.id,
+          full_name: dForm.full_name,
+          phone: dForm.phone || undefined,
+          vehicle_type: dForm.vehicle_type,
+          location_area: dForm.location_area || undefined,
+          verification_status: "pending",
+        })
+        .select()
+        .single();
+      if (error) throw error;
       setDrivers((p) => [created, ...p]);
       setShowAddDriver(false);
       setDForm({ full_name: "", phone: "", vehicle_type: "Pickup", location_area: "" });
@@ -168,10 +195,16 @@ export default function BusinessDashboard() {
   const assignDriver = async (vehicle, driverProfileId) => {
     const drv = drivers.find((d) => d.id === driverProfileId);
     try {
-      const updated = await base44.entities.FleetVehicle.update(vehicle.id, {
-        assigned_driver_profile_id: driverProfileId || undefined,
-        assigned_driver_name: drv?.full_name || undefined,
-      });
+      const { data: updated, error } = await supabase
+        .from("fleet_vehicles")
+        .update({
+          assigned_driver_profile_id: driverProfileId || null,
+          assigned_driver_name: drv?.full_name || null,
+        })
+        .eq("id", vehicle.id)
+        .select()
+        .single();
+      if (error) throw error;
       setVehicles((p) => p.map((v) => (v.id === vehicle.id ? updated : v)));
       toast({ title: drv ? `Assigned ${drv.full_name}` : "Driver unassigned" });
     } catch {
@@ -182,10 +215,16 @@ export default function BusinessDashboard() {
   const toggleMaintenance = async (vehicle) => {
     const next = vehicle.status === "in_maintenance" ? "active" : "in_maintenance";
     try {
-      const updated = await base44.entities.FleetVehicle.update(vehicle.id, {
-        status: next,
-        last_maintenance_date: next === "in_maintenance" ? new Date().toISOString() : vehicle.last_maintenance_date,
-      });
+      const { data: updated, error } = await supabase
+        .from("fleet_vehicles")
+        .update({
+          status: next,
+          last_maintenance_date: next === "in_maintenance" ? new Date().toISOString() : vehicle.last_maintenance_date,
+        })
+        .eq("id", vehicle.id)
+        .select()
+        .single();
+      if (error) throw error;
       setVehicles((p) => p.map((v) => (v.id === vehicle.id ? updated : v)));
       toast({ title: next === "in_maintenance" ? "Marked for maintenance" : "Back in service" });
     } catch {
@@ -270,7 +309,7 @@ export default function BusinessDashboard() {
     ) },
     { key: "status", header: "Status", render: (j) => <StatusBadge status={j.status} /> },
     { key: "accepted_price", header: "Amount", sortable: true, render: (j) => <span className="font-semibold text-primary">{formatMoney(j.accepted_price || j.budget)}</span> },
-    { key: "created_date", header: "Date", sortable: true, render: (j) => <span className="text-xs text-muted-foreground">{formatDate(j.created_date)}</span> },
+    { key: "created_at", header: "Date", sortable: true, render: (j) => <span className="text-xs text-muted-foreground">{formatDate(j.created_at)}</span> },
   ];
 
   return (

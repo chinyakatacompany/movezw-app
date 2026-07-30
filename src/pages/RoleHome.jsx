@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { Loader2 } from "lucide-react";
 
 export default function RoleHome() {
@@ -16,13 +16,15 @@ export default function RoleHome() {
       if (!user?.id) { setChecking(false); return; }
       if (user.role === "admin") { setChecking(false); return; }
       try {
-        const [profiles, businesses] = await Promise.all([
-          base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1).catch(() => []),
-          base44.entities.Business.filter({ owner_id: user.id }, "-created_date", 1).catch(() => []),
+        const [{ data: profiles, error: profileErr }, { data: businesses, error: businessErr }] = await Promise.all([
+          supabase.from("driver_profiles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+          supabase.from("businesses").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }).limit(1),
         ]);
+        if (profileErr) console.error("Failed to load driver profile:", profileErr);
+        if (businessErr) console.error("Failed to load business account:", businessErr);
         if (!active) return;
-        setProfile(profiles[0] || null);
-        setBusiness(businesses[0] || null);
+        setProfile(profiles?.[0] || null);
+        setBusiness(businesses?.[0] || null);
       } catch (_) {}
       if (active) setChecking(false);
     }

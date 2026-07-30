@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, Send, Image as ImageIcon, Loader2, CheckCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { createNotification } from "@/lib/movezw";
 
 function formatTime(d) {
   if (!d) return "";
@@ -29,34 +30,36 @@ export default function Chat() {
 
   const load = async () => {
     try {
-      const conv = await base44.entities.Conversation.get(id);
+      const { data: conv, error: convErr } = await supabase.from("conversations").select("*").eq("id", id).single();
+      if (convErr) throw convErr;
       setConversation(conv);
-      const msgs = await base44.entities.Message.filter({ conversation_id: id }, "created_date", 500);
-      setMessages(msgs);
+      const { data: msgs, error: msgErr } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", id)
+        .order("created_at", { ascending: true })
+        .limit(500);
+      if (msgErr) throw msgErr;
+      setMessages(msgs || []);
     } catch (e) {
-      /* ignore */
+      console.error("Failed to load conversation:", e);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     load();
-    const unsubMsg = base44.entities.Message.subscribe((event) => {
-      if (event?.data?.conversation_id === id) {
-        load();
-      } else if (event?.type === "create" || event?.type === "update") {
-        // refresh on any new message (filter re-checks)
-        load();
-      }
-    });
-    const unsubConv = base44.entities.Conversation.subscribe((event) => {
-      if (event?.data?.id === id) {
-        setConversation((prev) => ({ ...prev, ...event.data }));
-        const t = event.data.typing_at ? new Date(event.data.typing_at).getTime() : 0;
-        setOtherTyping(event.data.typing_user_id && event.data.typing_user_id !== user.id && Date.now() - t < 4000);
-      }
-    });
-    return () => { unsubMsg?.(); unsubConv?.(); };
+    const channel = supabase
+      .channel(`chat-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversations", filter: `id=eq.${id}` }, (payload) => {
+        const data = payload.new;
+        setConversation((prev) => ({ ...prev, ...data }));
+        const t = data.typing_at ? new Date(data.typing_at).getTime() : 0;
+        setOtherTyping(data.typing_user_id && data.typing_user_id !== user.id && Date.now() - t < 4000);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line
   }, [id]);
 
@@ -66,7 +69,7 @@ export default function Chat() {
     const toRead = messages.filter((m) => m.sender_id !== user.id && !m.is_read);
     if (toRead.length === 0) return;
     setMarkingRead(true);
-    Promise.all(toRead.map((m) => base44.entities.Message.update(m.id, { is_read: true })))
+    Promise.all(toRead.map((m) => supabase.from("messages").update({ is_read: true }).eq("id", m.id)))
       .catch(() => {})
       .finally(() => setMarkingRead(false));
   }, [messages, user?.id, loading]);
@@ -76,10 +79,11 @@ export default function Chat() {
   }, [messages.length, otherTyping]);
 
   const sendTyping = () => {
-    base44.entities.Conversation.update(id, {
-      typing_user_id: user.id,
-      typing_at: new Date().toISOString(),
-    }).catch(() => {});
+    supabase
+      .from("conversations")
+      .update({ typing_user_id: user.id, typing_at: new Date().toISOString() })
+      .eq("id", id)
+      .then(() => {});
   };
 
   const handleTextChange = (v) => {
@@ -95,33 +99,24 @@ export default function Chat() {
     if (!body || sending) return;
     setSending(true);
     try {
-      const msg = await base44.entities.Message.create({
-        conversation_id: id,
-        sender_id: user.id,
-        text: body,
-        is_read: false,
-      });
-      await base44.entities.Conversation.update(id, {
-        last_message: body,
-        last_message_at: new Date().toISOString(),
-        typing_user_id: "",
-        typing_at: null,
-      });
+      const { data: msg, error } = await supabase
+        .from("messages")
+        .insert({ conversation_id: id, sender_id: user.id, text: body, is_read: false })
+        .select()
+        .single();
+      if (error) throw error;
+      await supabase
+        .from("conversations")
+        .update({ last_message: body, last_message_at: new Date().toISOString(), typing_user_id: null, typing_at: null })
+        .eq("id", id);
       setMessages((prev) => [...prev, msg]);
       setText("");
       setTyping(false);
       // notify the other party
       const recipient = conversation.driver_id === user.id ? conversation.customer_id : conversation.driver_id;
-      const otherName = conversation.driver_id === user.id ? conversation.customer_name : conversation.driver_name;
       const me = user.full_name || "Someone";
       try {
-        await base44.entities.Notification.create({
-          user_id: recipient,
-          type: "admin",
-          title: `New message from ${me}`,
-          message: body,
-          link: `/chat/${id}`,
-        });
+        await createNotification(recipient, "admin", `New message from ${me}`, body, `/chat/${id}`);
       } catch (_) {}
     } catch (err) {
       toast({ title: "Could not send", description: err.message, variant: "destructive" });
@@ -134,27 +129,24 @@ export default function Chat() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const msg = await base44.entities.Message.create({
-        conversation_id: id,
-        sender_id: user.id,
-        image_url: file_url,
-        is_read: false,
-      });
-      await base44.entities.Conversation.update(id, {
-        last_message: "📷 Photo",
-        last_message_at: new Date().toISOString(),
-      });
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+      const { error: uploadErr } = await supabase.storage.from("documents").upload(fileName, file);
+      if (uploadErr) throw uploadErr;
+      const { data: pub } = supabase.storage.from("documents").getPublicUrl(fileName);
+      const { data: msg, error } = await supabase
+        .from("messages")
+        .insert({ conversation_id: id, sender_id: user.id, image_url: pub.publicUrl, is_read: false })
+        .select()
+        .single();
+      if (error) throw error;
+      await supabase
+        .from("conversations")
+        .update({ last_message: "📷 Photo", last_message_at: new Date().toISOString() })
+        .eq("id", id);
       setMessages((prev) => [...prev, msg]);
       const recipient = conversation.driver_id === user.id ? conversation.customer_id : conversation.driver_id;
       try {
-        await base44.entities.Notification.create({
-          user_id: recipient,
-          type: "admin",
-          title: `New photo from ${user.full_name || "Someone"}`,
-          message: "📷 Photo",
-          link: `/chat/${id}`,
-        });
+        await createNotification(recipient, "admin", `New photo from ${user.full_name || "Someone"}`, "📷 Photo", `/chat/${id}`);
       } catch (_) {}
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -195,13 +187,13 @@ export default function Chat() {
           {messages.map((m, idx) => {
             const mine = m.sender_id === user.id;
             const prev = messages[idx - 1];
-            const showDate = !prev || new Date(prev.created_date).toDateString() !== new Date(m.created_date).toDateString();
+            const showDate = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
             return (
               <React.Fragment key={m.id}>
                 {showDate && (
                   <div className="text-center my-3">
                     <span className="text-[11px] text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                      {new Date(m.created_date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                      {new Date(m.created_at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
                     </span>
                   </div>
                 )}
@@ -214,7 +206,7 @@ export default function Chat() {
                     )}
                     {m.text && <p className="text-sm whitespace-pre-wrap break-words">{m.text}</p>}
                     <div className={`flex items-center justify-end gap-1 mt-0.5 ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                      <span className="text-[10px]">{formatTime(m.created_date)}</span>
+                      <span className="text-[10px]">{formatTime(m.created_at)}</span>
                       {mine && (m.is_read ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />)}
                     </div>
                   </div>

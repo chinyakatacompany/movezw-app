@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Loader2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
@@ -11,10 +11,16 @@ export default function DriverHistory() {
 
   useEffect(() => {
     if (!user?.id) return;
-    base44.entities.TransportRequest
-      .filter({ accepted_driver_id: user.id }, "-created_date", 100)
-      .then(setJobs)
-      .catch(() => setJobs([]));
+    supabase
+      .from("transport_requests")
+      .select("*")
+      .eq("accepted_driver_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (error) console.error("Failed to load job history:", error);
+        setJobs(data || []);
+      });
   }, [user?.id]);
 
   return (

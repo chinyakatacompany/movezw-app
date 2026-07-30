@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Plus, MapPin, Calendar, Truck, X, Loader2, Package, Check, Repeat, ArrowRight } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
@@ -50,21 +50,26 @@ export default function DriverReturnLoads() {
   const [form, setForm] = useState({ origin: "", destination: "", departure_date: "", vehicle_type: "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
 
   const loadAll = async () => {
-    const [myLoads, myBookings] = await Promise.all([
-      base44.entities.ReturnLoad.filter({ driver_id: user.id }, "-created_date", 200).catch(() => []),
-      base44.entities.ReturnLoadBooking.filter({ driver_id: user.id }, "-created_date", 200).catch(() => []),
+    const [{ data: myLoads }, { data: myBookings }] = await Promise.all([
+      supabase.from("return_loads").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(200),
+      supabase.from("return_load_bookings").select("*").eq("driver_id", user.id).order("created_at", { ascending: false }).limit(200),
     ]);
-    setLoads(myLoads);
-    setBookings(myBookings);
+    setLoads(myLoads || []);
+    setBookings(myBookings || []);
   };
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const profiles = await base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1).catch(() => []);
+        const { data: profiles } = await supabase
+          .from("driver_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
         if (!active) return;
-        const p = profiles[0] || null;
+        const p = profiles?.[0] || null;
         setProfile(p);
         if (p) setForm((f) => ({ ...f, vehicle_type: p.vehicle_type || "Pickup" }));
         await loadAll();
@@ -82,7 +87,7 @@ export default function DriverReturnLoads() {
     if (!form.origin || !form.destination || !form.departure_date || !form.available_capacity_kg || !form.price) return;
     setSaving(true);
     try {
-      await base44.entities.ReturnLoad.create({
+      const { error } = await supabase.from("return_loads").insert({
         driver_id: user.id,
         driver_profile_id: profile?.id || undefined,
         driver_name: profile?.full_name || user.full_name || "Driver",
@@ -97,6 +102,7 @@ export default function DriverReturnLoads() {
         cargo_notes: form.cargo_notes || undefined,
         status: "open",
       });
+      if (error) throw error;
       setShowCreate(false);
       setForm({ origin: "", destination: "", departure_date: "", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
       await loadAll();
@@ -113,18 +119,20 @@ export default function DriverReturnLoads() {
     if (!load) return;
     try {
       const others = bookings.filter((b) => b.return_load_id === load.id && b.status === "pending" && b.id !== booking.id);
-      await base44.entities.ReturnLoadBooking.update(booking.id, { status: "accepted" });
-      await base44.entities.ReturnLoad.update(load.id, {
-        status: "booked",
-        accepted_booking_id: booking.id,
-        accepted_customer_id: booking.customer_id,
-        accepted_customer_name: booking.customer_name,
-      });
+      const { error: bookErr } = await supabase.from("return_load_bookings").update({ status: "accepted" }).eq("id", booking.id);
+      if (bookErr) throw bookErr;
+      const { error: loadErr } = await supabase
+        .from("return_loads")
+        .update({
+          status: "booked",
+          accepted_booking_id: booking.id,
+          accepted_customer_id: booking.customer_id,
+          accepted_customer_name: booking.customer_name,
+        })
+        .eq("id", load.id);
+      if (loadErr) throw loadErr;
       if (others.length) {
-        await base44.entities.ReturnLoadBooking.updateMany(
-          { return_load_id: load.id, status: "pending" },
-          { $set: { status: "rejected" } }
-        );
+        await supabase.from("return_load_bookings").update({ status: "rejected" }).eq("return_load_id", load.id).eq("status", "pending");
         others.forEach((b) =>
           createNotification(b.customer_id, "offer_rejected", "Return load booking declined", `Your booking for ${load.origin} → ${load.destination} was declined.`, "/return-loads")
         );
@@ -140,7 +148,8 @@ export default function DriverReturnLoads() {
   const rejectBooking = async (booking) => {
     const load = loads.find((l) => l.id === booking.return_load_id);
     try {
-      await base44.entities.ReturnLoadBooking.update(booking.id, { status: "rejected" });
+      const { error } = await supabase.from("return_load_bookings").update({ status: "rejected" }).eq("id", booking.id);
+      if (error) throw error;
       if (load) {
         await createNotification(booking.customer_id, "offer_rejected", "Return load booking declined", `Your booking for ${load.origin} → ${load.destination} was declined.`, "/return-loads");
       }
@@ -153,7 +162,8 @@ export default function DriverReturnLoads() {
 
   const closeLoad = async (load) => {
     try {
-      await base44.entities.ReturnLoad.update(load.id, { status: "closed" });
+      const { error } = await supabase.from("return_loads").update({ status: "closed" }).eq("id", load.id);
+      if (error) throw error;
       await loadAll();
       toast({ title: "Listing closed" });
     } catch {

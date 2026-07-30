@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Clock } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
-import { processJobCompletion, chargeCommissionOnCollection } from "@/lib/payments";
+import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 
@@ -28,18 +28,32 @@ export default function DriverJobDetail() {
   const [updating, setUpdating] = useState(false);
 
   const load = async () => {
-    const [req, prof, offers] = await Promise.all([
-      base44.entities.TransportRequest.get(id),
-      base44.entities.DriverProfile.filter({ user_id: user.id }, "-created_date", 1),
-      base44.entities.Offer.filter({ request_id: id, driver_id: user.id }, "-created_date", 1),
+    const [{ data: req, error: reqErr }, { data: prof }, { data: offers }] = await Promise.all([
+      supabase.from("transport_requests").select("*").eq("id", id).single(),
+      supabase.from("driver_profiles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+      supabase.from("offers").select("*").eq("request_id", id).eq("driver_id", user.id).order("created_at", { ascending: false }).limit(1),
     ]);
-    setRequest(req);
-    setProfile(prof[0] || null);
-    setMyOffer(offers[0] || null);
+    if (reqErr) console.error("Failed to load request:", reqErr);
+    setRequest(req || null);
+    setProfile(prof?.[0] || null);
+    setMyOffer(offers?.[0] || null);
     setLoading(false);
   };
 
   useEffect(() => { if (user?.id) load(); /* eslint-disable-next-line */ }, [id, user?.id]);
+
+  // Live-refresh this page the moment the customer accepts/rejects an offer
+  // on this job, so the driver sees the accepted state without a manual reload.
+  useEffect(() => {
+    if (!id || !user?.id) return;
+    const channel = supabase
+      .channel(`driver-job-${id}-${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "transport_requests", filter: `id=eq.${id}` }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "offers", filter: `request_id=eq.${id}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    /* eslint-disable-next-line */
+  }, [id, user?.id]);
 
   const submitQuote = async () => {
     if (!price || Number(price) <= 0) {
@@ -48,7 +62,18 @@ export default function DriverJobDetail() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.Offer.create({
+      const [wallet, cfg] = await Promise.all([ensureWallet(user.id), getCommissionConfig()]);
+      const likelyCommission = Math.round(Number(price) * (cfg.rate ?? COMMISSION_RATE) * 100) / 100;
+      if ((wallet.balance || 0) < likelyCommission) {
+        toast({
+          title: "Wallet balance too low",
+          description: `This quote needs a commission of ${formatMoney(likelyCommission)} when you collect the cargo. Top up your wallet before quoting.`,
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+      const { error } = await supabase.from("offers").insert({
         request_id: request.id,
         driver_id: user.id,
         driver_profile_id: profile.id,
@@ -63,6 +88,7 @@ export default function DriverJobDetail() {
         note,
         status: "pending",
       });
+      if (error) throw error;
       await createNotification(request.customer_id, "new_offer", "New offer received 💬", `A driver quoted ${formatMoney(price)} for your ${request.cargo_type} request.`, `/customer/request/${request.id}`);
       toast({ title: "Quote submitted!", description: "We'll notify you when the customer responds." });
       load();
@@ -98,9 +124,14 @@ export default function DriverJobDetail() {
           return;
         }
       }
-      await base44.entities.TransportRequest.update(request.id, { status: newStatus });
+      const { error: statusErr } = await supabase.from("transport_requests").update({ status: newStatus }).eq("id", request.id);
+      if (statusErr) throw statusErr;
       if (newStatus === "completed") {
-        await base44.entities.DriverProfile.update(profile.id, { completed_jobs: (profile.completed_jobs || 0) + 1 });
+        const { error: profErr } = await supabase
+          .from("driver_profiles")
+          .update({ completed_jobs: (profile.completed_jobs || 0) + 1 })
+          .eq("id", profile.id);
+        if (profErr) console.error("Failed to update completed_jobs:", profErr);
         // Future-ready payment: credit driver earnings, deduct platform commission, generate invoice.
         try {
           await processJobCompletion({ driverId: user.id, request, acceptedPrice: request.accepted_price });
@@ -142,7 +173,7 @@ export default function DriverJobDetail() {
         <h1 className="text-xl font-bold">{request.cargo_type}</h1>
         <StatusBadge status={request.status} />
       </div>
-      <p className="text-xs text-muted-foreground -mt-3">{isMyJob ? `${request.customer_name || "Customer"}` : "New request"} · {timeAgo(request.created_date)}</p>
+      <p className="text-xs text-muted-foreground -mt-3">{isMyJob ? `${request.customer_name || "Customer"}` : "New request"} · {timeAgo(request.created_at)}</p>
 
       {/* Route */}
       <div className="bg-white rounded-2xl border border-border p-4">

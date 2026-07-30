@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, Receipt, Loader2, Download, CheckCircle2, Clock, Banknote } from "lucide-react";
 import { formatMoney, formatDate, EmptyState } from "@/lib/movezw";
@@ -21,13 +21,12 @@ export default function PaymentHistory() {
   useEffect(() => {
     if (!user?.id) return;
     const isDriver = user.role === "driver";
-    const filter = isDriver
-      ? { accepted_driver_id: user.id, status: { $in: ["delivered", "completed"] } }
-      : { customer_id: user.id, status: { $in: ["delivered", "completed"] } };
-    base44.entities.TransportRequest.filter(filter, "-updated_date", 100)
-      .then((r) => setPayments(r))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let query = supabase.from("transport_requests").select("*").in("status", ["delivered", "completed"]).order("updated_at", { ascending: false }).limit(100);
+    query = isDriver ? query.eq("accepted_driver_id", user.id) : query.eq("customer_id", user.id);
+    query.then(({ data, error }) => {
+      if (error) console.error("Failed to load payment history:", error);
+      setPayments(data || []);
+    }).finally(() => setLoading(false));
   }, [user?.id]);
 
   const total = payments.reduce((s, p) => s + (p.accepted_price || 0), 0);
@@ -71,7 +70,7 @@ export default function PaymentHistory() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{p.pickup_location} → {p.destination}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{invNo} · {formatDate(p.updated_date)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{invNo} · {formatDate(p.updated_at)}</p>
                   </div>
                   <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border shrink-0", ps.cls)}>
                     <PsIcon className="w-3 h-3" /> {ps.label}
