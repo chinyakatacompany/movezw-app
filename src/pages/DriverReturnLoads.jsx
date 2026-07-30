@@ -6,6 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import DataTable from "@/components/shared/DataTable";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
 import { EmptyState, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDate, createNotification } from "@/lib/movezw";
+import { notifyMatchingCustomersForReturnLoad } from "@/lib/matching";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +104,11 @@ export default function DriverReturnLoads() {
         status: "open",
       });
       if (error) throw error;
+      try {
+        await notifyMatchingCustomersForReturnLoad({ origin: form.origin, destination: form.destination, price: Number(form.price) });
+      } catch (e) {
+        console.error("Failed to notify matching customers:", e);
+      }
       setShowCreate(false);
       setForm({ origin: "", destination: "", departure_date: "", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
       await loadAll();

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import { CARGO_TYPES } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest } from "@/lib/matching";
+import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +58,7 @@ export default function CreateRequest() {
       if (error) throw error;
 
       try { await notifyMatchingDriversForRequest(data); } catch (e) { console.error("Failed to notify drivers:", e); }
+      try { await notifyMatchingReturnLoadDriversForRequest(data); } catch (e) { console.error("Failed to notify return-load drivers:", e); }
 
       toast({ title: "Request posted", description: "Drivers nearby will see your request." });
       navigate(`/customer/request/${data.id}`);

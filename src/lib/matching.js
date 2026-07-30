@@ -1,5 +1,5 @@
 import { supabase } from "@/api/supabaseClient";
-import { createNotification } from "@/lib/movezw";
+import { createNotification, formatMoney } from "@/lib/movezw";
 
 export const AVAILABILITY = {
   online: "online",
@@ -107,6 +107,74 @@ export async function notifyMatchingDriversForRequest(request, limit = 10) {
         "job_assigned",
         "New job match nearby",
         `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
+        `/driver/job/${request.id}`
+      )
+    )
+  );
+  return matched.length;
+}
+
+// Loose place-name match — same substring-overlap approach as the driver
+// location scoring above, applied to both ends of a route.
+function placesMatch(a, b) {
+  if (!a || !b) return false;
+  const x = a.toLowerCase().trim();
+  const y = b.toLowerCase().trim();
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+function routesMatch(originA, destA, originB, destB) {
+  return placesMatch(originA, originB) && placesMatch(destA, destB);
+}
+
+// When a driver lists empty return-trip space, notify customers who already
+// have an open request heading the same way — they may prefer the driver's
+// return-load price to waiting for regular offers.
+export async function notifyMatchingCustomersForReturnLoad(load) {
+  const { data: requests, error } = await supabase
+    .from("transport_requests")
+    .select("*")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) console.error("Failed to load requests for return-load matching:", error);
+  const matched = (requests || []).filter((r) =>
+    routesMatch(load.origin, load.destination, r.pickup_location, r.destination)
+  );
+  await Promise.all(
+    matched.map((r) =>
+      createNotification(
+        r.customer_id,
+        "return_load_match",
+        "Return-trip space available 🚚",
+        `A driver has space ${load.origin} → ${load.destination} for ${formatMoney(load.price)} — could suit your ${r.cargo_type} request.`,
+        "/return-loads"
+      )
+    )
+  );
+  return matched.length;
+}
+
+// When a customer posts a new request, notify drivers who already listed
+// empty return-trip space heading the same way.
+export async function notifyMatchingReturnLoadDriversForRequest(request) {
+  const { data: loads, error } = await supabase
+    .from("return_loads")
+    .select("*")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) console.error("Failed to load return loads for request matching:", error);
+  const matched = (loads || []).filter((l) =>
+    routesMatch(l.origin, l.destination, request.pickup_location, request.destination)
+  );
+  await Promise.all(
+    matched.map((l) =>
+      createNotification(
+        l.driver_id,
+        "return_load_match",
+        "Matching customer request 📦",
+        `A customer needs ${request.cargo_type} moved ${request.pickup_location} → ${request.destination} — matches your return trip.`,
         `/driver/job/${request.id}`
       )
     )

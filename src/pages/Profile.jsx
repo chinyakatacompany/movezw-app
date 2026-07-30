@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Profile({ role }) {
@@ -80,6 +80,20 @@ export default function Profile({ role }) {
         <button onClick={() => navigate("/vehicle-management")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
           <Car className="w-5 h-5 text-primary" />
           <span className="text-sm font-medium flex-1 text-left">Manage vehicle</span>
+          <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        </button>
+      )}
+
+      <button onClick={() => navigate(role === "driver" ? "/driver/history" : "/customer/history")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+        <History className="w-5 h-5 text-primary" />
+        <span className="text-sm font-medium flex-1 text-left">Trip history</span>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </button>
+
+      {role === "driver" && (
+        <button onClick={() => navigate("/return-loads/manage")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+          <Repeat className="w-5 h-5 text-primary" />
+          <span className="text-sm font-medium flex-1 text-left">My return loads</span>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       )}

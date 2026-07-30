@@ -4,7 +4,8 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Plus, Package, CheckCircle2, Truck, ArrowRight } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
-import { EmptyState } from "@/lib/movezw";
+import { EmptyState, STATUS_FLOW, STATUS_LABELS } from "@/lib/movezw";
+import { cn } from "@/lib/utils";
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -30,7 +31,8 @@ export default function CustomerDashboard() {
   }, [user?.id]);
 
   const active = (requests || []).filter((x) => !["completed", "cancelled"].includes(x.status));
-  const past = (requests || []).filter((x) => ["completed", "cancelled"].includes(x.status));
+  const inTransit = active.find((x) => STATUS_FLOW.includes(x.status));
+  const transitStep = inTransit ? STATUS_FLOW.indexOf(inTransit.status) : -1;
 
   return (
     <div className="p-4 space-y-6">
@@ -61,6 +63,22 @@ export default function CustomerDashboard() {
         New transport request
       </Link>
 
+      {inTransit && (
+        <Link to={`/customer/request/${inTransit.id}`} className="block bg-white rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-semibold flex items-center gap-1.5"><Truck className="w-4 h-4 text-primary" /> Trip progress</h2>
+            <span className="text-xs text-primary font-medium inline-flex items-center gap-1">Track <ArrowRight className="w-3 h-3" /></span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">{inTransit.cargo_type} · {inTransit.pickup_location} → {inTransit.destination}</p>
+          <div className="flex gap-1 mb-2">
+            {STATUS_FLOW.map((step, i) => (
+              <span key={step} className={cn("h-1.5 flex-1 rounded-full", i <= transitStep ? "bg-primary" : "bg-muted")} />
+            ))}
+          </div>
+          <p className="text-xs font-medium text-foreground">{STATUS_LABELS[inTransit.status]}</p>
+        </Link>
+      )}
+
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold">Active deliveries</h2>
@@ -86,17 +104,6 @@ export default function CustomerDashboard() {
           </div>
         )}
       </div>
-
-      {past.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3">Recent trips</h2>
-          <div className="space-y-3">
-            {past.slice(0, 3).map((r) => (
-              <RequestCard key={r.id} request={r} to={`/customer/request/${r.id}`} />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

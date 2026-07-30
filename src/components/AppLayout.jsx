@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 const customerNav = [
   { to: "/customer", label: "Home", icon: Home },
   { to: "/customer/new", label: "Request", icon: Plus },
-  { to: "/return-loads", label: "Loads", icon: Repeat },
-  { to: "/customer/history", label: "Trips", icon: Truck },
   { to: "/customer/profile", label: "Me", icon: UserIcon },
 ];
 
