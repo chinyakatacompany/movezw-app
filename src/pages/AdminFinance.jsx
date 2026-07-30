@@ -173,12 +173,12 @@ export default function AdminFinance() {
           </div>
 
           <div className="bg-card rounded-2xl border border-border p-5 card-shadow">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-base font-semibold">Commission over time</h2>
                 <p className="text-xs text-muted-foreground">Realised platform commission per day (last 30 days)</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => downloadCSV("movezw-finance.csv", ledgerCols, ledger)} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 h-8 rounded-lg border border-border hover:bg-muted">
                   <Download className="w-3.5 h-3.5" /> CSV
                 </button>
