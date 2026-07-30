@@ -94,13 +94,11 @@ export default function Register() {
             <p className="text-[11px] text-muted-foreground">I offer transport</p>
             {accountType === "driver" && <Check className="w-4 h-4 text-primary absolute top-2 right-2" />}
           </button>
-          <button type="button" onClick={() => setAccountType("business")}
-            className={cn("relative rounded-xl border-2 p-3 text-left transition-all",
-              accountType === "business" ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40")}>
-            <Building2 className={cn("w-5 h-5 mb-1.5", accountType === "business" ? "text-primary" : "text-muted-foreground")} />
+          <button type="button" disabled title="Business accounts are coming soon"
+            className="relative rounded-xl border-2 p-3 text-left transition-all border-border opacity-50 cursor-not-allowed">
+            <Building2 className="w-5 h-5 mb-1.5 text-muted-foreground" />
             <p className="text-sm font-semibold">Business</p>
-            <p className="text-[11px] text-muted-foreground">Manage a fleet</p>
-            {accountType === "business" && <Check className="w-4 h-4 text-primary absolute top-2 right-2" />}
+            <p className="text-[11px] text-muted-foreground">Coming soon</p>
           </button>
         </div>
       </div>

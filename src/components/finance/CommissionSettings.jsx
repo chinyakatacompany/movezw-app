@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { Settings, Loader2, ShieldCheck } from "lucide-react";
+import { Settings, Loader2, ShieldCheck, PauseCircle } from "lucide-react";
 import { updateCommissionSettings } from "@/lib/payments";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/use-toast";
 
 export default function CommissionSettings({ cfg, adminId }) {
   const [rate, setRate] = useState("");
   const [threshold, setThreshold] = useState("");
   const [policy, setPolicy] = useState("");
+  const [walletPaused, setWalletPaused] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -18,13 +20,14 @@ export default function CommissionSettings({ cfg, adminId }) {
     setRate(String(Math.round((cfg.rate ?? 0.1) * 100)));
     setThreshold(String(cfg.low_balance_threshold ?? 5));
     setPolicy(cfg.cancellation_policy_note || "");
+    setWalletPaused(Boolean(cfg.wallet_paused));
   }, [cfg]);
 
   const save = async () => {
     setSaving(true);
     try {
       await updateCommissionSettings(
-        { rate: Number(rate) / 100, lowBalanceThreshold: Number(threshold), policyNote: policy },
+        { rate: Number(rate) / 100, lowBalanceThreshold: Number(threshold), policyNote: policy, walletPaused },
         { id: adminId }
       );
       toast({ title: "Commission settings saved" });
@@ -37,6 +40,21 @@ export default function CommissionSettings({ cfg, adminId }) {
 
   return (
     <div className="space-y-5">
+      <div className={`rounded-2xl border p-5 card-shadow ${walletPaused ? "bg-amber-50 border-amber-200" : "bg-card border-border"}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <PauseCircle className={`w-5 h-5 shrink-0 mt-0.5 ${walletPaused ? "text-amber-600" : "text-muted-foreground"}`} />
+            <div>
+              <h2 className="text-base font-semibold">Pause wallet & commission (testing mode)</h2>
+              <p className="text-xs text-muted-foreground mt-1 max-w-md">
+                While paused, drivers can quote and collect cargo without needing wallet balance, and no commission is deducted. Wallet top-ups/payouts still work normally. Turn this off when real payments should start counting.
+              </p>
+            </div>
+          </div>
+          <Switch checked={walletPaused} onCheckedChange={setWalletPaused} />
+        </div>
+      </div>
+
       <div className="bg-card rounded-2xl border border-border p-5 card-shadow">
         <div className="flex items-center gap-2 mb-4">
           <Settings className="w-4 h-4 text-primary" />

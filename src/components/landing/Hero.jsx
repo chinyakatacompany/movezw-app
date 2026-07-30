@@ -21,10 +21,8 @@ export default function Hero() {
             Move Anything.{" "}
             <span className="text-primary">Anywhere in Zimbabwe.</span>
           </h1>
-          <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0 bg-[hsl(var(--destructive-foreground))]">Quickly find trusted, verified transport providers for your goods. Post a request in minutes, compare offers from local drivers, and track your delivery every step of the way.
-
-
-
+          <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
+            Quickly find trusted, verified transport providers for your goods. Post a request in minutes, compare offers from local drivers, and track your delivery every step of the way.
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">

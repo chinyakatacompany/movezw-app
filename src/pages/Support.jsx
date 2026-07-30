@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2, LifeBuoy, ChevronDown, Send, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, LifeBuoy, ChevronDown, Send, CheckCircle2, Phone, Mail } from "lucide-react";
 
 const FAQS = [
   { q: "How do I track my delivery?", a: "Open the request from your Trips list — its status updates live from pickup through to delivery." },
@@ -30,7 +30,7 @@ export default function Support() {
     // No backend email service is connected yet, so this opens the user's own
     // mail app with the message pre-filled rather than sending silently.
     const body = `From: ${user?.full_name || "User"} (${user?.email || "—"})\n\n${message}`;
-    const mailto = `mailto:support@movezw.co.zw?subject=${encodeURIComponent(`Support: ${subject || "MoveZW enquiry"}`)}&body=${encodeURIComponent(body)}`;
+    const mailto = `mailto:movezwsupport@gmail.com?subject=${encodeURIComponent(`Support: ${subject || "MoveZW enquiry"}`)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailto;
     setSent(true);
     setSubject("");
@@ -45,6 +45,17 @@ export default function Support() {
       </button>
       <h1 className="text-2xl font-bold tracking-tight mb-1">Support Center</h1>
       <p className="text-sm text-muted-foreground mb-6">Find quick answers or reach out to our team.</p>
+
+      <div className="bg-white rounded-2xl border border-border divide-y divide-border mb-6">
+        <a href="tel:+263780269976" className="flex items-center gap-3 p-4">
+          <Phone className="w-5 h-5 text-primary shrink-0" />
+          <div><p className="text-xs text-muted-foreground">Call or WhatsApp</p><p className="text-sm font-medium">0780 269 976</p></div>
+        </a>
+        <a href="mailto:movezwsupport@gmail.com" className="flex items-center gap-3 p-4">
+          <Mail className="w-5 h-5 text-primary shrink-0" />
+          <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">movezwsupport@gmail.com</p></div>
+        </a>
+      </div>
 
       <div className="bg-white rounded-2xl border border-border p-4 mb-6">
         <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><LifeBuoy className="w-4 h-4 text-primary" /> Common questions</h2>

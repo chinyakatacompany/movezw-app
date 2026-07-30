@@ -64,7 +64,7 @@ export default function DriverJobDetail() {
     try {
       const [wallet, cfg] = await Promise.all([ensureWallet(user.id), getCommissionConfig()]);
       const likelyCommission = Math.round(Number(price) * (cfg.rate ?? COMMISSION_RATE) * 100) / 100;
-      if ((wallet.balance || 0) < likelyCommission) {
+      if (!cfg.wallet_paused && (wallet.balance || 0) < likelyCommission) {
         toast({
           title: "Wallet balance too low",
           description: `This quote needs a commission of ${formatMoney(likelyCommission)} when you collect the cargo. Top up your wallet before quoting.`,

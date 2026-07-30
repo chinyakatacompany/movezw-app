@@ -44,11 +44,11 @@ export default function LandingFooter() {
             <ul className="space-y-3 text-sm text-background/70">
               <li className="flex items-start gap-2.5">
                 <Mail className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                <span>support@movezw.co.zw</span>
+                <span>movezwsupport@gmail.com</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                <span>+263 86 770 00000</span>
+                <span>0780 269 976</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />

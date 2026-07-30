@@ -50,7 +50,7 @@ const SECTIONS = [
   },
   {
     title: "12. Contact",
-    body: "Questions about these Terms can be sent to support@movezw.co.zw or through the in-app Support Center.",
+    body: "Questions about these Terms can be sent to movezwsupport@gmail.com or through the in-app Support Center.",
   },
 ];
 

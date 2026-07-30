@@ -114,12 +114,13 @@ export async function setCommissionRate(rate, actor) {
   return updated;
 }
 
-export async function updateCommissionSettings({ rate, lowBalanceThreshold, policyNote }, actor) {
+export async function updateCommissionSettings({ rate, lowBalanceThreshold, policyNote, walletPaused }, actor) {
   const cfg = await getCommissionConfig();
   const patch = {};
   if (rate != null && !isNaN(Number(rate))) patch.rate = Math.min(0.5, Math.max(0, Number(rate)));
   if (lowBalanceThreshold != null && !isNaN(Number(lowBalanceThreshold))) patch.low_balance_threshold = Number(lowBalanceThreshold);
   if (policyNote != null) patch.cancellation_policy_note = policyNote;
+  if (walletPaused != null) patch.wallet_paused = Boolean(walletPaused);
   patch.updated_by_id = actor?.id || null;
   let updated = { ...cfg, ...patch };
   if (cfg.id) {
@@ -142,6 +143,7 @@ export async function updateCommissionSettings({ rate, lowBalanceThreshold, poli
 // ---- Charge commission when the driver collects the cargo (job accepted/started) ----
 export async function chargeCommissionOnCollection({ driverId, request, acceptedPrice, actorId }) {
   const cfg = await getCommissionConfig();
+  if (cfg.wallet_paused) return { commission: 0, skipped: true, paused: true };
   const rate = cfg.rate ?? COMMISSION_RATE;
   const price = Number(acceptedPrice || request?.accepted_price || 0);
   const commission = Math.round(price * rate * 100) / 100;

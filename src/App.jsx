@@ -40,9 +40,7 @@ import Terms from '@/pages/Terms';
 import Messages from '@/pages/Messages';
 import Chat from '@/pages/Chat';
 import Wallet from '@/pages/Wallet';
-import BusinessOnboarding from '@/pages/BusinessOnboarding';
-import BusinessDashboard from '@/pages/BusinessDashboard';
-import BusinessLayout from '@/components/BusinessLayout';
+import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 
@@ -138,17 +136,11 @@ const AuthenticatedApp = () => {
         </Route>
       </Route>
 
-      {/* Business / Fleet management area */}
+      {/* Business / Fleet management area — gated off for the testing period */}
       <Route element={
         <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/business/onboarding" element={<BusinessOnboarding />} />
-        <Route element={
-          <RoleGuard allow={["business"]}>
-            <BusinessLayout />
-          </RoleGuard>
-        }>
-          <Route path="/business" element={<BusinessDashboard />} />
-        </Route>
+        <Route path="/business/onboarding" element={<ComingSoon title="Business accounts coming soon" subtitle="Fleet management for businesses isn't available yet during testing." />} />
+        <Route path="/business" element={<ComingSoon title="Business accounts coming soon" subtitle="Fleet management for businesses isn't available yet during testing." />} />
       </Route>
 
       {/* Chat (full-screen, no app shell) */}
