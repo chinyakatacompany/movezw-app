@@ -19,7 +19,7 @@ export default defineConfig({
         // stale job/wallet/chat data from a cache.
         globPatterns: ['**/*.{js,css,html,svg,ico}'],
       },
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'MoveZW',
         short_name: 'MoveZW',
@@ -31,7 +31,9 @@ export default defineConfig({
         theme_color: '#1e2f5e',
         icons: [
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),
