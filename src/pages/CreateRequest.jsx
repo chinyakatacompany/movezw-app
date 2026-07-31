@@ -83,6 +83,7 @@ export default function CreateRequest() {
 
       try { await notifyMatchingDriversForRequest(data); } catch (e) { console.error("Failed to notify drivers:", e); }
       try { await notifyMatchingReturnLoadDriversForRequest(data); } catch (e) { console.error("Failed to notify return-load drivers:", e); }
+      try { await supabase.functions.invoke("notify-drivers-push", { body: { requestId: data.id } }); } catch (e) { console.error("Failed to send push alerts:", e); }
 
       toast({ title: "Request posted", description: "Drivers nearby will see your request." });
       navigate(`/customer/request/${data.id}`);

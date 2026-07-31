@@ -9,6 +9,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
+      injectManifest: {
+        // Precache only the static build output (app shell). Live data
+        // (Supabase requests) always goes over the network — this keeps
+        // the app installable and fast to load without ever serving
+        // stale job/wallet/chat data from a cache.
+        globPatterns: ['**/*.{js,css,html,svg,ico}'],
+      },
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'MoveZW',
@@ -23,14 +33,6 @@ export default defineConfig({
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
           { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
-      },
-      workbox: {
-        // Precache only the static build output (app shell). Live data
-        // (Supabase requests) always goes over the network — this keeps
-        // the app installable and fast to load without ever serving
-        // stale job/wallet/chat data from a cache.
-        globPatterns: ['**/*.{js,css,html,svg,ico}'],
-        navigateFallback: 'index.html',
       },
     }),
   ],

@@ -7,6 +7,7 @@ import RequestCard from "@/components/RequestCard";
 import ShipmentMap from "@/components/ShipmentMap";
 import { EmptyState, formatMoney, StarRating, STATUS_LABELS, shipmentPosition, STATUS_COLORS } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
+import NotificationSettings from "@/components/NotificationSettings";
 import { AVAILABILITY_LABELS } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -150,6 +151,8 @@ export default function DriverDashboard() {
         </div>
         <AvailabilityToggle value={profile.availability_status} onChange={updateAvailability} disabled={toggling} />
       </div>
+
+      <NotificationSettings profile={profile} onProfileChange={setProfile} />
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl border border-border p-3 text-center">
