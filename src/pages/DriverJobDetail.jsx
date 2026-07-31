@@ -101,23 +101,28 @@ export default function DriverJobDetail() {
         setSubmitting(false);
         return;
       }
-      const { error } = await supabase.from("offers").insert({
-        request_id: request.id,
-        driver_id: user.id,
-        driver_profile_id: profile.id,
-        driver_name: profile.full_name || user.full_name,
-        driver_photo_url: profile.profile_picture_url || "",
-        verified: profile.verification_status === "approved",
-        vehicle_type: profile.vehicle_type,
-        driver_rating: profile.rating_avg || 0,
-        completed_jobs: profile.completed_jobs || 0,
-        eta_minutes: eta ? Number(eta) : null,
-        price: Number(price),
-        note,
-        status: "pending",
-      });
+      const { data: newOffer, error } = await supabase
+        .from("offers")
+        .insert({
+          request_id: request.id,
+          driver_id: user.id,
+          driver_profile_id: profile.id,
+          driver_name: profile.full_name || user.full_name,
+          driver_photo_url: profile.profile_picture_url || "",
+          verified: profile.verification_status === "approved",
+          vehicle_type: profile.vehicle_type,
+          driver_rating: profile.rating_avg || 0,
+          completed_jobs: profile.completed_jobs || 0,
+          eta_minutes: eta ? Number(eta) : null,
+          price: Number(price),
+          note,
+          status: "pending",
+        })
+        .select()
+        .single();
       if (error) throw error;
       await createNotification(request.customer_id, "new_offer", "New offer received 💬", `A driver quoted ${formatMoney(price)} for your ${request.cargo_type} request.`, `/customer/request/${request.id}`);
+      try { await supabase.functions.invoke("notify-offer-push", { body: { offerId: newOffer.id } }); } catch (e) { console.error("Failed to send push alert:", e); }
       toast({ title: "Quote submitted!", description: "We'll notify you when the customer responds." });
       load();
     } catch (e) {

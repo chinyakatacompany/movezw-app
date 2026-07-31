@@ -152,7 +152,7 @@ export default function DriverDashboard() {
         <AvailabilityToggle value={profile.availability_status} onChange={updateAvailability} disabled={toggling} />
       </div>
 
-      <NotificationSettings profile={profile} onProfileChange={setProfile} />
+      <NotificationSettings description="Get notified the moment a matching job comes in, even with the app in the background." />
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-2xl border border-border p-3 text-center">

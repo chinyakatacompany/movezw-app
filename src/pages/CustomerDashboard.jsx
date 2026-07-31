@@ -6,6 +6,7 @@ import { Plus, Package, CheckCircle2, Truck, ArrowRight } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState, STATUS_FLOW, STATUS_LABELS } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
+import NotificationSettings from "@/components/NotificationSettings";
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -62,6 +63,8 @@ export default function CustomerDashboard() {
         <Plus className="w-5 h-5" />
         New transport request
       </Link>
+
+      <NotificationSettings description="Get notified the moment a driver quotes your request, even with the app in the background." />
 
       {inTransit && (
         <Link to={`/customer/request/${inTransit.id}`} className="block bg-white rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors">
