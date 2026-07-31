@@ -115,11 +115,13 @@ export default function CreateRequest() {
               onClick={useMyLocation}
               disabled={locating}
               className={cn(
-                "flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-1.5 transition-colors",
-                pickupCoords ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                "flex items-center gap-2 text-sm font-semibold rounded-xl px-3.5 py-2.5 border-2 transition-colors w-full justify-center",
+                pickupCoords
+                  ? "text-emerald-700 bg-emerald-50 border-emerald-300"
+                  : "text-primary bg-primary/10 border-primary/30 hover:bg-primary/15"
               )}
             >
-              {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+              {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
               {locating ? "Getting your location..." : pickupCoords ? "Exact location captured ✓" : "Use my current location"}
             </button>
           </div>

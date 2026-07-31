@@ -182,9 +182,9 @@ export default function RequestDetail() {
                   href={`https://www.openstreetmap.org/?mlat=${request.pickup_lat}&mlon=${request.pickup_lng}#map=17/${request.pickup_lat}/${request.pickup_lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-0.5"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary bg-primary/10 border-2 border-primary/30 rounded-xl px-3 py-2 mt-1.5 hover:bg-primary/15 transition-colors"
                 >
-                  <MapPin className="w-3 h-3" /> View exact location on map
+                  <MapPin className="w-4 h-4" /> View exact location on map
                 </a>
               )}
             </div>
