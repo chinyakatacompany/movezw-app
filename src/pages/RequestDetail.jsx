@@ -60,12 +60,17 @@ export default function RequestDetail() {
       .then(({ data }) => setAlreadyRated((data || []).length > 0));
   }, [request?.id, request?.status, user?.id]);
 
-  const openChat = async () => {
+  // For a pending offer, message that specific driver. Once a driver is
+  // accepted, calling this with no offer messages the accepted driver.
+  const openChat = async (offer) => {
+    const driverId = offer?.driver_id || request.accepted_driver_id;
+    const driverName = offer?.driver_name || acceptedOffer?.driver_name;
+    if (!driverId) return;
     try {
       const conv = await getOrCreateConversation({
         request,
-        driverId: request.accepted_driver_id,
-        driverName: acceptedOffer?.driver_name,
+        driverId,
+        driverName,
         customerName: request.customer_name,
       });
       navigate(`/chat/${conv.id}`);
@@ -204,7 +209,7 @@ export default function RequestDetail() {
                     <Button onClick={() => acceptOffer(o)} disabled={accepting === o.id} className="flex-1 h-11 font-semibold">
                       {accepting === o.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Accepting...</> : "Accept offer"}
                     </Button>
-                    <Button variant="outline" size="icon" className="h-11 w-11" onClick={openChat}>
+                    <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => openChat(o)}>
                       <MessageCircle className="w-4 h-4" />
                     </Button>
                   </div>
@@ -243,7 +248,7 @@ export default function RequestDetail() {
         <div className="bg-white rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-3">Your driver</h2>
           <p className="text-sm font-semibold">{acceptedOffer.driver_name}</p>
-          <Button variant="outline" className="w-full h-11 mt-3" onClick={openChat}>
+          <Button variant="outline" className="w-full h-11 mt-3" onClick={() => openChat()}>
             <MessageCircle className="w-4 h-4 mr-2" /> Message driver
           </Button>
         </div>

@@ -9,7 +9,7 @@ import {
   ArrowLeft, Wallet as WalletIcon, Loader2, ArrowDownLeft, ArrowUpRight,
   Download, Banknote, TrendingUp, Percent, CheckCircle2, Clock, X, AlertTriangle, Plus,
 } from "lucide-react";
-import { PAYMENT_METHODS, formatMoney, formatDate, EmptyState, createNotification } from "@/lib/movezw";
+import { PAYMENT_METHODS, formatMoney, formatDate, EmptyState } from "@/lib/movezw";
 import { ensureWallet, requestPayout, requestTopUp, claimRefund as claimRefundFn, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -89,16 +89,12 @@ export default function Wallet() {
     e.preventDefault();
     setProcessing(true);
     try {
-      const { payout } = await requestPayout({
-        driverId: user.id,
+      await requestPayout({
         amount: payoutAmount,
         method: payoutMethod,
         destination: payoutDest,
       });
-      try {
-        await createNotification(user.id, "admin", "Payout requested", `Your payout of ${formatMoney(payoutAmount)} to ${payoutMethod} is being processed.`, "/wallet");
-      } catch (_) {}
-      toast({ title: "Payout requested", description: `${formatMoney(payoutAmount)} to ${payoutMethod}` });
+      toast({ title: "Payout sent", description: `${formatMoney(payoutAmount)} to ${payoutMethod}` });
       setShowPayout(false);
       setPayoutAmount("");
       setPayoutDest("");
