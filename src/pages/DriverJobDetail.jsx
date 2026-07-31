@@ -12,6 +12,7 @@ import { getOrCreateConversation } from "@/lib/messaging";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import RouteMap from "@/components/RouteMap";
 
 export default function DriverJobDetail() {
   const { id } = useParams();
@@ -27,6 +28,27 @@ export default function DriverJobDetail() {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [driverPos, setDriverPos] = useState(null);
+  const [locatingRoute, setLocatingRoute] = useState(false);
+
+  const showRoute = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Location not supported", description: "Your browser doesn't support GPS location.", variant: "destructive" });
+      return;
+    }
+    setLocatingRoute(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocatingRoute(false);
+      },
+      (err) => {
+        setLocatingRoute(false);
+        toast({ title: "Could not get your location", description: err.message || "Please allow location access and try again.", variant: "destructive" });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
 
   const load = async () => {
     const [{ data: req, error: reqErr }, { data: prof }, { data: offers }] = await Promise.all([
@@ -208,6 +230,26 @@ export default function DriverJobDetail() {
           </div>
         </div>
       </div>
+
+      {/* Route to pickup */}
+      {request.pickup_lat != null && request.pickup_lng != null && (
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Route to pickup</h2>
+            {!driverPos && (
+              <button type="button" onClick={showRoute} disabled={locatingRoute} className="text-xs font-medium text-primary flex items-center gap-1">
+                {locatingRoute && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {locatingRoute ? "Locating..." : "Get directions"}
+              </button>
+            )}
+          </div>
+          {driverPos ? (
+            <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
+          ) : (
+            <p className="text-xs text-muted-foreground">Tap "Get directions" to see the road route from your location to the pickup point.</p>
+          )}
+        </div>
+      )}
 
       {/* Cargo */}
       <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
