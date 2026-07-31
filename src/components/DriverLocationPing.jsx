@@ -2,9 +2,9 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 
-const PING_INTERVAL_MS = 20 * 60 * 1000;
+const PING_INTERVAL_MS = 10 * 60 * 1000;
 
-// Silently refreshes a driver's GPS position every 20 minutes while they're
+// Silently refreshes a driver's GPS position every 10 minutes while they're
 // toggled "Online", overwriting driver_profiles.latitude/longitude in place
 // (no location history kept) so distance-to-job matching stays reasonably
 // current without full live tracking. Uses only the browser's built-in
