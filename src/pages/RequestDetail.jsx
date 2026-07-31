@@ -146,6 +146,7 @@ export default function RequestDetail() {
   if (!request) return <div className="p-8 text-center text-muted-foreground">Request not found.</div>;
 
   const activeStep = STATUS_FLOW.indexOf(request.status);
+  const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const acceptedOffer = offers?.find((o) => o.id === request.accepted_offer_id);
   const pendingOffers = offers?.filter((o) => o.status === "pending") || [];
   const showOffers = request.status === "open";
@@ -267,20 +268,24 @@ export default function RequestDetail() {
         <div className="bg-white rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-3">Your driver</h2>
           <p className="text-sm font-semibold">{acceptedOffer.driver_name}</p>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <Button variant="outline" className="h-11" onClick={() => openChat()}>
-              <MessageCircle className="w-4 h-4 mr-2" /> Message
-            </Button>
-            {driverPhone ? (
-              <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground text-sm font-medium">
-                <Phone className="w-4 h-4 mr-2" /> Call
-              </a>
-            ) : (
-              <Button variant="outline" className="h-11" disabled>
-                <Phone className="w-4 h-4 mr-2" /> Call
+          {enRouteOrLater ? (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <Button variant="outline" className="h-11" onClick={() => openChat()}>
+                <MessageCircle className="w-4 h-4 mr-2" /> Message
               </Button>
-            )}
-          </div>
+              {driverPhone ? (
+                <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground text-sm font-medium">
+                  <Phone className="w-4 h-4 mr-2" /> Call
+                </a>
+              ) : (
+                <Button variant="outline" className="h-11" disabled>
+                  <Phone className="w-4 h-4 mr-2" /> Call
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-2">Contact details will appear here once your driver is on the way to pickup.</p>
+          )}
         </div>
       )}
 

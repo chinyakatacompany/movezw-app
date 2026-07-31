@@ -188,6 +188,7 @@ export default function DriverJobDetail() {
 
   const isMyJob = request.accepted_driver_id === user.id;
   const activeStep = STATUS_FLOW.indexOf(request.status);
+  const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const nextStep = STATUS_FLOW[activeStep + 1];
   const isOpen = request.status === "open";
 
@@ -325,16 +326,20 @@ export default function DriverJobDetail() {
               <p className="text-lg font-bold text-primary">{formatMoney(request.accepted_price)}</p>
             </div>
             <p className="text-xs text-muted-foreground">Payment: {request.payment_status === "cod" ? "Cash on delivery" : request.payment_status}</p>
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
-                <MessageCircle className="w-4 h-4 text-primary" /> Message
-              </button>
-              {customerPhone && (
-                <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
-                  <Phone className="w-4 h-4 text-primary" /> Call
-                </a>
-              )}
-            </div>
+            {enRouteOrLater ? (
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                  <MessageCircle className="w-4 h-4 text-primary" /> Message
+                </button>
+                {customerPhone && (
+                  <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                    <Phone className="w-4 h-4 text-primary" /> Call
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-3">Customer contact details will appear once you mark yourself en route to pickup.</p>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-border p-4">
