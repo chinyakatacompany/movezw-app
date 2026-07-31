@@ -43,6 +43,7 @@ import Wallet from '@/pages/Wallet';
 import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
+import DriverLocationPing from '@/components/DriverLocationPing';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -69,6 +70,8 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
+    <>
+    <DriverLocationPing />
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
@@ -169,6 +172,7 @@ const AuthenticatedApp = () => {
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+    </>
   );
 };
 
