@@ -188,7 +188,6 @@ export const ZW_CITIES = {
   marondera: [-18.1833, 31.4667],
   chipinge: [-20.2333, 32.5833],
   bindura: [-17.3, 31.3],
-  gweru: [-19.45, 29.8],
   "victoria falls": [-25.8389, 28.8089],
 };
 

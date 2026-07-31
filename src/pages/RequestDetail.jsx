@@ -39,8 +39,8 @@ export default function RequestDetail() {
     setLoading(false);
 
     if (req?.accepted_driver_id) {
-      const { data: dp } = await supabase.from("driver_profiles").select("phone").eq("user_id", req.accepted_driver_id).single();
-      setDriverPhone(dp?.phone || null);
+      const { data: phone } = await supabase.rpc("fn_get_trip_contact_phone", { p_request_id: req.id });
+      setDriverPhone(phone || null);
     }
   };
 

@@ -93,7 +93,7 @@ export function findMatchingDrivers(request, drivers) {
 // Best-effort, client-side; designed to move to a backend function later.
 export async function notifyMatchingDriversForRequest(request, limit = 10) {
   const { data: drivers, error } = await supabase
-    .from("driver_profiles")
+    .from("driver_public_profiles")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(200);

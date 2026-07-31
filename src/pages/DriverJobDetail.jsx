@@ -63,8 +63,8 @@ export default function DriverJobDetail() {
     setLoading(false);
 
     if (req?.customer_id) {
-      const { data: customerProfile } = await supabase.from("profiles").select("phone").eq("id", req.customer_id).single();
-      setCustomerPhone(customerProfile?.phone || null);
+      const { data: phone } = await supabase.rpc("fn_get_trip_contact_phone", { p_request_id: req.id });
+      setCustomerPhone(phone || null);
     }
   };
 
