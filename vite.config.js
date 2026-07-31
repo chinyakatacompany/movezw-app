@@ -19,7 +19,7 @@ export default defineConfig({
         // stale job/wallet/chat data from a cache.
         globPatterns: ['**/*.{js,css,html,svg,ico}'],
       },
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'MoveZW',
         short_name: 'MoveZW',
