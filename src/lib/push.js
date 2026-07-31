@@ -21,6 +21,9 @@ export async function subscribeToPush(userId) {
   if (!pushSupported()) {
     throw new Error("Push notifications aren't supported on this browser.");
   }
+  if (!import.meta.env.VITE_VAPID_PUBLIC_KEY) {
+    throw new Error("Push notifications aren't configured yet — missing VITE_VAPID_PUBLIC_KEY. Contact support.");
+  }
   const permission = await Notification.requestPermission();
   if (permission !== "granted") {
     throw new Error("Notification permission was not granted.");
