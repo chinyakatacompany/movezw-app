@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
@@ -173,7 +173,20 @@ export default function RequestDetail() {
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
           </div>
           <div className="flex-1 space-y-3 pb-1">
-            <div><p className="text-[11px] text-muted-foreground">PICKUP</p><p className="text-sm font-medium">{request.pickup_location}</p></div>
+            <div>
+              <p className="text-[11px] text-muted-foreground">PICKUP</p>
+              <p className="text-sm font-medium">{request.pickup_location}</p>
+              {request.pickup_lat != null && request.pickup_lng != null && (
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${request.pickup_lat}&mlon=${request.pickup_lng}#map=17/${request.pickup_lat}/${request.pickup_lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-0.5"
+                >
+                  <MapPin className="w-3 h-3" /> View exact location on map
+                </a>
+              )}
+            </div>
             <div><p className="text-[11px] text-muted-foreground">DESTINATION</p><p className="text-sm font-medium">{request.destination}</p></div>
           </div>
         </div>

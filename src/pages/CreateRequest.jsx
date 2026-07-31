@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import { CARGO_TYPES } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
@@ -28,8 +28,30 @@ export default function CreateRequest() {
   });
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pickupCoords, setPickupCoords] = useState(null);
+  const [locating, setLocating] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Location not supported", description: "Your browser doesn't support GPS location.", variant: "destructive" });
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPickupCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+        toast({ title: "Location captured", description: "Your exact pickup location has been saved." });
+      },
+      (err) => {
+        setLocating(false);
+        toast({ title: "Could not get location", description: err.message || "Please allow location access and try again.", variant: "destructive" });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -39,6 +61,8 @@ export default function CreateRequest() {
         customer_id: user.id,
         customer_name: user.full_name || user.email,
         pickup_location: form.pickup_location,
+        pickup_lat: pickupCoords?.lat ?? null,
+        pickup_lng: pickupCoords?.lng ?? null,
         destination: form.destination,
         cargo_type: form.cargo_type,
         cargo_weight: form.cargo_weight || null,
@@ -86,6 +110,18 @@ export default function CreateRequest() {
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
               <Input id="pickup" placeholder="e.g. Avondale, Harare" value={form.pickup_location} onChange={(e) => set("pickup_location", e.target.value)} className="pl-10" required />
             </div>
+            <button
+              type="button"
+              onClick={useMyLocation}
+              disabled={locating}
+              className={cn(
+                "flex items-center gap-1.5 text-xs font-medium rounded-lg px-2.5 py-1.5 transition-colors",
+                pickupCoords ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+              )}
+            >
+              {locating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LocateFixed className="w-3.5 h-3.5" />}
+              {locating ? "Getting your location..." : pickupCoords ? "Exact location captured ✓" : "Use my current location"}
+            </button>
           </div>
           <div className="space-y-2">
             <Label htmlFor="dest">Destination</Label>
