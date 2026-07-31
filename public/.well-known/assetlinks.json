@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.movezw.app",
+      "sha256_cert_fingerprints": [
+        "AA:7F:21:40:9C:C4:F1:3C:D2:FA:72:17:BA:FA:AF:84:7F:1A:10:D7:E6:CC:DA:C4:E8:D6:0E:D4:82:A5:51:73"
+      ]
+    }
+  }
+]
