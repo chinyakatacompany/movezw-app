@@ -4,7 +4,7 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Shield, Loader2, Star, TrendingUp, AlertCircle } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
-import ShipmentMap from "@/components/ShipmentMap";
+const ShipmentMap = React.lazy(() => import("@/components/ShipmentMap"));
 import { EmptyState, formatMoney, StarRating, STATUS_LABELS, shipmentPosition, STATUS_COLORS } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
@@ -187,14 +187,16 @@ export default function DriverDashboard() {
         <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
           <h2 className="text-base font-semibold mb-1">Active shipments map</h2>
           <p className="text-xs text-muted-foreground mb-3">Destinations for your active deliveries across Zimbabwe.</p>
-          <ShipmentMap
-            shipments={myJobs.map((r) => ({
-              id: r.id,
-              position: shipmentPosition(null, r),
-              label: `${r.customer_name || "Customer"} · ${STATUS_LABELS[r.status] || r.status}`,
-              color: STATUS_COLORS[r.status] || "#1e2f5e",
-            }))}
-          />
+          <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
+            <ShipmentMap
+              shipments={myJobs.map((r) => ({
+                id: r.id,
+                position: shipmentPosition(null, r),
+                label: `${r.customer_name || "Customer"} · ${STATUS_LABELS[r.status] || r.status}`,
+                color: STATUS_COLORS[r.status] || "#1e2f5e",
+              }))}
+            />
+          </React.Suspense>
         </div>
       )}
 

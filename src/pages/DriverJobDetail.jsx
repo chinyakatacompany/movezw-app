@@ -12,7 +12,7 @@ import { getOrCreateConversation } from "@/lib/messaging";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import RouteMap from "@/components/RouteMap";
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 export default function DriverJobDetail() {
   const { id } = useParams();
@@ -255,7 +255,9 @@ export default function DriverJobDetail() {
             )}
           </div>
           {driverPos ? (
-            <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
+            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+              <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
+            </React.Suspense>
           ) : (
             <p className="text-xs text-muted-foreground">Tap "Get directions" to see the road route from your location to the pickup point.</p>
           )}

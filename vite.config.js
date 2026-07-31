@@ -18,6 +18,7 @@ export default defineConfig({
         // the app installable and fast to load without ever serving
         // stale job/wallet/chat data from a cache.
         globPatterns: ['**/*.{js,css,html,svg,ico}'],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png'],
       manifest: {
