@@ -30,11 +30,12 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: payload.body || "",
-      icon: "/favicon.svg",
-      badge: "/favicon.svg",
+      icon: "/icon-512.png",
+      badge: "/icon-192.png",
       vibrate,
       data: { url: payload.url || "/driver" },
       tag: payload.tag || "movezw-job",
+      renotify: true,
     })
   );
 });
