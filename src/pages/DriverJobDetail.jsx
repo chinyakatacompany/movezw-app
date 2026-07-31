@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
@@ -20,6 +20,7 @@ export default function DriverJobDetail() {
   const [request, setRequest] = useState(null);
   const [profile, setProfile] = useState(null);
   const [myOffer, setMyOffer] = useState(null);
+  const [customerPhone, setCustomerPhone] = useState(null);
   const [loading, setLoading] = useState(true);
   const [price, setPrice] = useState("");
   const [eta, setEta] = useState("");
@@ -38,6 +39,11 @@ export default function DriverJobDetail() {
     setProfile(prof?.[0] || null);
     setMyOffer(offers?.[0] || null);
     setLoading(false);
+
+    if (req?.customer_id) {
+      const { data: customerProfile } = await supabase.from("profiles").select("phone").eq("id", req.customer_id).single();
+      setCustomerPhone(customerProfile?.phone || null);
+    }
   };
 
   useEffect(() => { if (user?.id) load(); /* eslint-disable-next-line */ }, [id, user?.id]);
@@ -264,9 +270,16 @@ export default function DriverJobDetail() {
               <p className="text-lg font-bold text-primary">{formatMoney(request.accepted_price)}</p>
             </div>
             <p className="text-xs text-muted-foreground">Payment: {request.payment_status === "cod" ? "Cash on delivery" : request.payment_status}</p>
-            <button onClick={openChat} className="w-full mt-3 flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
-              <MessageCircle className="w-4 h-4 text-primary" /> Message customer
-            </button>
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                <MessageCircle className="w-4 h-4 text-primary" /> Message
+              </button>
+              {customerPhone && (
+                <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                  <Phone className="w-4 h-4 text-primary" /> Call
+                </a>
+              )}
+            </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-border p-4">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
@@ -29,6 +29,7 @@ export default function RequestDetail() {
   const [comment, setComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
+  const [driverPhone, setDriverPhone] = useState(null);
 
   const load = async () => {
     const { data: req } = await supabase.from("transport_requests").select("*").eq("id", id).single();
@@ -36,6 +37,11 @@ export default function RequestDetail() {
     setRequest(req);
     setOffers(offs || []);
     setLoading(false);
+
+    if (req?.accepted_driver_id) {
+      const { data: dp } = await supabase.from("driver_profiles").select("phone").eq("user_id", req.accepted_driver_id).single();
+      setDriverPhone(dp?.phone || null);
+    }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -248,9 +254,20 @@ export default function RequestDetail() {
         <div className="bg-white rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-3">Your driver</h2>
           <p className="text-sm font-semibold">{acceptedOffer.driver_name}</p>
-          <Button variant="outline" className="w-full h-11 mt-3" onClick={() => openChat()}>
-            <MessageCircle className="w-4 h-4 mr-2" /> Message driver
-          </Button>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <Button variant="outline" className="h-11" onClick={() => openChat()}>
+              <MessageCircle className="w-4 h-4 mr-2" /> Message
+            </Button>
+            {driverPhone ? (
+              <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground text-sm font-medium">
+                <Phone className="w-4 h-4 mr-2" /> Call
+              </a>
+            ) : (
+              <Button variant="outline" className="h-11" disabled>
+                <Phone className="w-4 h-4 mr-2" /> Call
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
