@@ -8,10 +8,32 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
+import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { geolocationUnavailableReason } from "@/lib/geo";
+
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+
+// Build the most locally-specific label the free OSM data actually has —
+// road + suburb + city — instead of Nominatim's default display_name, which
+// tails off into province/country and can bury (or in sparser areas, lose)
+// the specific area. Note: OSM only indexes suburb-level areas in Zimbabwe
+// (e.g. "Budiriro"), not numbered sections within them (e.g. "Budiriro 5
+// West") — that finer detail isn't in the free dataset, so this is the most
+// precise text this data source can produce.
+function formatReverseAddress(data) {
+  const a = data?.address;
+  if (!a) return data?.display_name || null;
+  const parts = [];
+  if (a.road) parts.push(a.road);
+  const area = a.suburb || a.neighbourhood || a.quarter || a.village || a.town;
+  if (area) parts.push(area);
+  if (a.city || a.county) parts.push(a.city || a.county);
+  return parts.length > 0 ? parts.join(", ") : data.display_name || null;
+}
 
 export default function CreateRequest() {
   const navigate = useNavigate();
@@ -29,21 +51,32 @@ export default function CreateRequest() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pickupCoords, setPickupCoords] = useState(null);
+  const [destinationCoords, setDestinationCoords] = useState(null);
   const [locating, setLocating] = useState(false);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   const useMyLocation = () => {
-    if (!navigator.geolocation) {
-      toast({ title: "Location not supported", description: "Your browser doesn't support GPS location.", variant: "destructive" });
+    const reason = geolocationUnavailableReason();
+    if (reason) {
+      toast({ title: "Location not available", description: reason, variant: "destructive" });
       return;
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPickupCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      async (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setPickupCoords(coords);
         setLocating(false);
         toast({ title: "Location captured", description: "Your exact pickup location has been saved." });
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=18&addressdetails=1`);
+          const data = await res.json();
+          const label = formatReverseAddress(data);
+          if (label) set("pickup_location", label);
+        } catch (_) {
+          // Best-effort — keep the GPS coordinates even if we can't resolve an address string.
+        }
       },
       (err) => {
         setLocating(false);
@@ -64,6 +97,8 @@ export default function CreateRequest() {
         pickup_lat: pickupCoords?.lat ?? null,
         pickup_lng: pickupCoords?.lng ?? null,
         destination: form.destination,
+        destination_lat: destinationCoords?.lat ?? null,
+        destination_lng: destinationCoords?.lng ?? null,
         cargo_type: form.cargo_type,
         cargo_weight: form.cargo_weight || null,
         cargo_description: form.cargo_description,
@@ -107,10 +142,16 @@ export default function CreateRequest() {
           <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Locations</h2>
           <div className="space-y-2">
             <Label htmlFor="pickup">Pickup location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
-              <Input id="pickup" placeholder="e.g. Avondale, Harare" value={form.pickup_location} onChange={(e) => set("pickup_location", e.target.value)} className="pl-10" required />
-            </div>
+            <AddressSearchInput
+              id="pickup"
+              icon={MapPin}
+              iconClassName="text-primary"
+              placeholder="e.g. Avondale, Harare"
+              value={form.pickup_location}
+              onChange={(text) => { set("pickup_location", text); setPickupCoords(null); }}
+              onSelect={({ lat, lng, label }) => { set("pickup_location", label); setPickupCoords({ lat, lng }); }}
+              required
+            />
             <button
               type="button"
               onClick={useMyLocation}
@@ -128,11 +169,21 @@ export default function CreateRequest() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="dest">Destination</Label>
-            <div className="relative">
-              <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="dest" placeholder="e.g. Gweru CBD" value={form.destination} onChange={(e) => set("destination", e.target.value)} className="pl-10" required />
-            </div>
+            <AddressSearchInput
+              id="dest"
+              icon={Navigation}
+              placeholder="e.g. Gweru CBD"
+              value={form.destination}
+              onChange={(text) => { set("destination", text); setDestinationCoords(null); }}
+              onSelect={({ lat, lng, label }) => { set("destination", label); setDestinationCoords({ lat, lng }); }}
+              required
+            />
           </div>
+          {pickupCoords && destinationCoords && (
+            <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
+              <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
+            </React.Suspense>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-border p-4 space-y-4">

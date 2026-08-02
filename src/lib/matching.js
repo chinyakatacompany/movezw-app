@@ -181,3 +181,83 @@ export async function notifyMatchingReturnLoadDriversForRequest(request) {
   );
   return matched.length;
 }
+
+// ---- "Space available" — mid-trip second-customer matching ----
+// Distance (km) within which an open request's pickup/destination counts as
+// "along the same road" as a driver's current job — not the identical trip,
+// just close enough to be worth a combined-trip quote.
+const SAME_ROAD_MAX_KM = 3;
+
+// Nearest-vertex distance from a point to a route polyline. OSRM samples the
+// polyline densely (every ~20-50m along real roads), so nearest-vertex is a
+// good enough stand-in for true distance-to-road without point-to-segment math.
+function distanceToRouteKm(lat, lng, routeCoordinates) {
+  if (lat == null || lng == null || !routeCoordinates?.length) return null;
+  let min = Infinity;
+  for (const [rLng, rLat] of routeCoordinates) {
+    const d = distanceKm(lat, lng, rLat, rLng);
+    if (d < min) min = d;
+  }
+  return min;
+}
+
+// Which open requests have a pickup or destination near a driver's road
+// route — used when a driver has spare capacity mid-trip.
+export function findRequestsAlongRoute(driverRequest, candidates, routeCoordinates, maxKm = SAME_ROAD_MAX_KM) {
+  return candidates
+    .filter((r) => r.id !== driverRequest.id)
+    .map((r) => {
+      const pickupDist = distanceToRouteKm(r.pickup_lat, r.pickup_lng, routeCoordinates);
+      const destDist = distanceToRouteKm(r.destination_lat, r.destination_lng, routeCoordinates);
+      const dist = [pickupDist, destDist].filter((d) => d != null).sort((a, b) => a - b)[0];
+      return { request: r, distanceKm: dist };
+    })
+    .filter((m) => m.distanceKm != null && m.distanceKm <= maxKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .map((m) => m.request);
+}
+
+// Driver announces spare capacity on an active job: fetch its road route
+// (same free OSRM endpoint RouteMap.jsx uses), find other open requests
+// along that road, and notify those customers. Best-effort, client-side —
+// same fire-and-forget pattern as the return-load matching above; no
+// dedup/cooldown state, matching how the rest of this file works.
+export async function notifyCustomersAlongRoute(driverRequest) {
+  if (
+    driverRequest.pickup_lat == null || driverRequest.pickup_lng == null ||
+    driverRequest.destination_lat == null || driverRequest.destination_lng == null
+  ) {
+    throw new Error("This job doesn't have exact pickup/destination coordinates yet.");
+  }
+
+  const res = await fetch(
+    `https://router.project-osrm.org/route/v1/driving/${driverRequest.pickup_lng},${driverRequest.pickup_lat};${driverRequest.destination_lng},${driverRequest.destination_lat}?overview=full&geometries=geojson`
+  );
+  const data = await res.json();
+  const routeCoordinates = data?.routes?.[0]?.geometry?.coordinates;
+  if (data.code !== "Ok" || !routeCoordinates) {
+    throw new Error("Couldn't calculate this job's road route — try again shortly.");
+  }
+
+  const { data: candidates, error } = await supabase
+    .from("transport_requests")
+    .select("*")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) console.error("Failed to load open requests for space-along-route matching:", error);
+
+  const matched = findRequestsAlongRoute(driverRequest, candidates || [], routeCoordinates);
+  await Promise.all(
+    matched.map((r) =>
+      createNotification(
+        r.customer_id,
+        "space_along_route",
+        "A driver has space along your route 🚚",
+        `A driver already heading ${driverRequest.pickup_location} → ${driverRequest.destination} has room for your ${r.cargo_type} too — worth a lower quote.`,
+        `/customer/request/${r.id}`
+      )
+    )
+  );
+  return matched.length;
+}

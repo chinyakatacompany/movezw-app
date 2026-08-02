@@ -50,28 +50,28 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-muted/40 flex flex-col">
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-30 bg-header text-header-foreground">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to={isDriver ? "/driver" : "/customer"} className="flex items-center gap-2" aria-label="MoveZW home">
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm">
               <Truck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-foreground">MoveZW</span>
+            <span className="font-bold text-lg tracking-tight text-header-foreground">MoveZW</span>
           </Link>
           <div className="flex items-center gap-1">
             <Link
               to="/messages"
               aria-label="Messages"
-              className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              className="relative w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
             >
-              <MessageCircle className="w-5 h-5 text-foreground" />
+              <MessageCircle className="w-5 h-5 text-header-foreground" />
             </Link>
             <Link
               to={isDriver ? "/driver/notifications" : "/customer/notifications"}
               aria-label="Notifications"
-              className="relative w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              className="relative w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
             >
-              <Bell className="w-5 h-5 text-foreground" />
+              <Bell className="w-5 h-5 text-header-foreground" />
               {unread > 0 && (
                 <span className="absolute top-1.5 right-1.5 min-w-4 h-4 px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
                   {unread > 9 ? "9+" : unread}
@@ -81,9 +81,9 @@ export default function AppLayout() {
             <button
               onClick={handleLogout}
               aria-label="Sign out"
-              className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
             >
-              <LogOut className="w-5 h-5 text-foreground" />
+              <LogOut className="w-5 h-5 text-header-foreground" />
             </button>
           </div>
         </div>
@@ -106,6 +106,15 @@ export default function AppLayout() {
         <div className="max-w-2xl mx-auto px-2 h-16 grid grid-flow-col auto-cols-fr">
           {nav.map(({ to, label, icon: Icon }) => {
             const active = to === location.pathname || (to !== `/${user.role}` && location.pathname.startsWith(to));
+            if (to === "/customer/new") {
+              return (
+                <Link key={to} to={to} aria-label={label} aria-current={active ? "page" : undefined} className="flex items-center justify-center">
+                  <span className="w-12 h-12 -mt-7 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center border-4 border-background">
+                    <Icon className="w-5 h-5" />
+                  </span>
+                </Link>
+              );
+            }
             return (
               <Link
                 key={to}

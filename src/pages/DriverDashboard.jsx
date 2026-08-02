@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Shield, Loader2, Star, TrendingUp, AlertCircle } from "lucide-react";
+import { Package, Shield, TrendingUp, AlertCircle, Truck } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 const ShipmentMap = React.lazy(() => import("@/components/ShipmentMap"));
 import { EmptyState, formatMoney, StarRating, STATUS_LABELS, shipmentPosition, STATUS_COLORS } from "@/lib/movezw";
@@ -11,6 +11,13 @@ import NotificationSettings from "@/components/NotificationSettings";
 import { AVAILABILITY_LABELS } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+
+function timeOfDayGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 18) return "afternoon";
+  return "evening";
+}
 
 export default function DriverDashboard() {
   const { user } = useAuth();
@@ -126,10 +133,16 @@ export default function DriverDashboard() {
 
   return (
     <div className="p-4 space-y-6">
-      <div className="pt-2">
-        <p className="text-sm text-muted-foreground">Welcome back</p>
-        <h1 className="text-2xl font-bold tracking-tight">{user?.full_name?.split(" ")[0] || "Driver"} 👋</h1>
-        <p className="text-sm text-muted-foreground">{profile.vehicle_type} · {profile.location_area || "Zimbabwe"}</p>
+      <div className="relative -mx-4 -mt-4 mb-2 overflow-hidden bg-gradient-to-br from-header to-black/30 rounded-b-3xl px-4 pt-6 pb-8">
+        <Truck className="absolute -right-3 -bottom-3 w-28 h-28 text-white/10 -rotate-6" />
+        <svg className="absolute bottom-0 left-0 right-0 h-6 text-white/10" viewBox="0 0 400 24" preserveAspectRatio="none" fill="none">
+          <path d="M0 20 Q100 4 200 16 T400 10" stroke="currentColor" strokeWidth="3" strokeDasharray="10 8" strokeLinecap="round" />
+        </svg>
+        <div className="relative">
+          <p className="text-sm text-white/70">Good {timeOfDayGreeting()}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">{user?.full_name?.split(" ")[0] || "Driver"} 👋</h1>
+          <p className="text-sm text-white/70">{profile.vehicle_type} · {profile.location_area || "Zimbabwe"}</p>
+        </div>
       </div>
 
       <div className="bg-card rounded-2xl border border-border p-4 card-shadow animate-fade-in">
@@ -158,17 +171,24 @@ export default function DriverDashboard() {
         <div className="bg-white rounded-2xl border border-border p-3 text-center">
           <StarRating value={profile.rating_avg || 0} />
           <p className="text-lg font-bold mt-1">{profile.rating_avg?.toFixed(1) || "0.0"}</p>
-          <p className="text-[10px] text-muted-foreground">Rating</p>
+          <p className="text-[10px] text-muted-foreground mb-1.5">Rating</p>
+          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Great work!</span>
         </div>
         <div className="bg-white rounded-2xl border border-border p-3 text-center">
           <Package className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-lg font-bold">{profile.completed_jobs || 0}</p>
-          <p className="text-[10px] text-muted-foreground">Jobs done</p>
+          <p className="text-[10px] text-muted-foreground mb-1.5">Jobs done</p>
+          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Keep it up!</span>
         </div>
         <div className="bg-white rounded-2xl border border-border p-3 text-center">
           <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
           <p className="text-lg font-bold">{myJobs?.length || 0}</p>
-          <p className="text-[10px] text-muted-foreground">Active</p>
+          <p className="text-[10px] text-muted-foreground mb-1.5">Active</p>
+          {myJobs?.length > 0 ? (
+            <Link to={`/driver/job/${myJobs[0].id}`} className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">View job →</Link>
+          ) : (
+            <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">No jobs yet</span>
+          )}
         </div>
       </div>
 

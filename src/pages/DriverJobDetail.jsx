@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock, Users } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
+import { notifyCustomersAlongRoute } from "@/lib/matching";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { geolocationUnavailableReason } from "@/lib/geo";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 export default function DriverJobDetail() {
@@ -30,13 +32,17 @@ export default function DriverJobDetail() {
   const [updating, setUpdating] = useState(false);
   const [driverPos, setDriverPos] = useState(null);
   const [locatingRoute, setLocatingRoute] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [findingSpace, setFindingSpace] = useState(false);
 
-  const showRoute = () => {
-    if (!navigator.geolocation) {
-      toast({ title: "Location not supported", description: "Your browser doesn't support GPS location.", variant: "destructive" });
+  const fetchDriverLocation = () => {
+    const reason = geolocationUnavailableReason();
+    if (reason) {
+      setLocationError(reason);
       return;
     }
     setLocatingRoute(true);
+    setLocationError(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -44,11 +50,19 @@ export default function DriverJobDetail() {
       },
       (err) => {
         setLocatingRoute(false);
-        toast({ title: "Could not get your location", description: err.message || "Please allow location access and try again.", variant: "destructive" });
+        setLocationError(err.message || "Please allow location access to see the route to pickup.");
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
+
+  // Auto-fetch the driver's location the moment there's a pickup point to
+  // route to — no manual "Get directions" tap needed.
+  useEffect(() => {
+    if (request?.pickup_lat == null || request?.pickup_lng == null) return;
+    fetchDriverLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request?.pickup_lat, request?.pickup_lng]);
 
   const load = async () => {
     const [{ data: req, error: reqErr }, { data: prof }, { data: offers }] = await Promise.all([
@@ -146,6 +160,23 @@ export default function DriverJobDetail() {
     }
   };
 
+  const findSpace = async () => {
+    setFindingSpace(true);
+    try {
+      const count = await notifyCustomersAlongRoute(request);
+      toast({
+        title: count > 0 ? `Notified ${count} nearby customer${count === 1 ? "" : "s"}` : "No matches right now",
+        description: count > 0
+          ? "They can see your job's route — open their request to send a quote."
+          : "No open requests along this route at the moment. Try again later.",
+      });
+    } catch (e) {
+      toast({ title: "Couldn't check for matches", description: e.message, variant: "destructive" });
+    } finally {
+      setFindingSpace(false);
+    }
+  };
+
   const updateStatus = async (newStatus) => {
     setUpdating(true);
     try {
@@ -237,29 +268,45 @@ export default function DriverJobDetail() {
         </div>
       </div>
 
-      {/* Route to pickup */}
+      {/* Trip route: pickup -> destination, so the driver can see the whole
+          job at a glance without needing to share their own GPS location. */}
+      {request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null && (
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+          <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Trip route</h2>
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
+              to={{ lat: request.destination_lat, lng: request.destination_lng }}
+              fromLabel="Pickup"
+              toLabel="Destination"
+            />
+          </React.Suspense>
+        </div>
+      )}
+
+      {/* Route to pickup — driver location is fetched automatically, no button needed */}
       {request.pickup_lat != null && request.pickup_lng != null && (
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Route to pickup</h2>
-            {!driverPos && (
-              <button
-                type="button"
-                onClick={showRoute}
-                disabled={locatingRoute}
-                className="text-sm font-semibold text-primary bg-primary/10 border-2 border-primary/30 rounded-xl px-3 py-2 flex items-center gap-1.5 hover:bg-primary/15 transition-colors"
-              >
-                {locatingRoute && <Loader2 className="w-4 h-4 animate-spin" />}
-                {locatingRoute ? "Locating..." : "Get directions"}
-              </button>
-            )}
-          </div>
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Route to pickup</h2>
           {driverPos ? (
             <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
               <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
             </React.Suspense>
+          ) : locatingRoute ? (
+            <div className="h-[260px] rounded-xl bg-muted animate-pulse flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" /> Getting your location…
+            </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Tap "Get directions" to see the road route from your location to the pickup point.</p>
+            <div className="text-center py-4">
+              <p className="text-xs text-muted-foreground mb-3">{locationError || "Location access is needed to show the route to pickup."}</p>
+              <button
+                type="button"
+                onClick={fetchDriverLocation}
+                className="text-sm font-semibold text-primary bg-primary/10 border-2 border-primary/30 rounded-xl px-3 py-2 hover:bg-primary/15 transition-colors"
+              >
+                Try again
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -353,6 +400,22 @@ export default function DriverJobDetail() {
               <p className="text-xs text-muted-foreground mt-3">Customer contact details will appear once you mark yourself en route to pickup.</p>
             )}
           </div>
+
+          {!["delivered", "completed"].includes(request.status) && (
+            <div className="bg-white rounded-2xl border border-border p-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-primary" /> Got space for one more?</h2>
+              <p className="text-xs text-muted-foreground mb-3">Let nearby customers know you can pick up a second delivery along this route — you can quote them a lower price since you're already headed that way.</p>
+              <button
+                type="button"
+                onClick={findSpace}
+                disabled={findingSpace}
+                className="w-full h-11 rounded-xl bg-primary/10 border-2 border-primary/30 text-primary font-semibold text-sm flex items-center justify-center gap-2 hover:bg-primary/15 transition-colors disabled:opacity-60"
+              >
+                {findingSpace ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
+                {findingSpace ? "Checking nearby requests..." : "I have space — notify nearby customers"}
+              </button>
+            </div>
+          )}
 
           <div className="bg-white rounded-2xl border border-border p-4">
             <h2 className="text-sm font-semibold mb-4">Delivery progress</h2>

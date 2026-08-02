@@ -1,7 +1,8 @@
+import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useNavigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -35,6 +36,7 @@ import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
 import PaymentHistory from '@/pages/PaymentHistory';
 import Support from '@/pages/Support';
+import AlertSettings from '@/pages/AlertSettings';
 import VehicleManagement from '@/pages/VehicleManagement';
 import Terms from '@/pages/Terms';
 import Messages from '@/pages/Messages';
@@ -46,7 +48,17 @@ import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
+  const navigate = useNavigate();
+
+  // A notification that needs attention right now (e.g. a new quote to
+  // accept/reject) jumps the user straight to the relevant page instead of
+  // requiring a tap through the notification panel — see AuthContext.jsx.
+  useEffect(() => {
+    if (!autoNavigateLink) return;
+    navigate(autoNavigateLink);
+    clearAutoNavigate();
+  }, [autoNavigateLink, navigate, clearAutoNavigate]);
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -132,6 +144,7 @@ const AuthenticatedApp = () => {
         }>
           <Route path="/payment-history" element={<PaymentHistory />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/alerts" element={<AlertSettings />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/return-loads" element={<ReturnMarketplace />} />

@@ -9,6 +9,7 @@ import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeA
 import { getOrCreateConversation } from "@/lib/messaging";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 const SORT_OPTIONS = [
   { id: "price", label: "Lowest price" },
@@ -151,6 +152,7 @@ export default function RequestDetail() {
   const pendingOffers = offers?.filter((o) => o.status === "pending") || [];
   const showOffers = request.status === "open";
   const showTracking = STATUS_FLOW.includes(request.status) || request.status === "completed";
+  const hasFullRoute = request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null;
 
   return (
     <div className="p-4 pb-8 space-y-5">
@@ -166,7 +168,7 @@ export default function RequestDetail() {
         <p className="text-xs text-muted-foreground">Posted {timeAgo(request.created_at)}</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-4">
+      <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
         <div className="flex gap-3">
           <div className="flex flex-col items-center pt-1">
             <span className="w-2.5 h-2.5 rounded-full bg-primary" />
@@ -177,7 +179,7 @@ export default function RequestDetail() {
             <div>
               <p className="text-[11px] text-muted-foreground">PICKUP</p>
               <p className="text-sm font-medium">{request.pickup_location}</p>
-              {request.pickup_lat != null && request.pickup_lng != null && (
+              {!hasFullRoute && request.pickup_lat != null && request.pickup_lng != null && (
                 <a
                   href={`https://www.openstreetmap.org/?mlat=${request.pickup_lat}&mlon=${request.pickup_lng}#map=17/${request.pickup_lat}/${request.pickup_lng}`}
                   target="_blank"
@@ -191,6 +193,16 @@ export default function RequestDetail() {
             <div><p className="text-[11px] text-muted-foreground">DESTINATION</p><p className="text-sm font-medium">{request.destination}</p></div>
           </div>
         </div>
+        {hasFullRoute && (
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
+              to={{ lat: request.destination_lat, lng: request.destination_lng }}
+              fromLabel="Pickup"
+              toLabel="Destination"
+            />
+          </React.Suspense>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-border p-4 space-y-3">

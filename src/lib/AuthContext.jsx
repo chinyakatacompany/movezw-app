@@ -1,8 +1,15 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast as sonnerToast } from 'sonner';
 import { supabase } from '@/api/supabaseClient';
+import { playNotificationChime, unlockAudioOnFirstGesture } from '@/lib/sound';
 
 const AuthContext = createContext();
+
+// Notification types that need the customer/driver's attention on a
+// specific page right now — e.g. a quote just came in and needs an
+// accept/reject decision — so we jump them there automatically instead of
+// requiring a tap through the notification panel first.
+const AUTO_NAVIGATE_TYPES = new Set(['new_offer']);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,8 +19,12 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [appPublicSettings] = useState({});
+  const [autoNavigateLink, setAutoNavigateLink] = useState(null);
+
+  const clearAutoNavigate = () => setAutoNavigateLink(null);
 
   useEffect(() => {
+    unlockAudioOnFirstGesture();
     checkUserAuth();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -99,9 +110,11 @@ export const AuthProvider = ({ children }) => {
     await checkUserAuth();
   };
 
-  // Pop up a dismissible toast the moment a new notification row is inserted
-  // for this user. Reusing the same toast id means a fresh popup replaces
-  // whatever's currently showing instead of stacking up.
+  // Pop up a dismissible toast (with an audible chime) the moment a new
+  // notification row is inserted for this user — covers both customer and
+  // driver accounts since this listener runs for whoever is logged in.
+  // Reusing the same toast id means a fresh popup replaces whatever's
+  // currently showing instead of stacking up.
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabase
@@ -111,11 +124,15 @@ export const AuthProvider = ({ children }) => {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
           const n = payload.new;
+          playNotificationChime();
           sonnerToast(n.title, {
             id: 'notification-popup',
             description: n.message,
             action: n.link ? { label: 'View', onClick: () => { window.location.href = n.link; } } : undefined,
           });
+          if (n.link && AUTO_NAVIGATE_TYPES.has(n.type)) {
+            setAutoNavigateLink(n.link);
+          }
         }
       )
       .subscribe();
@@ -148,7 +165,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       navigateToLogin,
       checkUserAuth,
-      checkAppState
+      checkAppState,
+      autoNavigateLink,
+      clearAutoNavigate
     }}>
       {children}
     </AuthContext.Provider>

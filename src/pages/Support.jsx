@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, LifeBuoy, ChevronDown, Send, CheckCircle2, Phone, Mail } from "lucide-react";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const FAQS = [
   { q: "How do I track my delivery?", a: "Open the request from your Trips list — its status updates live from pickup through to delivery." },
@@ -50,6 +51,10 @@ export default function Support() {
         <a href="tel:+263780269976" className="flex items-center gap-3 p-4">
           <Phone className="w-5 h-5 text-primary shrink-0" />
           <div><p className="text-xs text-muted-foreground">Call or WhatsApp</p><p className="text-sm font-medium">0780 269 976</p></div>
+        </a>
+        <a href="https://wa.me/263715837174" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4">
+          <WhatsAppIcon className="w-5 h-5 shrink-0" />
+          <div><p className="text-xs text-muted-foreground">WhatsApp</p><p className="text-sm font-medium">0715 837 174</p></div>
         </a>
         <a href="mailto:movezwsupport@gmail.com" className="flex items-center gap-3 p-4">
           <Mail className="w-5 h-5 text-primary shrink-0" />

@@ -12,6 +12,16 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
+      // Without this, VitePWA never registers the service worker under
+      // `vite dev` — only on a production build/preview. Since the whole
+      // push-notification flow (subscribe, receive, click) lives in that
+      // worker, testing "Alerts" against the dev server would otherwise
+      // just hang forever on navigator.serviceWorker.ready, which never
+      // resolves with no worker registered.
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
       injectManifest: {
         // Precache only the static build output (app shell). Live data
         // (Supabase requests) always goes over the network — this keeps
@@ -43,6 +53,16 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  optimizeDeps: {
+    // Vite's esbuild dep pre-bundler mangles maplibre-gl's internal
+    // reference to its own Web Worker (maplibre-gl-worker.mjs ends up
+    // 404ing from node_modules/.vite/deps), which silently breaks all
+    // vector-tile rendering — roads, labels, and any line/route layer never
+    // paint, leaving just a flat background color. Excluding it from
+    // pre-bundling lets the browser load it straight from node_modules,
+    // where its internal worker path resolves correctly.
+    exclude: ['maplibre-gl'],
   },
   server: {
     // Needed so requests arriving through a LAN IP or a tunnel (e.g. loca.lt,
