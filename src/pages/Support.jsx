@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2, LifeBuoy, ChevronDown, Send, CheckCircle2, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, LifeBuoy, ChevronDown, Send, CheckCircle2, Phone, Mail, Users } from "lucide-react";
 import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const FAQS = [
@@ -55,6 +55,10 @@ export default function Support() {
         <a href="https://wa.me/263715837174" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4">
           <WhatsAppIcon className="w-5 h-5 shrink-0" />
           <div><p className="text-xs text-muted-foreground">WhatsApp</p><p className="text-sm font-medium">0715 837 174</p></div>
+        </a>
+        <a href="https://chat.whatsapp.com/B6b47kyWtXRK1mBRMSgDJJ?s=cl&p=a&ilr=0" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4">
+          <Users className="w-5 h-5 text-primary shrink-0" />
+          <div><p className="text-xs text-muted-foreground">Community</p><p className="text-sm font-medium">Join the MoveZW WhatsApp group</p></div>
         </a>
         <a href="mailto:movezwsupport@gmail.com" className="flex items-center gap-3 p-4">
           <Mail className="w-5 h-5 text-primary shrink-0" />

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "@/lib/maplibreSetup";
 import { Loader2, Flag, Navigation, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 

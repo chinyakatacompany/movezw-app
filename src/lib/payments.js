@@ -77,12 +77,15 @@ export async function claimRefund({ refundRequestId }) {
   return unwrapRpc(await supabase.rpc("fn_claim_refund", { p_refund_request_id: refundRequestId }));
 }
 
-// ---- Payout (driver -> external) ----
-export async function requestPayout({ amount, method, destination }) {
-  return unwrapRpc(await supabase.rpc("fn_request_payout", { p_amount: amount, p_method: method, p_destination: destination }));
-}
-
-// ---- Top up (placeholder gateway auto-confirms) ----
+// ---- Top up (lands as 'pending' until an admin approves it) ----
 export async function requestTopUp({ amount, method, destination }) {
   return unwrapRpc(await supabase.rpc("fn_request_topup", { p_amount: amount, p_method: method, p_destination: destination }));
+}
+
+export async function approveTopUp(transactionId) {
+  return unwrapRpc(await supabase.rpc("fn_approve_topup", { p_transaction_id: transactionId }));
+}
+
+export async function rejectTopUp(transactionId, adminNote = "") {
+  return unwrapRpc(await supabase.rpc("fn_reject_topup", { p_transaction_id: transactionId, p_admin_note: adminNote }));
 }

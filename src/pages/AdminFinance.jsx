@@ -12,6 +12,7 @@ import { formatMoney, formatDate } from "@/lib/movezw";
 import { getCommissionConfig } from "@/lib/payments";
 import { downloadCSV, downloadExcel, downloadPDF } from "@/lib/financeReports";
 import RefundQueue from "@/components/finance/RefundQueue";
+import TopupQueue from "@/components/finance/TopupQueue";
 import CommissionSettings from "@/components/finance/CommissionSettings";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -22,6 +23,7 @@ const ORANGE = "#c2410c";
 const TABS = [
   { id: "overview", label: "Overview", icon: TrendingUp },
   { id: "refunds", label: "Refunds", icon: RotateCcw },
+  { id: "topups", label: "Top ups", icon: Wallet },
   { id: "audit", label: "Audit trail", icon: FileText },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -35,6 +37,9 @@ const AUDIT_TONE = {
   refund_claimed: "bg-emerald-50 text-emerald-600",
   job_completed: "bg-emerald-50 text-emerald-600",
   wallet_topup: "bg-blue-50 text-blue-600",
+  topup_requested: "bg-amber-50 text-amber-600",
+  topup_approved: "bg-emerald-50 text-emerald-600",
+  topup_rejected: "bg-rose-50 text-rose-600",
   payout_requested: "bg-amber-50 text-amber-600",
   commission_rate_update: "bg-primary/10 text-primary",
   commission_settings_update: "bg-primary/10 text-primary",
@@ -70,20 +75,29 @@ export default function AdminFinance() {
   const [refunds, setRefunds] = useState(null);
   const [audits, setAudits] = useState(null);
   const [cfg, setCfg] = useState(null);
+  const [topups, setTopups] = useState(null);
+  const [driverNames, setDriverNames] = useState({});
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
     try {
-      const [{ data: allJobs }, { data: allRefunds }, { data: allAudits }, config] = await Promise.all([
+      const [{ data: allJobs }, { data: allRefunds }, { data: allAudits }, config, { data: allTopups }] = await Promise.all([
         supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(1000),
         supabase.from("refund_requests").select("*").order("requested_at", { ascending: false }).limit(200),
         supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
         getCommissionConfig(),
+        supabase.from("transactions").select("*").eq("type", "topup").order("created_at", { ascending: false }).limit(200),
       ]);
       setJobs(allJobs || []);
       setRefunds(allRefunds || []);
       setAudits(allAudits || []);
       setCfg(config);
+      setTopups(allTopups || []);
+      const driverIds = [...new Set((allTopups || []).map((t) => t.user_id))];
+      if (driverIds.length > 0) {
+        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", driverIds);
+        setDriverNames(Object.fromEntries((profs || []).map((p) => [p.id, p.full_name])));
+      }
     } finally {
       setLoading(false);
     }
@@ -108,6 +122,8 @@ export default function AdminFinance() {
     const net = realised - refundsPaid;
     return { gross, realised, pendingEscrow, refundsPaid, net, completedCount: completed.length, pendingRefunds: rf.filter((r) => r.status === "pending").length };
   }, [jobs, refunds, rate]);
+
+  const pendingTopups = (topups || []).filter((t) => t.status === "pending").length;
 
   const commissionSeries = useMemo(() => {
     const days = [];
@@ -158,6 +174,9 @@ export default function AdminFinance() {
             <t.icon className="w-4 h-4" /> {t.label}
             {t.id === "refunds" && metrics.pendingRefunds > 0 && (
               <span className="ml-1 bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{metrics.pendingRefunds}</span>
+            )}
+            {t.id === "topups" && pendingTopups > 0 && (
+              <span className="ml-1 bg-accent text-accent-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pendingTopups}</span>
             )}
           </button>
         ))}
@@ -241,6 +260,8 @@ export default function AdminFinance() {
       )}
 
       {tab === "refunds" && <RefundQueue refunds={refunds || []} adminId={user?.id} onChanged={load} />}
+
+      {tab === "topups" && <TopupQueue topups={topups || []} driverNames={driverNames} onChanged={load} />}
 
       {tab === "audit" && (
         <div className="bg-card rounded-2xl border border-border p-5 card-shadow">

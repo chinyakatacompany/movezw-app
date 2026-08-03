@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import "@/lib/maplibreSetup";
 
 const ZW_CENTER = [29.85, -19.0]; // MapLibre uses [lng, lat]
 
