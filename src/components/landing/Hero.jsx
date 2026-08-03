@@ -26,13 +26,13 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <Link to="/register">
+            <Link to="/register?role=customer">
               <Button size="lg" className="w-full sm:w-auto h-12 px-7 text-base">
                 Book Transport
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to="/register?role=driver">
               <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-7 text-base">
                 <Truck className="w-4 h-4" />
                 Become a Driver

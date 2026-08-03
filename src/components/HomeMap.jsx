@@ -29,6 +29,14 @@ function driverMarkerEl() {
   return el;
 }
 
+// OpenFreeMap's style/sprite/glyph fetches occasionally stall on their own
+// free, best-effort infra (or a flaky mobile connection) — when that
+// happens MapLibre's "load" event never fires and the map sits blank
+// forever with no visible error. If load hasn't happened within this
+// window, treat it as failed so the UI can offer a retry (a fresh map
+// instance means fresh network requests, which usually succeed).
+const LOAD_TIMEOUT_MS = 8000;
+
 function myLocationEl() {
   const el = document.createElement("div");
   Object.assign(el.style, {
@@ -52,9 +60,13 @@ export default function HomeMap({ height = 260 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const driverMarkersRef = useRef([]);
 
   useEffect(() => {
+    setMapLoaded(false);
+    setFailed(false);
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: MAP_STYLE,
@@ -68,7 +80,13 @@ export default function HomeMap({ height = 260 }) {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     return () => map.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
+
+  useEffect(() => {
+    if (mapLoaded) return;
+    const timeoutId = setTimeout(() => setFailed(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [mapLoaded, attempt]);
 
   // My location — best-effort. If permission is denied or the origin isn't
   // secure, this silently keeps the default Harare view instead of erroring.
@@ -102,8 +120,20 @@ export default function HomeMap({ height = 260 }) {
   }, [mapLoaded]);
 
   return (
-    <div style={{ height }}>
+    <div style={{ height }} className="relative">
       <div ref={containerRef} className="w-full h-full" />
+      {failed && !mapLoaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/90 rounded-xl">
+          <p className="text-xs text-muted-foreground">Map couldn't load</p>
+          <button
+            type="button"
+            onClick={() => { setFailed(false); setAttempt((a) => a + 1); }}
+            className="text-xs font-semibold text-primary underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
     </div>
   );
 }

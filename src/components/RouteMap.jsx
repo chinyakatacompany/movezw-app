@@ -9,6 +9,11 @@ import { cn } from "@/lib/utils";
 // for why this replaced direct OSM raster tile fetches).
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const ROUTE_COLOR = "#2563eb";
+// See HomeMap.jsx — OpenFreeMap's style/sprite/glyph fetches occasionally
+// stall, leaving MapLibre's "load" event never firing and the map blank
+// forever with no visible error. This bounds how long we wait before
+// offering a retry (a fresh map instance triggers fresh network requests).
+const LOAD_TIMEOUT_MS = 8000;
 
 // Teardrop pin (Google Maps style) instead of a plain dot. Anchored at its
 // bottom tip via the Marker's `anchor: "bottom"` option below.
@@ -49,11 +54,15 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
+  const [mapAttempt, setMapAttempt] = useState(0);
   const [route, setRoute] = useState(null);
   const [status, setStatus] = useState("loading");
   const [showSteps, setShowSteps] = useState(false);
 
   useEffect(() => {
+    setMapLoaded(false);
+    setMapFailed(false);
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: MAP_STYLE,
@@ -79,7 +88,13 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
 
     return () => map.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mapAttempt]);
+
+  useEffect(() => {
+    if (mapLoaded) return;
+    const timeoutId = setTimeout(() => setMapFailed(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timeoutId);
+  }, [mapLoaded, mapAttempt]);
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +157,18 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     <div className="rounded-xl overflow-hidden border border-border">
       <div className="relative" style={{ height }}>
         <div ref={containerRef} className="w-full h-full" />
+        {mapFailed && !mapLoaded && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-muted/90">
+            <p className="text-xs text-muted-foreground">Map couldn't load</p>
+            <button
+              type="button"
+              onClick={() => { setMapFailed(false); setMapAttempt((a) => a + 1); }}
+              className="text-xs font-semibold text-primary underline"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         {/* Floating info card overlaid on the map itself (Google Maps style)
             instead of a separate bar below it. We only ever show what our free
             routing source (OSRM) actually knows — distance/duration and whether

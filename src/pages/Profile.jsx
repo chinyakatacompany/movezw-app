@@ -65,7 +65,11 @@ export default function Profile({ role }) {
         {role === "driver" && profile && (
           <div className="flex items-center gap-3 p-4">
             <div className="w-5 h-5 text-center text-sm">{profile.vehicle_type && "🚚"}</div>
-            <div><p className="text-xs text-muted-foreground">Vehicle</p><p className="text-sm font-medium">{profile.vehicle_type}</p></div>
+            <div>
+              <p className="text-xs text-muted-foreground">Vehicle</p>
+              <p className="text-sm font-medium">{[profile.vehicle_name, profile.vehicle_type].filter(Boolean).join(" · ")}</p>
+              {profile.license_plate && <p className="text-xs text-muted-foreground mt-0.5">Plate: {profile.license_plate}</p>}
+            </div>
           </div>
         )}
         {role === "driver" && profile && (

@@ -91,7 +91,9 @@ export default function AdminVerification() {
                       p.verification_status === "rejected" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"
                     )}>{p.verification_status}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{p.vehicle_type} · {p.location_area || "Zimbabwe"} · {p.phone}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {[p.vehicle_name, p.vehicle_type].filter(Boolean).join(" ")}{p.license_plate ? ` (${p.license_plate})` : ""} · {p.location_area || "Zimbabwe"} · {p.phone}
+                  </p>
                   <div className="flex items-center gap-1 mt-1">
                     <StarRating value={p.rating_avg || 0} />
                     <span className="text-[11px] text-muted-foreground ml-1">{p.completed_jobs || 0} jobs</span>

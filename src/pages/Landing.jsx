@@ -27,13 +27,13 @@ export default function Landing() {
               Join MoveZW today and connect with trusted drivers across Zimbabwe in minutes.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Link to="/register">
+              <Link to="/register?role=customer">
                 <Button size="lg" variant="secondary" className="w-full sm:w-auto h-12 px-7 text-base">
                   Book Transport
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to="/register?role=driver">
                 <Button
                   size="lg"
                   variant="outline"

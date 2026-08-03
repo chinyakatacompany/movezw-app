@@ -61,6 +61,8 @@ export default function VehicleManagement() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [vehicleType, setVehicleType] = useState("");
+  const [vehicleName, setVehicleName] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
   const [vehicleRegistrationUrl, setVehicleRegistrationUrl] = useState("");
   const [locationArea, setLocationArea] = useState("");
   const [regChanged, setRegChanged] = useState(false);
@@ -79,6 +81,8 @@ export default function VehicleManagement() {
         if (p) {
           setProfile(p);
           setVehicleType(p.vehicle_type || "");
+          setVehicleName(p.vehicle_name || "");
+          setLicensePlate(p.license_plate || "");
           setVehicleRegistrationUrl(p.vehicle_registration_url || "");
           setLocationArea(p.location_area || "");
         }
@@ -89,14 +93,16 @@ export default function VehicleManagement() {
   const submit = async (e) => {
     e.preventDefault();
     if (!profile) return;
-    if (!vehicleType || !vehicleRegistrationUrl) {
-      toast({ title: "Vehicle type and registration document are required", variant: "destructive" });
+    if (!vehicleType || !vehicleName || !licensePlate || !vehicleRegistrationUrl) {
+      toast({ title: "Vehicle type, make/model, licence plate and registration document are required", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
       const payload = {
         vehicle_type: vehicleType,
+        vehicle_name: vehicleName,
+        license_plate: licensePlate,
         vehicle_registration_url: vehicleRegistrationUrl,
         location_area: locationArea,
         verification_status: regChanged && profile.verification_status === "approved" ? "pending" : profile.verification_status,
@@ -169,6 +175,16 @@ export default function VehicleManagement() {
 
         <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Specifications</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="vname">Vehicle make/model</Label>
+              <Input id="vname" placeholder="e.g. Toyota Hilux" value={vehicleName} onChange={(e) => setVehicleName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plate">Licence plate</Label>
+              <Input id="plate" placeholder="e.g. ADZ 1234" value={licensePlate} onChange={(e) => setLicensePlate(e.target.value.toUpperCase())} />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="area">Operating area</Label>
             <Input id="area" placeholder="e.g. Harare CBD" value={locationArea} onChange={(e) => setLocationArea(e.target.value)} />

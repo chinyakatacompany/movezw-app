@@ -44,7 +44,7 @@ export default function AddressSearchInput({
     abortRef.current?.abort();
   }, []);
 
-  const runSearch = async (text) => {
+  const runSearch = async (text, isRetry = false) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -59,12 +59,22 @@ export default function AddressSearchInput({
         addressdetails: "1",
       });
       const res = await fetch(`${NOMINATIM_URL}?${params.toString()}`, { signal: controller.signal });
+      if (!res.ok) throw new Error(`Nominatim ${res.status}`);
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
       setSearched(true);
       setOpen(true);
     } catch (err) {
-      if (err.name !== "AbortError") { setResults([]); setSearched(true); }
+      if (err.name === "AbortError") return;
+      // Nominatim is a free, best-effort service — a transient hiccup or
+      // rate-limit response shouldn't read as "no results exist", so retry
+      // once before showing the empty state.
+      if (!isRetry) {
+        setTimeout(() => runSearch(text, true), 800);
+        return;
+      }
+      setResults([]);
+      setSearched(true);
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }

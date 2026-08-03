@@ -65,6 +65,8 @@ export default function DriverOnboarding() {
     phone: "",
     location_area: "",
     vehicle_type: "Pickup",
+    vehicle_name: "",
+    license_plate: "",
     national_id_url: "",
     driver_licence_url: "",
     vehicle_registration_url: "",
@@ -92,6 +94,8 @@ export default function DriverOnboarding() {
             phone: p.phone || "",
             location_area: p.location_area || "",
             vehicle_type: p.vehicle_type || "Pickup",
+            vehicle_name: p.vehicle_name || "",
+            license_plate: p.license_plate || "",
             national_id_url: p.national_id_url || "",
             driver_licence_url: p.driver_licence_url || "",
             vehicle_registration_url: p.vehicle_registration_url || "",
@@ -108,6 +112,10 @@ export default function DriverOnboarding() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!form.vehicle_name || !form.license_plate) {
+      toast({ title: "Vehicle make/model and licence plate are required", variant: "destructive" });
+      return;
+    }
     if (!form.national_id_url || !form.driver_licence_url || !form.vehicle_registration_url) {
       toast({ title: "All three documents are required", variant: "destructive" });
       return;
@@ -122,6 +130,8 @@ export default function DriverOnboarding() {
         phone: form.phone,
         location_area: form.location_area,
         vehicle_type: form.vehicle_type,
+        vehicle_name: form.vehicle_name,
+        license_plate: form.license_plate,
         national_id_url: form.national_id_url,
         driver_licence_url: form.driver_licence_url,
         vehicle_registration_url: form.vehicle_registration_url,
@@ -194,8 +204,8 @@ export default function DriverOnboarding() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Car className="w-4 h-4 text-primary" /> Vehicle type</h2>
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Car className="w-4 h-4 text-primary" /> Vehicle</h2>
           <div className="grid grid-cols-2 gap-2">
             {VEHICLE_TYPES.map((v) => (
               <button
@@ -211,6 +221,16 @@ export default function DriverOnboarding() {
                 <span className="text-xs font-medium">{v}</span>
               </button>
             ))}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="vname">Vehicle make/model *</Label>
+              <Input id="vname" placeholder="e.g. Toyota Hilux" value={form.vehicle_name} onChange={(e) => set("vehicle_name", e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plate">Licence plate *</Label>
+              <Input id="plate" placeholder="e.g. ADZ 1234" value={form.license_plate} onChange={(e) => set("license_plate", e.target.value.toUpperCase())} required />
+            </div>
           </div>
         </div>
 

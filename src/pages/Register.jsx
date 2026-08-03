@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,12 @@ import { cn } from "@/lib/utils";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [accountType, setAccountType] = useState("customer");
+  const [searchParams] = useSearchParams();
+  // Landing page CTAs link here with ?role=driver or ?role=customer so
+  // "Become a Driver" / "Book Transport" land pre-selected instead of
+  // requiring a second click.
+  const roleParam = searchParams.get("role");
+  const [accountType, setAccountType] = useState(roleParam === "driver" ? "driver" : "customer");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
