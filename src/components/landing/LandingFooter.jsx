@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Truck, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { Truck, Mail, Phone, MapPin, Users, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const SOCIALS = [
 { icon: Facebook, href: "#", label: "Facebook" },
@@ -43,12 +44,20 @@ export default function LandingFooter() {
             <h4 className="font-semibold text-background mb-4 text-sm">Contact</h4>
             <ul className="space-y-3 text-sm text-background/70">
               <li className="flex items-start gap-2.5">
-                <Mail className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                <span>movezwsupport@gmail.com</span>
+                <Phone className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                <a href="tel:+263780269976" className="hover:text-background">Call or WhatsApp: 0780 269 976</a>
               </li>
               <li className="flex items-start gap-2.5">
-                <Phone className="w-4 h-4 mt-0.5 text-primary shrink-0" />
-                <span>0780 269 976</span>
+                <WhatsAppIcon className="w-4 h-4 mt-0.5 shrink-0" />
+                <a href="https://wa.me/263715837174" target="_blank" rel="noopener noreferrer" className="hover:text-background">WhatsApp: 0715 837 174</a>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Users className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                <a href="https://chat.whatsapp.com/B6b47kyWtXRK1mBRMSgDJJ?s=cl&p=a&ilr=0" target="_blank" rel="noopener noreferrer" className="hover:text-background">Join the MoveZW WhatsApp group</a>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Mail className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                <a href="mailto:movezwsupport@gmail.com" className="hover:text-background">movezwsupport@gmail.com</a>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 mt-0.5 text-primary shrink-0" />
