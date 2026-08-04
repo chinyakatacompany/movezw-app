@@ -256,6 +256,13 @@ export default function DriverJobDetail() {
   const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const nextStep = STATUS_FLOW[activeStep + 1];
   const isOpen = request.status === "open";
+  // Real turn-by-turn (voice guidance, auto-advance, re-routing) isn't
+  // something this app builds itself — deep-link into the driver's own
+  // Google Maps app for that instead. Target is wherever they're headed
+  // next: pickup until collected, then the destination.
+  const navigateTarget = !["collected", "in_transit", "delivered", "completed"].includes(request.status)
+    ? (request.pickup_lat != null && request.pickup_lng != null ? { lat: request.pickup_lat, lng: request.pickup_lng, label: "pickup" } : null)
+    : (request.destination_lat != null && request.destination_lng != null ? { lat: request.destination_lat, lng: request.destination_lng, label: "destination" } : null);
 
   return (
     <div className="p-4 pb-8 space-y-5">
@@ -408,6 +415,16 @@ export default function DriverJobDetail() {
       {/* Manage delivery (accepted) */}
       {isMyJob && (STATUS_FLOW.includes(request.status) || request.status === "completed") && (
         <div className="space-y-4">
+          {navigateTarget && (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${navigateTarget.lat},${navigateTarget.lng}&travelmode=driving`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
+            >
+              <Navigation className="w-4 h-4" /> Navigate to {navigateTarget.label}
+            </a>
+          )}
           <div className="bg-white rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-sm font-semibold">Agreed price</h2>
