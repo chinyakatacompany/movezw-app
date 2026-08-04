@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Search, Ban, CheckCircle2, Mail, Phone } from "lucide-react";
+import { Users, Loader2, Search, Ban, CheckCircle2, Mail, Phone, Pencil, Check, X } from "lucide-react";
 import { formatDate } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -9,6 +9,10 @@ import { toast } from "@/components/ui/use-toast";
 export default function AdminUsers() {
   const [users, setUsers] = useState(null);
   const [q, setQ] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     supabase
@@ -31,6 +35,27 @@ export default function AdminUsers() {
       load();
     } catch (e) {
       toast({ title: "Action failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const startEdit = (u) => {
+    setEditingId(u.id);
+    setEditName(u.full_name || "");
+    setEditPhone(u.phone || "");
+  };
+
+  const saveEdit = async (u) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("profiles").update({ full_name: editName.trim(), phone: editPhone.trim() }).eq("id", u.id);
+      if (error) throw error;
+      toast({ title: "User updated" });
+      setEditingId(null);
+      load();
+    } catch (e) {
+      toast({ title: "Could not update user", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -67,25 +92,60 @@ export default function AdminUsers() {
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
                 {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold truncate">{u.full_name || "Unnamed"}</p>
-                  <span className={cn(
-                    "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded",
-                    u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
-                  )}>{u.role || "customer"}</span>
-                  {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700">Suspended</span>}
+              {editingId === u.id ? (
+                <div className="flex-1 min-w-0 space-y-2">
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Full name"
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <input
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="Phone"
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
+              ) : (
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold truncate">{u.full_name || "Unnamed"}</p>
+                    <span className={cn(
+                      "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded",
+                      u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                    )}>{u.role || "customer"}</span>
+                    {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700">Suspended</span>}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
+                </div>
+              )}
+              <div className="flex gap-2 shrink-0">
+                {editingId === u.id ? (
+                  <>
+                    <Button size="sm" onClick={() => saveEdit(u)} disabled={saving}>
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)} disabled={saving}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleSuspend(u)}
+                      className={cn(u.is_suspended ? "text-emerald-600 border-emerald-300 hover:bg-emerald-50" : "text-destructive border-destructive/30 hover:bg-destructive/5")}
+                    >
+                      {u.is_suspended ? <><CheckCircle2 className="w-4 h-4 mr-1" />Reactivate</> : <><Ban className="w-4 h-4 mr-1" />Suspend</>}
+                    </Button>
+                  </>
+                )}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toggleSuspend(u)}
-                className={cn(u.is_suspended ? "text-emerald-600 border-emerald-300 hover:bg-emerald-50" : "text-destructive border-destructive/30 hover:bg-destructive/5", "shrink-0")}
-              >
-                {u.is_suspended ? <><CheckCircle2 className="w-4 h-4 mr-1" />Reactivate</> : <><Ban className="w-4 h-4 mr-1" />Suspend</>}
-              </Button>
             </div>
           ))}
         </div>

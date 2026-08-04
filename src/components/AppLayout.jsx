@@ -24,6 +24,7 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
+  const [activeJobCount, setActiveJobCount] = useState(0);
 
   const isDriver = user?.role === "driver";
   const nav = isDriver ? driverNav : customerNav;
@@ -42,6 +43,21 @@ export default function AppLayout() {
       });
     return () => { active = false; };
   }, [user?.id, location.pathname]);
+
+  useEffect(() => {
+    if (!user?.id || !isDriver) return;
+    let active = true;
+    supabase
+      .from("transport_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("accepted_driver_id", user.id)
+      .in("status", ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"])
+      .then(({ count, error }) => {
+        if (error) console.error("Failed to load active job count:", error);
+        if (active) setActiveJobCount(count || 0);
+      });
+    return () => { active = false; };
+  }, [user?.id, isDriver, location.pathname]);
 
   const handleLogout = () => {
     logout(false);
@@ -127,7 +143,14 @@ export default function AppLayout() {
                 )}
               >
                 {active && <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-6 h-1 rounded-full bg-accent" />}
-                <Icon className={cn("w-5 h-5", active && "stroke-[2.5]")} />
+                <span className="relative">
+                  <Icon className={cn("w-5 h-5", active && "stroke-[2.5]")} />
+                  {isDriver && to === "/driver" && activeJobCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center">
+                      {activeJobCount > 9 ? "9+" : activeJobCount}
+                    </span>
+                  )}
+                </span>
                 {label}
               </Link>
             );

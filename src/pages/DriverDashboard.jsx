@@ -2,10 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Shield, TrendingUp, AlertCircle, Truck } from "lucide-react";
+import { Package, Shield, AlertCircle, Truck, ChevronRight } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
-const ShipmentMap = React.lazy(() => import("@/components/ShipmentMap"));
-import { EmptyState, formatMoney, StarRating, STATUS_LABELS, shipmentPosition, STATUS_COLORS } from "@/lib/movezw";
+import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
 import { AVAILABILITY_LABELS } from "@/lib/matching";
@@ -142,6 +141,16 @@ export default function DriverDashboard() {
           <p className="text-sm text-white/70">Good {timeOfDayGreeting()}</p>
           <h1 className="text-2xl font-bold tracking-tight text-white">{user?.full_name?.split(" ")[0] || "Driver"} 👋</h1>
           <p className="text-sm text-white/70">{profile.vehicle_type} · {profile.location_area || "Zimbabwe"}</p>
+          {myJobs?.length > 0 && (
+            <Link
+              to={`/driver/job/${myJobs[0].id}`}
+              className="mt-3 flex items-center gap-2 bg-white/10 hover:bg-white/15 transition-colors rounded-xl px-3 py-2 w-fit"
+            >
+              <Package className="w-4 h-4 text-white" />
+              <span className="text-sm font-medium text-white">{myJobs.length} active job{myJobs.length === 1 ? "" : "s"}</span>
+              <ChevronRight className="w-4 h-4 text-white/70" />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -166,59 +175,6 @@ export default function DriverDashboard() {
       </div>
 
       <NotificationSettings description="Get notified the moment a matching job comes in, even with the app in the background." />
-
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-border p-3 text-center">
-          <StarRating value={profile.rating_avg || 0} />
-          <p className="text-lg font-bold mt-1">{profile.rating_avg?.toFixed(1) || "0.0"}</p>
-          <p className="text-[10px] text-muted-foreground mb-1.5">Rating</p>
-          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">Great work!</span>
-        </div>
-        <div className="bg-white rounded-2xl border border-border p-3 text-center">
-          <Package className="w-5 h-5 text-primary mx-auto mb-1" />
-          <p className="text-lg font-bold">{profile.completed_jobs || 0}</p>
-          <p className="text-[10px] text-muted-foreground mb-1.5">Jobs done</p>
-          <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700">Keep it up!</span>
-        </div>
-        <div className="bg-white rounded-2xl border border-border p-3 text-center">
-          <TrendingUp className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-          <p className="text-lg font-bold">{myJobs?.length || 0}</p>
-          <p className="text-[10px] text-muted-foreground mb-1.5">Active</p>
-          {myJobs?.length > 0 ? (
-            <Link to={`/driver/job/${myJobs[0].id}`} className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700">View job →</Link>
-          ) : (
-            <span className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">No jobs yet</span>
-          )}
-        </div>
-      </div>
-
-      {myJobs?.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold mb-3">Your active jobs</h2>
-          <div className="space-y-3">
-            {myJobs.map((r) => (
-              <RequestCard key={r.id} request={r} to={`/driver/job/${r.id}`} showCustomer />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {myJobs?.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
-          <h2 className="text-base font-semibold mb-1">Active shipments map</h2>
-          <p className="text-xs text-muted-foreground mb-3">Destinations for your active deliveries across Zimbabwe.</p>
-          <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
-            <ShipmentMap
-              shipments={myJobs.map((r) => ({
-                id: r.id,
-                position: shipmentPosition(null, r),
-                label: `${r.customer_name || "Customer"} · ${STATUS_LABELS[r.status] || r.status}`,
-                color: STATUS_COLORS[r.status] || "#1e2f5e",
-              }))}
-            />
-          </React.Suspense>
-        </div>
-      )}
 
       <div>
         <h2 className="text-base font-semibold mb-3">Nearby open requests</h2>
