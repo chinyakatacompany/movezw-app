@@ -53,12 +53,22 @@ export default function Register() {
       setError(error.message);
       return;
     }
+    // Tagged with the exact account it belongs to (known immediately here,
+    // unlike the Google OAuth path below) so a stale flag from an earlier
+    // signup in this same browser tab can never be misread as belonging to
+    // a different account that logs in later — see AuthContext.jsx.
     sessionStorage.setItem("movzw_signup_role", accountType);
+    sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
     setDone(true);
   };
 
   const handleGoogle = async () => {
+    // Unlike email signup above, we don't know the resulting user's id
+    // until after the OAuth redirect completes — clear any stale claim tag
+    // so AuthContext.jsx's first-claim-wins logic assigns this fresh role
+    // hint to whichever account actually comes back, not a leftover one.
+    sessionStorage.removeItem("movzw_signup_user_id");
     sessionStorage.setItem("movzw_signup_role", accountType);
     await supabase.auth.signInWithOAuth({ provider: "google" });
   };

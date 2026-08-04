@@ -40,6 +40,7 @@ export default function BusinessOnboarding() {
       });
       if (error) throw error;
       sessionStorage.removeItem("movzw_signup_role");
+      sessionStorage.removeItem("movzw_signup_user_id");
       toast({ title: "Business account created", description: "Welcome to MoveZW Business." });
       navigate("/business");
     } catch (err) {

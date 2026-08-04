@@ -69,13 +69,22 @@ export const AuthProvider = ({ children }) => {
 
       // Google sign-in can't seed role into handle_new_user() the way
       // email/password signup does (Register.jsx passes it via signUp's
-      // user metadata) — this is the fallback for that path, and a safety
-      // net generally, promoting a still-default 'customer' profile to
-      // 'driver' if that's what was chosen at signup and sessionStorage
-      // survived to this login.
+      // user metadata) — this is the fallback for that path. sessionStorage
+      // isn't cleared on logout, so without the user-id tag below, a stale
+      // "driver" flag left over from testing a driver signup earlier in
+      // this same browser tab would silently promote an unrelated account
+      // that logs in afterward (this happened — see git history). The tag
+      // is claimed by whichever account first sees an untagged flag (the
+      // Google path can't pre-tag it, since the user id isn't known until
+      // after the redirect completes) and then only that exact account may
+      // ever act on it.
+      if (sessionStorage.getItem('movzw_signup_role') && !sessionStorage.getItem('movzw_signup_user_id')) {
+        sessionStorage.setItem('movzw_signup_user_id', authUser.id);
+      }
       let role = profile?.role || 'customer';
       const pendingRole = sessionStorage.getItem('movzw_signup_role');
-      if (pendingRole === 'driver' && role === 'customer') {
+      const pendingRoleOwner = sessionStorage.getItem('movzw_signup_user_id');
+      if (pendingRole === 'driver' && pendingRoleOwner === authUser.id && role === 'customer') {
         const { error: roleErr } = await supabase
           .from('profiles')
           .update({ role: 'driver' })

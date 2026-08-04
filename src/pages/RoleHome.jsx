@@ -44,7 +44,11 @@ export default function RoleHome() {
 
   if (user.role === "admin") return <Navigate to="/admin" replace />;
 
-  const signupRole = sessionStorage.getItem("movzw_signup_role");
+  // Only trust the hint if it's tagged for this exact account — see
+  // RoleGuard.jsx for why (sessionStorage isn't cleared on logout).
+  const signupRole = sessionStorage.getItem("movzw_signup_user_id") === user.id
+    ? sessionStorage.getItem("movzw_signup_role")
+    : null;
 
   if (business) return <Navigate to="/business" replace />;
   if (signupRole === "business") return <Navigate to="/business/onboarding" replace />;

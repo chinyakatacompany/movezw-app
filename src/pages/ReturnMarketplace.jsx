@@ -41,7 +41,10 @@ export default function ReturnMarketplace() {
   const [bForm, setBForm] = useState({ requested_capacity_kg: "", offered_price: "", cargo_description: "", message: "" });
   const [submitting, setSubmitting] = useState(false);
 
-  const isDriver = user?.role === "driver" || sessionStorage.getItem("movzw_signup_role") === "driver";
+  // Only trust the hint if it's tagged for this exact account — see
+  // RoleGuard.jsx for why (sessionStorage isn't cleared on logout).
+  const isDriver = user?.role === "driver"
+    || (sessionStorage.getItem("movzw_signup_user_id") === user?.id && sessionStorage.getItem("movzw_signup_role") === "driver");
 
   useEffect(() => {
     let active = true;

@@ -148,6 +148,7 @@ export default function DriverOnboarding() {
         if (error) throw error;
       }
       sessionStorage.removeItem("movzw_signup_role");
+      sessionStorage.removeItem("movzw_signup_user_id");
       toast({ title: existing ? "Profile updated" : "Application submitted!", description: "Our team will verify your documents shortly." });
       navigate("/driver");
     } catch (err) {

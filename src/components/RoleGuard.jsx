@@ -64,21 +64,24 @@ export default function RoleGuard({ allow, children }) {
   // Admin access
   if (allow.includes("admin") && user.role === "admin") return children;
 
-  const isDriver =
-    allow.includes("driver") &&
-    (user.role === "driver" || hasProfile || sessionStorage.getItem("movzw_signup_role") === "driver");
+  // Only trust the sessionStorage hint if it's tagged for this exact
+  // account — sessionStorage isn't cleared on logout, so an untagged (or
+  // differently-tagged) leftover from a different signup earlier in this
+  // browser tab must never be read as belonging to whoever's logged in now.
+  const signupRole = sessionStorage.getItem("movzw_signup_user_id") === user.id
+    ? sessionStorage.getItem("movzw_signup_role")
+    : null;
+
+  const isDriver = allow.includes("driver") && (user.role === "driver" || hasProfile || signupRole === "driver");
   if (allow.includes("driver") && isDriver) return children;
 
-  const isBusiness =
-    allow.includes("business") &&
-    (hasBusiness || sessionStorage.getItem("movzw_signup_role") === "business");
+  const isBusiness = allow.includes("business") && (hasBusiness || signupRole === "business");
   if (allow.includes("business") && isBusiness) return children;
 
   // Customer access
   if (allow.includes("customer") && !isDriver && !isBusiness && user.role !== "admin") return children;
 
   // Redirect to the right home
-  const signupRole = sessionStorage.getItem("movzw_signup_role");
   if (user.role === "admin") return <Navigate to="/admin" replace />;
   if (isBusiness || signupRole === "business") return <Navigate to="/business" replace />;
   if (isDriver) return <Navigate to="/driver" replace />;
