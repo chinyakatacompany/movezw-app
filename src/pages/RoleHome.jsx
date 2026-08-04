@@ -50,7 +50,7 @@ export default function RoleHome() {
   if (signupRole === "business") return <Navigate to="/business/onboarding" replace />;
 
   if (profile) return <Navigate to="/driver" replace />;
-  if (signupRole === "driver") return <Navigate to="/driver/onboarding" replace />;
+  if (user.role === "driver" || signupRole === "driver") return <Navigate to="/driver/onboarding" replace />;
 
   return <Navigate to="/customer" replace />;
 }

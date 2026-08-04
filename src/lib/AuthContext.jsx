@@ -67,12 +67,28 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('movzw_signup_phone');
       }
 
+      // Google sign-in can't seed role into handle_new_user() the way
+      // email/password signup does (Register.jsx passes it via signUp's
+      // user metadata) — this is the fallback for that path, and a safety
+      // net generally, promoting a still-default 'customer' profile to
+      // 'driver' if that's what was chosen at signup and sessionStorage
+      // survived to this login.
+      let role = profile?.role || 'customer';
+      const pendingRole = sessionStorage.getItem('movzw_signup_role');
+      if (pendingRole === 'driver' && role === 'customer') {
+        const { error: roleErr } = await supabase
+          .from('profiles')
+          .update({ role: 'driver' })
+          .eq('id', authUser.id);
+        if (!roleErr) role = 'driver';
+      }
+
       setUser({
         id: authUser.id,
         email: authUser.email,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
         phone,
-        role: profile?.role || 'customer',
+        role,
         is_suspended: profile?.is_suspended || false,
       });
       setIsAuthenticated(true);

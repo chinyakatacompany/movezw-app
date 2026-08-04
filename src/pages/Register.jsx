@@ -41,7 +41,11 @@ export default function Register() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      // role travels in the auth user's metadata (not just sessionStorage)
+      // so handle_new_user() can set it correctly on the profiles row from
+      // the start — sessionStorage alone doesn't survive email confirmation
+      // reliably, since that link is often opened in a different tab/app.
+      options: { data: { full_name: fullName, role: accountType === "driver" ? "driver" : "customer" } },
     });
     setLoading(false);
     if (error) {
