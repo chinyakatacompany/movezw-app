@@ -7,7 +7,8 @@ import RequestCard from "@/components/RequestCard";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
-import { AVAILABILITY_LABELS } from "@/lib/matching";
+import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
+import { geolocationUnavailableReason } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,19 @@ export default function DriverDashboard() {
   const [profile, setProfile] = useState(null);
   const [openRequests, setOpenRequests] = useState(null);
   const [myJobs, setMyJobs] = useState(null);
+  const [driverPos, setDriverPos] = useState(null);
+
+  // Best-effort — lets each request card show "X km away" so a driver can
+  // judge proximity without opening a map. Silently does nothing if
+  // location isn't available; cards just show without a distance.
+  useEffect(() => {
+    if (geolocationUnavailableReason()) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+    );
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -201,6 +215,23 @@ export default function DriverDashboard() {
 
       <NotificationSettings description="Get notified the moment a matching job comes in, even with the app in the background." />
 
+      {myJobs?.length > 0 && (
+        <div>
+          <h2 className="text-base font-semibold mb-3">Active jobs</h2>
+          <div className="space-y-3">
+            {myJobs.map((r) => (
+              <RequestCard
+                key={r.id}
+                request={r}
+                to={`/driver/job/${r.id}`}
+                showCustomer
+                distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-base font-semibold mb-3">Nearby open requests</h2>
         {openRequests === null ? (
@@ -214,7 +245,14 @@ export default function DriverDashboard() {
         ) : (
           <div className="space-y-3">
             {openRequests.map((r) => (
-              <RequestCard key={r.id} request={r} to={`/driver/job/${r.id}`} showCustomer rightSlot={<span className="text-sm font-bold text-primary">{formatMoney(r.budget)}</span>} />
+              <RequestCard
+                key={r.id}
+                request={r}
+                to={`/driver/job/${r.id}`}
+                showCustomer
+                distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
+                rightSlot={<span className="text-sm font-bold text-primary">{formatMoney(r.budget)}</span>}
+              />
             ))}
           </div>
         )}

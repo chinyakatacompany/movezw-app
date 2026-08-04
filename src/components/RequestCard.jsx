@@ -4,7 +4,7 @@ import { MapPin, Navigation, Clock, DollarSign, Package } from "lucide-react";
 import { StatusBadge, formatMoney, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 
-export default function RequestCard({ request, to, showCustomer = false, rightSlot }) {
+export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm }) {
   return (
     <Link
       to={to}
@@ -45,6 +45,12 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
           {request.vehicle_type && (
             <span className="inline-flex items-center gap-1">
               {VEHICLE_ICONS[request.vehicle_type] || "🚚"} {request.vehicle_type}
+            </span>
+          )}
+          {distanceKm != null && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5" />
+              {distanceKm < 1 ? `${Math.round(distanceKm * 1000)} m away` : `${distanceKm.toFixed(1)} km away`}
             </span>
           )}
           <span className="inline-flex items-center gap-1">
