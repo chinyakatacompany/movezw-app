@@ -32,18 +32,37 @@ export default function DriverDashboard() {
   const [openRequests, setOpenRequests] = useState(null);
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
+  const [locatingPos, setLocatingPos] = useState(true);
+  const [locationError, setLocationError] = useState(null);
 
-  // Best-effort — lets each request card show "X km away" so a driver can
-  // judge proximity without opening a map. Silently does nothing if
-  // location isn't available; cards just show without a distance.
-  useEffect(() => {
-    if (geolocationUnavailableReason()) return;
+  // Lets each request card show "X km away", and gates the compact route
+  // tile under each active job. Unlike a silent best-effort failure, this
+  // surfaces WHY the map/distance isn't showing (permission denied, no GPS,
+  // insecure origin) with a retry — otherwise a driver who hasn't granted
+  // location just sees nothing there with no explanation.
+  const fetchDriverPos = () => {
+    const reason = geolocationUnavailableReason();
+    if (reason) {
+      setLocationError(reason);
+      setLocatingPos(false);
+      return;
+    }
+    setLocatingPos(true);
+    setLocationError(null);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
+      (pos) => {
+        setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocatingPos(false);
+      },
+      (err) => {
+        setLocatingPos(false);
+        setLocationError(err.message || "Couldn't get your location. Enable location access to see distance and route to your jobs.");
+      },
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
     );
-  }, []);
+  };
+
+  useEffect(() => { fetchDriverPos(); }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -249,6 +268,24 @@ export default function DriverDashboard() {
                         height={ROUTE_TILE_HEIGHT}
                       />
                     </React.Suspense>
+                  )}
+                  {locatingPos && (
+                    <div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl bg-muted animate-pulse flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      Getting your location…
+                    </div>
+                  )}
+                  {!locatingPos && locationError && (
+                    <div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 px-4 text-center">
+                      <p className="text-xs text-muted-foreground">{locationError}</p>
+                      <button type="button" onClick={fetchDriverPos} className="text-xs font-semibold text-primary underline">
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                  {!locatingPos && !locationError && driverPos && !target && (
+                    <p className="text-xs text-muted-foreground px-1">
+                      Map unavailable — this job's {headedToDestination ? "destination" : "pickup"} doesn't have a pinned location.
+                    </p>
                   )}
                 </div>
               );
