@@ -59,6 +59,31 @@ export default function DriverDashboard() {
       });
   }, [user?.id]);
 
+  // Keep "Nearby open requests" live: the moment another driver accepts a
+  // request (or the customer cancels it), it disappears here without a
+  // manual refresh — otherwise a driver could tap into a job someone else
+  // already took.
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`driver-dashboard-open-requests-${user.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transport_requests", filter: "status=eq.open" }, (payload) => {
+        setOpenRequests((cur) => (cur ? [payload.new, ...cur] : cur));
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "transport_requests" }, (payload) => {
+        setOpenRequests((cur) => {
+          if (!cur) return cur;
+          if (payload.new.status === "open") {
+            const exists = cur.some((r) => r.id === payload.new.id);
+            return exists ? cur.map((r) => (r.id === payload.new.id ? payload.new : r)) : [payload.new, ...cur];
+          }
+          return cur.filter((r) => r.id !== payload.new.id);
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   const [toggling, setToggling] = useState(false);
   const verified = profile?.verification_status === "approved";
 

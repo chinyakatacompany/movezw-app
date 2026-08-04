@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon } from "lucide-react";
 import { STATUS_FLOW } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
+import MapReveal from "@/components/MapReveal";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
 
 const TRIP_STEPS = [
@@ -71,9 +72,11 @@ export default function CustomerDashboard() {
   return (
     <div className="pb-2">
       <div className="relative h-64 overflow-hidden rounded-b-3xl">
-        <React.Suspense fallback={<div className="w-full h-full bg-muted animate-pulse" />}>
-          <HomeMap height={256} />
-        </React.Suspense>
+        <MapReveal height={256} label="Tap to view live map" className="rounded-none border-0">
+          <React.Suspense fallback={<div className="w-full h-full bg-muted animate-pulse" />}>
+            <HomeMap height={256} />
+          </React.Suspense>
+        </MapReveal>
         <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
           <Truck className="w-3.5 h-3.5 text-primary" />
           {onlineDrivers} driver{onlineDrivers === 1 ? "" : "s"} nearby
