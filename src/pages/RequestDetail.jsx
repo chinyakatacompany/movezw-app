@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown, MapPin, Navigation } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown, MapPin, Navigation, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
@@ -240,12 +240,28 @@ export default function RequestDetail() {
               {pendingOffers.slice().sort((a, b) => sortBy === "rating" ? (b.driver_rating || 0) - (a.driver_rating || 0) : a.price - b.price).map((o) => (
                 <div key={o.id} className="bg-white rounded-2xl border-2 border-border p-4">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="text-sm font-semibold">{o.driver_name}</p>
-                      <StarRating value={o.driver_rating || 0} />
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {o.driver_photo_url ? (
+                          <img src={o.driver_photo_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <UserIcon className="w-5 h-5 text-primary" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{o.driver_name}</p>
+                        <StarRating value={o.driver_rating || 0} />
+                      </div>
                     </div>
                     <p className="text-lg font-bold text-primary">{formatMoney(o.price)}</p>
                   </div>
+                  {(o.vehicle_name || o.vehicle_type || o.license_plate) && (
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {VEHICLE_ICONS[o.vehicle_type] ? `${VEHICLE_ICONS[o.vehicle_type]} ` : ""}
+                      {[o.vehicle_name, o.vehicle_type].filter(Boolean).join(" ")}
+                      {o.license_plate ? ` · ${o.license_plate}` : ""}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <Button onClick={() => acceptOffer(o)} disabled={accepting === o.id} className="flex-1 h-11 font-semibold">
                       {accepting === o.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Accepting...</> : "Accept offer"}

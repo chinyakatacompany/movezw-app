@@ -154,6 +154,8 @@ export default function DriverJobDetail() {
           driver_photo_url: profile.profile_picture_url || "",
           verified: profile.verification_status === "approved",
           vehicle_type: profile.vehicle_type,
+          vehicle_name: profile.vehicle_name || null,
+          license_plate: profile.license_plate || null,
           driver_rating: profile.rating_avg || 0,
           completed_jobs: profile.completed_jobs || 0,
           eta_minutes: eta ? Number(eta) : null,
@@ -259,10 +261,18 @@ export default function DriverJobDetail() {
   // Real turn-by-turn (voice guidance, auto-advance, re-routing) isn't
   // something this app builds itself — deep-link into the driver's own
   // Google Maps app for that instead. Target is wherever they're headed
-  // next: pickup until collected, then the destination.
+  // next: pickup until collected, then the destination. Falls back to the
+  // raw address text when we don't have coordinates (MoveZW's free OSM
+  // geocoder doesn't know every local place) — Google Maps' own, much
+  // better geocoder resolves it query-side, at no cost to us since it's
+  // just handing off to their consumer app, not calling their paid API.
   const navigateTarget = !["collected", "in_transit", "delivered", "completed"].includes(request.status)
-    ? (request.pickup_lat != null && request.pickup_lng != null ? { lat: request.pickup_lat, lng: request.pickup_lng, label: "pickup" } : null)
-    : (request.destination_lat != null && request.destination_lng != null ? { lat: request.destination_lat, lng: request.destination_lng, label: "destination" } : null);
+    ? (request.pickup_lat != null && request.pickup_lng != null
+        ? { query: `${request.pickup_lat},${request.pickup_lng}`, label: "pickup" }
+        : request.pickup_location ? { query: request.pickup_location, label: "pickup" } : null)
+    : (request.destination_lat != null && request.destination_lng != null
+        ? { query: `${request.destination_lat},${request.destination_lng}`, label: "destination" }
+        : request.destination ? { query: request.destination, label: "destination" } : null);
 
   return (
     <div className="p-4 pb-8 space-y-5">
@@ -417,7 +427,7 @@ export default function DriverJobDetail() {
         <div className="space-y-4">
           {navigateTarget && (
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${navigateTarget.lat},${navigateTarget.lng}&travelmode=driving`}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navigateTarget.query)}&travelmode=driving`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
