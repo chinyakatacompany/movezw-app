@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
-import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut } from "lucide-react";
+import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
@@ -13,6 +13,7 @@ const nav = [
   { to: "/admin/users", label: "User Management", icon: Users },
   { to: "/admin/jobs", label: "Job Management", icon: Package },
   { to: "/admin/finance", label: "Finance", icon: Wallet },
+  { to: "/admin/content", label: "Site Content", icon: FileText },
   { to: "/admin/reports", label: "Reports", icon: BarChart3 },
 ];
 

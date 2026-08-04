@@ -2,59 +2,77 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Truck, ArrowLeft, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSiteContent } from "@/lib/siteContent";
 
-const SECTIONS = [
+// Defines structure/order/count of sections and their default text. Actual
+// rendered text is pulled from site_content via each section's key, so
+// admins can edit it at /admin/content without a code change — this array
+// only supplies the fallback shown until a section is customized.
+export const TERMS_SECTIONS = [
   {
+    key: "terms.1",
     title: "1. Acceptance of Terms",
     body: "By creating an account or using the MoveZW platform, you agree to be bound by these Terms of Service. If you do not agree with any part of these terms, you must not use the platform.",
   },
   {
+    key: "terms.2",
     title: "2. Description of Service",
     body: "MoveZW is a marketplace that connects customers who need goods transported with independent transport providers (drivers). MoveZW facilitates the connection but is not itself a transport provider and does not take possession of any goods.",
   },
   {
+    key: "terms.3",
     title: "3. User Accounts",
     body: "You must provide accurate and complete information when registering. You are responsible for keeping your account credentials secure and for all activity under your account. You must be at least 18 years old to use MoveZW.",
   },
   {
+    key: "terms.4",
     title: "4. Customer Responsibilities",
     body: "Customers agree to provide truthful descriptions of cargo, pickup and destination details, and a fair budget. Customers must ensure goods are lawful to transport and are responsible for ensuring items are ready for pickup at the agreed time.",
   },
   {
+    key: "terms.5",
     title: "5. Driver Responsibilities",
     body: "Drivers must hold a valid driver's licence and submit truthful vehicle and identity documents for verification. Drivers are independent contractors, not employees of MoveZW, and are responsible for the safe and lawful transport of goods.",
   },
   {
+    key: "terms.6",
     title: "6. Verification & Listings",
     body: "MoveZW reviews submitted documents before approving drivers. Approval does not guarantee the quality of any individual service. Drivers and customers are responsible for their own conduct during a job.",
   },
   {
+    key: "terms.7",
     title: "7. Payments",
     body: "MoveZW currently facilitates cash-on-delivery payments directly between customers and drivers. Additional payment methods may be introduced. Any platform service fees will be clearly disclosed before they apply.",
   },
   {
+    key: "terms.8",
     title: "8. Cancellations & Disputes",
     body: "Either party may cancel an open request before a driver is en route to pickup. For disputes, users should first attempt to resolve directly, then contact MoveZW support. MoveZW may mediate but is not liable for the outcome.",
   },
   {
+    key: "terms.9",
     title: "9. Prohibited Conduct",
     body: "Users must not use MoveZW to transport illegal, hazardous or stolen goods, to harass others, to circumvent the platform's processes, or to misrepresent themselves or their vehicles.",
   },
   {
+    key: "terms.10",
     title: "10. Limitation of Liability",
     body: "MoveZW provides the platform 'as is' and is not liable for loss or damage to goods, delays, or the conduct of other users. Liability is limited to the maximum extent permitted by applicable Zimbabwean law.",
   },
   {
+    key: "terms.11",
     title: "11. Changes to Terms",
     body: "MoveZW may update these Terms from time to time. Continued use of the platform after changes constitutes acceptance of the revised Terms. Material changes will be communicated to active users.",
   },
   {
+    key: "terms.12",
     title: "12. Contact",
     body: "Questions about these Terms can be sent to movezwsupport@gmail.com or through the in-app Support Center.",
   },
 ];
 
 export default function Terms() {
+  const { t } = useSiteContent();
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-background">
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-border">
@@ -79,10 +97,10 @@ export default function Terms() {
         <p className="mt-3 text-sm text-muted-foreground">Last updated: July 2026</p>
 
         <div className="mt-8 space-y-6">
-          {SECTIONS.map((s) => (
-            <section key={s.title} className="bg-card rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
-              <h2 className="font-heading text-base sm:text-lg font-semibold text-foreground mb-2">{s.title}</h2>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{s.body}</p>
+          {TERMS_SECTIONS.map((s) => (
+            <section key={s.key} className="bg-card rounded-2xl border border-border p-5 sm:p-6 shadow-sm">
+              <h2 className="font-heading text-base sm:text-lg font-semibold text-foreground mb-2">{t(`${s.key}.title`, s.title)}</h2>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed whitespace-pre-line">{t(`${s.key}.body`, s.body)}</p>
             </section>
           ))}
         </div>

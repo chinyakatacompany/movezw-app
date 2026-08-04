@@ -32,6 +32,7 @@ import AdminJobs from '@/pages/AdminJobs';
 import AdminReports from '@/pages/AdminReports';
 import AdminAnalytics from '@/pages/AdminAnalytics';
 import AdminFinance from '@/pages/AdminFinance';
+import AdminContent from '@/pages/AdminContent';
 import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
 import PaymentHistory from '@/pages/PaymentHistory';
@@ -180,6 +181,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/finance" element={<AdminFinance />} />
+          <Route path="/admin/content" element={<AdminContent />} />
         </Route>
       </Route>
 

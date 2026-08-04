@@ -2,8 +2,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Truck, Star, ShieldCheck } from "lucide-react";
+import { useSiteContent } from "@/lib/siteContent";
 
 export default function Hero() {
+  const { t } = useSiteContent();
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-blue-50 via-background to-background">
       <div className="absolute inset-0 pointer-events-none">
@@ -18,24 +20,24 @@ export default function Hero() {
             Zimbabwe's trusted transport marketplace
           </span>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1]">
-            Move Anything.{" "}
-            <span className="text-primary">Anywhere in Zimbabwe.</span>
+            {t("landing.hero.title_main", "Move Anything.")}{" "}
+            <span className="text-primary">{t("landing.hero.title_highlight", "Anywhere in Zimbabwe.")}</span>
           </h1>
           <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
-            Quickly find trusted, verified transport providers for your goods. Post a request in minutes, compare offers from local drivers, and track your delivery every step of the way.
+            {t("landing.hero.subtitle", "Quickly find trusted, verified transport providers for your goods. Post a request in minutes, compare offers from local drivers, and track your delivery every step of the way.")}
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
             <Link to="/register?role=customer">
               <Button size="lg" className="w-full sm:w-auto h-12 px-7 text-base">
-                Book Transport
+                {t("landing.hero.cta_customer", "Book Transport")}
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
             <Link to="/register?role=driver">
               <Button size="lg" variant="outline" className="w-full sm:w-auto h-12 px-7 text-base">
                 <Truck className="w-4 h-4" />
-                Become a Driver
+                {t("landing.hero.cta_driver", "Become a Driver")}
               </Button>
             </Link>
           </div>
