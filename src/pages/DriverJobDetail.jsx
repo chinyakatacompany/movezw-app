@@ -16,6 +16,12 @@ import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason } from "@/lib/geo";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
+// Statuses during which the customer can see the driver moving live —
+// matches fn_get_trip_contact_phone's "en route or later" gate, so location
+// only becomes visible once contact details do too.
+const LIVE_TRACKING_STATUSES = ["en_route_pickup", "collected", "in_transit"];
+const LOCATION_REPORT_INTERVAL_MS = 5 * 60 * 1000;
+
 export default function DriverJobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -96,6 +102,29 @@ export default function DriverJobDetail() {
     return () => { supabase.removeChannel(channel); };
     /* eslint-disable-next-line */
   }, [id, user?.id]);
+
+  // Report this driver's position to the customer every 5 minutes while the
+  // job is actively moving (en route to pickup through in transit). Stops
+  // automatically once delivered/completed/cancelled, or if this isn't the
+  // accepted driver's own job.
+  useEffect(() => {
+    if (request?.accepted_driver_id !== user?.id || !LIVE_TRACKING_STATUSES.includes(request?.status)) return;
+    const reportLocation = () => {
+      if (geolocationUnavailableReason()) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          supabase
+            .rpc("fn_update_driver_location", { p_request_id: request.id, p_lat: pos.coords.latitude, p_lng: pos.coords.longitude })
+            .then(({ error }) => { if (error) console.error("Failed to report location:", error); });
+        },
+        () => { /* best-effort — skip this cycle if location isn't available */ },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+      );
+    };
+    reportLocation();
+    const intervalId = setInterval(reportLocation, LOCATION_REPORT_INTERVAL_MS);
+    return () => clearInterval(intervalId);
+  }, [request?.accepted_driver_id, request?.status, request?.id, user?.id]);
 
   const submitQuote = async () => {
     if (!price || Number(price) <= 0) {

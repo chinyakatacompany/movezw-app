@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown, MapPin } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, ShieldCheck, Clock, Package, MessageCircle, Phone, ChevronDown, MapPin, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
@@ -153,6 +153,15 @@ export default function RequestDetail() {
   const showOffers = request.status === "open";
   const showTracking = STATUS_FLOW.includes(request.status) || request.status === "completed";
   const hasFullRoute = request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null;
+  // Live driver position, refreshed every 5 minutes by the driver's app —
+  // heads to pickup while en route, then to the destination once collected.
+  const trackingTarget = request.status === "en_route_pickup"
+    ? { lat: request.pickup_lat, lng: request.pickup_lng, label: "Pickup" }
+    : { lat: request.destination_lat, lng: request.destination_lng, label: "Destination" };
+  const showLiveTracking = enRouteOrLater
+    && !["delivered", "completed", "cancelled"].includes(request.status)
+    && request.driver_lat != null && request.driver_lng != null
+    && trackingTarget.lat != null && trackingTarget.lng != null;
 
   return (
     <div className="p-4 pb-8 space-y-5">
@@ -249,6 +258,24 @@ export default function RequestDetail() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {showLiveTracking && (
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Live driver location</h2>
+            <span className="text-[11px] text-muted-foreground">Updated {timeAgo(request.driver_location_updated_at)}</span>
+          </div>
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.driver_lat, lng: request.driver_lng }}
+              to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
+              fromLabel="Your driver"
+              toLabel={trackingTarget.label}
+              fromColor="#ea580c"
+            />
+          </React.Suspense>
         </div>
       )}
 
