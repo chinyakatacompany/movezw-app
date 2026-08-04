@@ -11,6 +11,13 @@ import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
 import { geolocationUnavailableReason } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+
+// Active jobs only, not every "nearby open request" card — a live map is a
+// real WebGL instance with its own tile/route fetch, and a driver usually
+// has just one active job at a time. Many of these on one page (as "nearby
+// open requests" could be) would genuinely slow the dashboard down.
+const ROUTE_TILE_HEIGHT = 150;
 
 function timeOfDayGreeting() {
   const h = new Date().getHours();
@@ -219,15 +226,33 @@ export default function DriverDashboard() {
         <div>
           <h2 className="text-base font-semibold mb-3">Active jobs</h2>
           <div className="space-y-3">
-            {myJobs.map((r) => (
-              <RequestCard
-                key={r.id}
-                request={r}
-                to={`/driver/job/${r.id}`}
-                showCustomer
-                distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
-              />
-            ))}
+            {myJobs.map((r) => {
+              const headedToDestination = ["collected", "in_transit", "delivered"].includes(r.status);
+              const target = headedToDestination
+                ? (r.destination_lat != null && r.destination_lng != null ? { lat: r.destination_lat, lng: r.destination_lng } : null)
+                : (r.pickup_lat != null && r.pickup_lng != null ? { lat: r.pickup_lat, lng: r.pickup_lng } : null);
+              return (
+                <div key={r.id} className="space-y-2">
+                  <RequestCard
+                    request={r}
+                    to={`/driver/job/${r.id}`}
+                    showCustomer
+                    distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
+                  />
+                  {driverPos && target && (
+                    <React.Suspense fallback={<div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl bg-muted animate-pulse" />}>
+                      <RouteMap
+                        from={driverPos}
+                        to={target}
+                        fromLabel="You"
+                        toLabel={headedToDestination ? "Destination" : "Pickup"}
+                        height={ROUTE_TILE_HEIGHT}
+                      />
+                    </React.Suspense>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
