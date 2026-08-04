@@ -14,7 +14,6 @@ import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCo
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason } from "@/lib/geo";
-import MapReveal from "@/components/MapReveal";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 // Statuses during which the customer can see the driver moving live —
@@ -310,16 +309,14 @@ export default function DriverJobDetail() {
       {request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null && (
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
           <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Trip route</h2>
-          <MapReveal>
-            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-              <RouteMap
-                from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
-                to={{ lat: request.destination_lat, lng: request.destination_lng }}
-                fromLabel="Pickup"
-                toLabel="Destination"
-              />
-            </React.Suspense>
-          </MapReveal>
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
+              to={{ lat: request.destination_lat, lng: request.destination_lng }}
+              fromLabel="Pickup"
+              toLabel="Destination"
+            />
+          </React.Suspense>
         </div>
       )}
 
@@ -328,11 +325,9 @@ export default function DriverJobDetail() {
         <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
           <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Route to pickup</h2>
           {driverPos ? (
-            <MapReveal>
-              <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-                <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
-              </React.Suspense>
-            </MapReveal>
+            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+              <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
+            </React.Suspense>
           ) : locatingRoute ? (
             <div className="h-[260px] rounded-xl bg-muted animate-pulse flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" /> Getting your location…

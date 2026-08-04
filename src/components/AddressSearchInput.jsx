@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, MapPinned } from "lucide-react";
+// Lazy so maplibre-gl only loads for the rare case this fallback is opened,
+// not on every page that renders an address input.
+const PinDropMap = React.lazy(() => import("@/components/PinDropMap"));
 
 // Free public Nominatim geocoder (OpenStreetMap) — no API key, no paid tier,
 // same "free, open technology" pattern as OSRM/OpenFreeMap elsewhere in this
@@ -27,6 +30,7 @@ export default function AddressSearchInput({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [showPinDrop, setShowPinDrop] = useState(false);
   const containerRef = useRef(null);
   const debounceRef = useRef(null);
   const abortRef = useRef(null);
@@ -100,6 +104,14 @@ export default function AddressSearchInput({
     setOpen(false);
   };
 
+  const pickPin = ({ lat, lng, label }) => {
+    onChange?.(label);
+    onSelect?.({ lat, lng, label });
+    setShowPinDrop(false);
+    setResults([]);
+    setOpen(false);
+  };
+
   return (
     <div className="relative" ref={containerRef}>
       <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${iconClassName}`} />
@@ -130,9 +142,23 @@ export default function AddressSearchInput({
               </li>
             ))
           ) : (
-            <li className="px-3 py-2.5 text-sm text-muted-foreground">No matching addresses found — you can still type it manually.</li>
+            <li className="p-3 space-y-2">
+              <p className="text-sm text-muted-foreground">No matching addresses found — this address search doesn't cover every local business or informal place name.</p>
+              <button
+                type="button"
+                onClick={() => setShowPinDrop(true)}
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors"
+              >
+                <MapPinned className="w-4 h-4" /> Pick location on map instead
+              </button>
+            </li>
           )}
         </ul>
+      )}
+      {showPinDrop && (
+        <React.Suspense fallback={null}>
+          <PinDropMap onConfirm={pickPin} onClose={() => setShowPinDrop(false)} />
+        </React.Suspense>
       )}
     </div>
   );

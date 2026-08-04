@@ -14,7 +14,6 @@ import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequ
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason } from "@/lib/geo";
-import MapReveal from "@/components/MapReveal";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -181,11 +180,9 @@ export default function CreateRequest() {
             />
           </div>
           {pickupCoords && destinationCoords && (
-            <MapReveal height={220}>
-              <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
-                <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
-              </React.Suspense>
-            </MapReveal>
+            <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
+              <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
+            </React.Suspense>
           )}
         </div>
 

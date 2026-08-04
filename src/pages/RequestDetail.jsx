@@ -9,7 +9,6 @@ import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeA
 import { getOrCreateConversation } from "@/lib/messaging";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import MapReveal from "@/components/MapReveal";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 const SORT_OPTIONS = [
@@ -204,16 +203,14 @@ export default function RequestDetail() {
           </div>
         </div>
         {hasFullRoute && (
-          <MapReveal>
-            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-              <RouteMap
-                from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
-                to={{ lat: request.destination_lat, lng: request.destination_lng }}
-                fromLabel="Pickup"
-                toLabel="Destination"
-              />
-            </React.Suspense>
-          </MapReveal>
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
+              to={{ lat: request.destination_lat, lng: request.destination_lng }}
+              fromLabel="Pickup"
+              toLabel="Destination"
+            />
+          </React.Suspense>
         )}
       </div>
 
@@ -270,17 +267,15 @@ export default function RequestDetail() {
             <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Live driver location</h2>
             <span className="text-[11px] text-muted-foreground">Updated {timeAgo(request.driver_location_updated_at)}</span>
           </div>
-          <MapReveal label="Tap to view live location">
-            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-              <RouteMap
-                from={{ lat: request.driver_lat, lng: request.driver_lng }}
-                to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
-                fromLabel="Your driver"
-                toLabel={trackingTarget.label}
-                fromColor="#ea580c"
-              />
-            </React.Suspense>
-          </MapReveal>
+          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.driver_lat, lng: request.driver_lng }}
+              to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
+              fromLabel="Your driver"
+              toLabel={trackingTarget.label}
+              fromColor="#ea580c"
+            />
+          </React.Suspense>
         </div>
       )}
 
