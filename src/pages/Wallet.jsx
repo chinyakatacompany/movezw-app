@@ -273,6 +273,11 @@ export default function Wallet() {
           <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-1">Top up commission balance</h2>
             <p className="text-sm text-muted-foreground mb-4">An admin reviews and approves each top up before it's added to your balance.</p>
+            <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-3.5 mb-4">
+              <p className="text-xs font-semibold text-primary mb-1">Send your payment to</p>
+              <p className="text-base font-bold text-foreground">0780269976</p>
+              <p className="text-sm text-muted-foreground">ASHER CHINYAKATA</p>
+            </div>
             <form onSubmit={submitTopUp} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tamount">Amount (USD)</Label>
@@ -290,7 +295,7 @@ export default function Wallet() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tdest">Destination (mobile number / account)</Label>
+                <Label htmlFor="tdest">The number you paid from</Label>
                 <Input id="tdest" value={topupDest} onChange={(e) => setTopupDest(e.target.value)} placeholder="e.g. 0772 000 000" />
               </div>
               <div className="flex gap-2 pt-1">
