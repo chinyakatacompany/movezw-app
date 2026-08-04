@@ -2,13 +2,39 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Profile({ role }) {
-  const { user, logout } = useAuth();
+  const { user, logout, checkUserAuth } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const startEditPhone = () => {
+    setPhoneInput(user?.phone || profile?.phone || "");
+    setEditingPhone(true);
+  };
+
+  const savePhone = async () => {
+    if (!phoneInput.trim()) return;
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase.from("profiles").update({ phone: phoneInput.trim() }).eq("id", user.id);
+      if (error) throw error;
+      await checkUserAuth();
+      setEditingPhone(false);
+      toast({ title: "Phone number updated" });
+    } catch (e) {
+      toast({ title: "Could not update phone", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   useEffect(() => {
     if (role === "driver" && user?.id) {
@@ -59,8 +85,31 @@ export default function Profile({ role }) {
           <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{user?.email}</p></div>
         </div>
         <div className="flex items-center gap-3 p-4">
-          <Phone className="w-5 h-5 text-muted-foreground" />
-          <div><p className="text-xs text-muted-foreground">Phone</p><p className="text-sm font-medium">{user?.phone || profile?.phone || "—"}</p></div>
+          <Phone className="w-5 h-5 text-muted-foreground shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground">Phone</p>
+            {editingPhone ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Input
+                  type="tel"
+                  value={phoneInput}
+                  onChange={(e) => setPhoneInput(e.target.value)}
+                  className="h-9 text-sm"
+                  autoFocus
+                />
+                <button type="button" onClick={savePhone} disabled={savingPhone} className="shrink-0 text-primary p-1">
+                  {savingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm font-medium">{user?.phone || profile?.phone || "—"}</p>
+            )}
+          </div>
+          {!editingPhone && (
+            <button type="button" onClick={startEditPhone} className="shrink-0 text-xs font-medium text-primary flex items-center gap-1">
+              {user?.phone || profile?.phone ? <Pencil className="w-3.5 h-3.5" /> : "Add"}
+            </button>
+          )}
         </div>
         {role === "driver" && profile && (
           <div className="flex items-center gap-3 p-4">
