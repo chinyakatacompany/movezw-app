@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock, Users } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute } from "@/lib/matching";
@@ -276,9 +276,16 @@ export default function DriverJobDetail() {
 
   return (
     <div className="p-4 pb-8 space-y-5">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="w-4 h-4" /> Back
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+        {isMyJob && enRouteOrLater && customerPhone && (
+          <a href={`tel:${customerPhone}`} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+            <Phone className="w-4 h-4 text-primary" />
+          </a>
+        )}
+      </div>
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">{request.cargo_type}</h1>
@@ -296,8 +303,8 @@ export default function DriverJobDetail() {
           </div>
           <div className="flex-1 space-y-3 pb-1">
             <div>
-              <p className="text-[11px] text-muted-foreground">PICKUP</p>
-              <p className="text-sm font-medium">{request.pickup_location}</p>
+              <p className="text-[11px] tracking-wide text-muted-foreground">PICKUP</p>
+              <p className="text-base font-bold text-primary">{request.pickup_location}</p>
               {request.pickup_lat != null && request.pickup_lng != null && (
                 <a
                   href={`https://www.openstreetmap.org/?mlat=${request.pickup_lat}&mlon=${request.pickup_lng}#map=17/${request.pickup_lat}/${request.pickup_lng}`}
@@ -309,7 +316,10 @@ export default function DriverJobDetail() {
                 </a>
               )}
             </div>
-            <div><p className="text-[11px] text-muted-foreground">DESTINATION</p><p className="text-sm font-medium">{request.destination}</p></div>
+            <div>
+              <p className="text-[11px] tracking-wide text-muted-foreground">DESTINATION</p>
+              <p className="text-base font-bold text-emerald-700">{request.destination}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -358,11 +368,33 @@ export default function DriverJobDetail() {
       )}
 
       {/* Cargo */}
-      <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div><p className="text-xs text-muted-foreground">Weight</p><p className="font-medium">{request.cargo_weight || "—"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Customer budget</p><p className="font-medium text-primary">{formatMoney(request.budget)}</p></div>
-          <div><p className="text-xs text-muted-foreground">Timing</p><p className="font-medium capitalize">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p></div>
+      <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"><Weight className="w-4 h-4 text-blue-600" /></span>
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Weight</p>
+              <p className="text-sm font-semibold truncate">{request.cargo_weight || "—"}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><DollarSign className="w-4 h-4 text-primary" /></span>
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Budget</p>
+              <p className="text-sm font-semibold text-primary truncate">{formatMoney(request.budget)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0"><Clock className="w-4 h-4 text-purple-600" /></span>
+            <div className="min-w-0">
+              <p className="text-[11px] text-muted-foreground">Timing</p>
+              <p className="text-sm font-semibold truncate">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
+          <Package className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">{request.cargo_type}</span>
         </div>
         {request.cargo_description && <p className="text-sm text-muted-foreground pt-2 border-t border-border">{request.cargo_description}</p>}
         {request.photos?.length > 0 && (
