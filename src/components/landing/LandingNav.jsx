@@ -23,7 +23,7 @@ export default function LandingNav() {
   return (
     <header
       className={`fixed top-0 inset-x-0 z-50 transition-colors ${
-        scrolled ? "bg-white/90 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
+        scrolled ? "bg-card/90 backdrop-blur-md border-b border-border shadow-sm" : "bg-transparent"
       }`}
     >
       <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -65,7 +65,7 @@ export default function LandingNav() {
       </nav>
 
       {open && (
-        <div className="md:hidden bg-white border-b border-border shadow-lg">
+        <div className="md:hidden bg-card border-b border-border shadow-lg">
           <div className="px-4 py-4 space-y-1">
             {NAV_LINKS.map((l) => (
               <a

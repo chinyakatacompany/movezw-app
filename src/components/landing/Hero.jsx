@@ -7,10 +7,10 @@ import { useSiteContent } from "@/lib/siteContent";
 export default function Hero() {
   const { t } = useSiteContent();
   return (
-    <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-blue-50 via-background to-background">
+    <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-primary/5 via-background to-background">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute top-40 -left-24 w-80 h-80 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute top-40 -left-24 w-80 h-80 rounded-full bg-accent/15 blur-3xl" />
       </div>
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
@@ -59,7 +59,7 @@ export default function Hero() {
         </div>
 
         <div className="relative">
-          <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-border aspect-[4/3] bg-blue-100">
+          <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-border aspect-[4/3] bg-muted">
             <img
               src="https://i.pinimg.com/1200x/91/df/2d/91df2daeccdea36c1b9193caac81547a.jpg"
               alt="Pickup truck loaded and ready for a transport job"
@@ -69,7 +69,7 @@ export default function Hero() {
             <div className="absolute inset-0 bg-gradient-to-t from-primary/30 to-transparent" />
           </div>
 
-          <div className="absolute -bottom-5 -left-3 sm:left-5 bg-white rounded-2xl shadow-xl border border-border p-4 flex items-center gap-3 max-w-[15rem]">
+          <div className="absolute -bottom-5 -left-3 sm:left-5 bg-card rounded-2xl shadow-xl border border-border p-4 flex items-center gap-3 max-w-[15rem]">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
               <Truck className="w-5 h-5 text-emerald-600" />
             </div>

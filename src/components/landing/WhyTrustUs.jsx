@@ -36,7 +36,7 @@ const REASONS = [
 
 export default function WhyTrustUs() {
   return (
-    <section id="why" className="py-16 sm:py-24 bg-blue-50/60 border-y border-border">
+    <section id="why" className="py-16 sm:py-24 bg-muted/60 border-y border-border">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="text-primary text-sm font-semibold uppercase tracking-wide">Why MoveZW</span>

@@ -3,7 +3,7 @@ import { Truck } from "lucide-react";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-background px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background px-4 py-10">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-sm">

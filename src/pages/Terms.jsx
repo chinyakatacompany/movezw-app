@@ -74,8 +74,8 @@ export const TERMS_SECTIONS = [
 export default function Terms() {
   const { t } = useSiteContent();
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-background">
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
+      <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/landing" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center">
