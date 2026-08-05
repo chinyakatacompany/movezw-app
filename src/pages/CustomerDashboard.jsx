@@ -36,6 +36,23 @@ export default function CustomerDashboard() {
       });
   }, [user?.id]);
 
+  // Keep "Trip in progress" live: the moment a driver marks a job en route,
+  // collected, in transit, etc., this updates without the customer needing
+  // to reload the home screen.
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`customer-dashboard-requests-${user.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "transport_requests", filter: `customer_id=eq.${user.id}` }, (payload) => {
+        setRequests((cur) => (cur ? cur.map((r) => (r.id === payload.new.id ? payload.new : r)) : cur));
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transport_requests", filter: `customer_id=eq.${user.id}` }, (payload) => {
+        setRequests((cur) => (cur ? [payload.new, ...cur] : cur));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   useEffect(() => {
     supabase.rpc("fn_online_driver_count").then(({ data, error }) => {
       if (!error) setOnlineDrivers(data || 0);
