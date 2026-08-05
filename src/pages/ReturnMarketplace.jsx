@@ -62,7 +62,7 @@ export default function ReturnMarketplace() {
         const profileIds = [...new Set((open || []).map((l) => l.driver_profile_id).filter(Boolean))];
         const pMap = {};
         if (profileIds.length) {
-          const { data: ps } = await supabase.from("driver_public_profiles").select("*").in("id", profileIds).limit(200);
+          const { data: ps } = await supabase.rpc("fn_driver_public_profiles").in("id", profileIds).limit(200);
           (ps || []).forEach((p) => { pMap[p.id] = p; });
         }
         if (active) setProfiles(pMap);
