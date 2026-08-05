@@ -9,6 +9,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered manually in main.jsx via virtual:pwa-register instead —
+      // the auto-injected script is a bare `serviceWorker.register()` with
+      // no update-detection, so an already-open tab (or an installed
+      // Android/TWA app, which stays resident across app-switches instead
+      // of restarting) never learns a new version activated in the
+      // background and keeps running stale JS indefinitely.
+      injectRegister: false,
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
