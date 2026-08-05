@@ -146,6 +146,29 @@ export const THEMES = {
       header: "220 25% 15%", "header-foreground": "0 0% 100%",
     },
   },
+  midnight: {
+    label: "Midnight Cyan",
+    swatch: ["174 65% 38%", "165 70% 34%", "200 25% 9%"],
+    // Cards throughout the app are mostly hand-styled with a literal
+    // bg-white rather than the bg-card token, so — unlike the other themes
+    // — making --card dark here wouldn't actually reach most surfaces and
+    // would risk dark-on-dark text wherever it did. Keeps the same light
+    // background / near-white card structure every other theme uses, and
+    // carries the "glowing cyan on near-black" digital-display look on the
+    // one element that's genuinely dark in every theme already: the header.
+    vars: {
+      background: "195 15% 88%", foreground: "200 30% 18%",
+      card: "195 10% 98%", "card-foreground": "200 30% 12%",
+      popover: "0 0% 100%", "popover-foreground": "200 30% 12%",
+      primary: "174 65% 38%", "primary-foreground": "0 0% 100%",
+      secondary: "195 15% 96%", "secondary-foreground": "200 30% 20%",
+      muted: "195 15% 92%", "muted-foreground": "195 12% 42%",
+      accent: "165 70% 34%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "200 30% 20%", input: "195 15% 89%", ring: "174 60% 34%",
+      header: "200 25% 9%", "header-foreground": "174 75% 58%",
+    },
+  },
 };
 
 // Sets/clears the inline :root overrides for every theme variable. Passing
