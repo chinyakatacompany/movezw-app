@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Loader2, MapPin, MapPinned } from "lucide-react";
+import { Loader2, MapPin, MapPinned, Sparkles } from "lucide-react";
+import { supabase } from "@/api/supabaseClient";
 // Lazy so maplibre-gl only loads for the rare case this fallback is opened,
 // not on every page that renders an address input.
 const PinDropMap = React.lazy(() => import("@/components/PinDropMap"));
@@ -27,6 +28,7 @@ export default function AddressSearchInput({
   required,
 }) {
   const [results, setResults] = useState([]);
+  const [knownResults, setKnownResults] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -65,9 +67,26 @@ export default function AddressSearchInput({
       const res = await fetch(`${NOMINATIM_URL}?${params.toString()}`, { signal: controller.signal });
       if (!res.ok) throw new Error(`Nominatim ${res.status}`);
       const data = await res.json();
-      setResults(Array.isArray(data) ? data : []);
+      const found = Array.isArray(data) ? data : [];
+      setResults(found);
       setSearched(true);
       setOpen(true);
+      // Nominatim found nothing — check places a driver has actually
+      // reached before via Google Maps for the same text (see
+      // fn_learn_place in DriverJobDetail.jsx) before falling back to the
+      // "no results" / pin-drop state.
+      if (found.length === 0) {
+        const { data: known, error: knownErr } = await supabase
+          .from("known_places")
+          .select("*")
+          .ilike("label", `%${text.toLowerCase()}%`)
+          .order("hit_count", { ascending: false })
+          .limit(3);
+        if (knownErr) console.error("Failed to check known places:", knownErr);
+        setKnownResults(known || []);
+      } else {
+        setKnownResults([]);
+      }
     } catch (err) {
       if (err.name === "AbortError") return;
       // Nominatim is a free, best-effort service — a transient hiccup or
@@ -91,6 +110,7 @@ export default function AddressSearchInput({
     clearTimeout(debounceRef.current);
     if (text.trim().length < MIN_CHARS) {
       setResults([]);
+      setKnownResults([]);
       setOpen(false);
       return;
     }
@@ -101,6 +121,13 @@ export default function AddressSearchInput({
     onChange?.(r.display_name);
     onSelect?.({ lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: r.display_name });
     setResults([]);
+    setOpen(false);
+  };
+
+  const pickKnown = (k) => {
+    onChange?.(k.display_name);
+    onSelect?.({ lat: Number(k.lat), lng: Number(k.lng), label: k.display_name });
+    setKnownResults([]);
     setOpen(false);
   };
 
@@ -138,6 +165,22 @@ export default function AddressSearchInput({
                 >
                   <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                   <span className="line-clamp-2">{r.display_name}</span>
+                </button>
+              </li>
+            ))
+          ) : knownResults.length > 0 ? (
+            knownResults.map((k) => (
+              <li key={k.id}>
+                <button
+                  type="button"
+                  onClick={() => pickKnown(k)}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/60 flex items-start gap-2 border-b border-border last:border-0"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                  <span className="flex-1 min-w-0">
+                    <span className="line-clamp-2 block">{k.display_name}</span>
+                    <span className="text-[11px] text-muted-foreground">Learned from a previous delivery</span>
+                  </span>
                 </button>
               </li>
             ))

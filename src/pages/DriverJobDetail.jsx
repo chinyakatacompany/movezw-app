@@ -212,6 +212,33 @@ export default function DriverJobDetail() {
     }
   };
 
+  // Arriving somewhere is the strongest signal we ever get for a place OSM
+  // couldn't geocode (that's exactly why the driver had to fall back to a
+  // text-only Google Maps search to get here). Capture the driver's real
+  // GPS position at that moment: fills in this job's own lat/lng, and feeds
+  // known_places so the next customer typing the same address gets a real
+  // coordinate instead of hitting the same gap again. Best-effort — never
+  // blocks the actual status update.
+  const captureLearnedLocation = (fieldPrefix, label) => {
+    if (!label || geolocationUnavailableReason()) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        supabase
+          .from("transport_requests")
+          .update({ [`${fieldPrefix}_lat`]: lat, [`${fieldPrefix}_lng`]: lng })
+          .eq("id", request.id)
+          .then(({ error }) => { if (error) console.error("Failed to save learned location:", error); });
+        supabase
+          .rpc("fn_learn_place", { p_display_name: label, p_lat: lat, p_lng: lng })
+          .then(({ error }) => { if (error) console.error("Failed to save known place:", error); });
+      },
+      () => { /* best-effort — skip if location isn't available right now */ },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
   const updateStatus = async (newStatus) => {
     setUpdating(true);
     try {
@@ -225,6 +252,12 @@ export default function DriverJobDetail() {
       }
       const { error: statusErr } = await supabase.from("transport_requests").update({ status: newStatus }).eq("id", request.id);
       if (statusErr) throw statusErr;
+      if (newStatus === "collected" && request.pickup_lat == null) {
+        captureLearnedLocation("pickup", request.pickup_location);
+      }
+      if (newStatus === "delivered" && request.destination_lat == null) {
+        captureLearnedLocation("destination", request.destination);
+      }
       if (newStatus === "completed") {
         const { error: profErr } = await supabase
           .from("driver_profiles")
