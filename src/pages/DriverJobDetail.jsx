@@ -135,6 +135,10 @@ export default function DriverJobDetail() {
       toast({ title: "Enter a valid price", variant: "destructive" });
       return;
     }
+    if (profile?.availability_status === "offline") {
+      toast({ title: "You're offline", description: "Go online from your dashboard to submit quotes.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const [wallet, cfg] = await Promise.all([ensureWallet(user.id), getCommissionConfig()]);
@@ -432,8 +436,16 @@ export default function DriverJobDetail() {
         )}
       </div>
 
+      {/* Offline — must go online before quoting */}
+      {isOpen && !myOffer && profile?.availability_status === "offline" && (
+        <div className="bg-white rounded-2xl border border-border p-4 text-center">
+          <p className="text-sm font-semibold">You're offline</p>
+          <p className="text-sm text-muted-foreground mt-1">Go online from your dashboard to submit a quote for this job.</p>
+        </div>
+      )}
+
       {/* Submit quote (open) */}
-      {isOpen && !myOffer && (
+      {isOpen && !myOffer && profile?.availability_status !== "offline" && (
         <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Submit your quote</h2>
           <div className="space-y-2">
