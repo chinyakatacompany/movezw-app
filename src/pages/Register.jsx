@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2, Truck, ShoppingBag, Check, Building2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
 import { cn } from "@/lib/utils";
 
 export default function Register() {
@@ -53,24 +52,13 @@ export default function Register() {
       setError(error.message);
       return;
     }
-    // Tagged with the exact account it belongs to (known immediately here,
-    // unlike the Google OAuth path below) so a stale flag from an earlier
-    // signup in this same browser tab can never be misread as belonging to
-    // a different account that logs in later — see AuthContext.jsx.
+    // Tagged with the exact account it belongs to so a stale flag from an
+    // earlier signup in this same browser tab can never be misread as
+    // belonging to a different account that logs in later — see AuthContext.jsx.
     sessionStorage.setItem("movzw_signup_role", accountType);
     sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
     setDone(true);
-  };
-
-  const handleGoogle = async () => {
-    // Unlike email signup above, we don't know the resulting user's id
-    // until after the OAuth redirect completes — clear any stale claim tag
-    // so AuthContext.jsx's first-claim-wins logic assigns this fresh role
-    // hint to whichever account actually comes back, not a leftover one.
-    sessionStorage.removeItem("movzw_signup_user_id");
-    sessionStorage.setItem("movzw_signup_role", accountType);
-    await supabase.auth.signInWithOAuth({ provider: "google" });
   };
 
   if (done) {
@@ -120,18 +108,6 @@ export default function Register() {
             <p className="text-sm font-semibold">Business</p>
             <p className="text-[11px] text-muted-foreground">Coming soon</p>
           </button>
-        </div>
-      </div>
-
-      <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle}>
-        <GoogleIcon className="w-5 h-5 mr-2" />
-        Continue with Google
-      </Button>
-
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
         </div>
       </div>
 

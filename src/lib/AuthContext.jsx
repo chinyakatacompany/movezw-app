@@ -67,20 +67,12 @@ export const AuthProvider = ({ children }) => {
         sessionStorage.removeItem('movzw_signup_phone');
       }
 
-      // Google sign-in can't seed role into handle_new_user() the way
-      // email/password signup does (Register.jsx passes it via signUp's
-      // user metadata) — this is the fallback for that path. sessionStorage
-      // isn't cleared on logout, so without the user-id tag below, a stale
-      // "driver" flag left over from testing a driver signup earlier in
-      // this same browser tab would silently promote an unrelated account
-      // that logs in afterward (this happened — see git history). The tag
-      // is claimed by whichever account first sees an untagged flag (the
-      // Google path can't pre-tag it, since the user id isn't known until
-      // after the redirect completes) and then only that exact account may
-      // ever act on it.
-      if (sessionStorage.getItem('movzw_signup_role') && !sessionStorage.getItem('movzw_signup_user_id')) {
-        sessionStorage.setItem('movzw_signup_user_id', authUser.id);
-      }
+      // sessionStorage isn't cleared on logout, so a stale "driver" flag
+      // left over from testing a driver signup earlier in this same browser
+      // tab could silently promote an unrelated account that logs in
+      // afterward (this happened — see git history). Register.jsx tags the
+      // flag with the exact account id it belongs to, so it's only ever
+      // applied below when that id matches the account actually logging in.
       let role = profile?.role || 'customer';
       const pendingRole = sessionStorage.getItem('movzw_signup_role');
       const pendingRoleOwner = sessionStorage.getItem('movzw_signup_user_id');
