@@ -9,23 +9,19 @@ import { ArrowLeft, Loader2, Car, Upload, Check, ShieldCheck } from "lucide-reac
 import { VEHICLE_TYPES, VEHICLE_ICONS } from "@/lib/movezw";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { uploadVerificationDocument } from "@/lib/documents";
 
-async function uploadDocument(file) {
-  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
-  const { error } = await supabase.storage.from("documents").upload(fileName, file);
-  if (error) throw error;
-  const { data } = supabase.storage.from("documents").getPublicUrl(fileName);
-  return data.publicUrl;
-}
-
+// Vehicle registration is a real ID-type document, so it goes to the
+// private verification-docs bucket (see lib/documents.js), not the public
+// bucket used for photos elsewhere in the app.
 function DocField({ label, value, onChange }) {
   const [uploading, setUploading] = useState(false);
   const handle = async (file) => {
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadDocument(file);
-      onChange(url);
+      const path = await uploadVerificationDocument(file);
+      onChange(path);
       toast({ title: "Document uploaded" });
     } catch (e) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });

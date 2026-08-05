@@ -6,6 +6,7 @@ import { StatusBadge, StarRating, formatDate } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
+import { getVerificationDocSignedUrl } from "@/lib/documents";
 
 export default function AdminVerification() {
   const [profiles, setProfiles] = useState(null);
@@ -140,10 +141,37 @@ export default function AdminVerification() {
 }
 
 function DocLink({ label, url }) {
+  const [opening, setOpening] = useState(false);
+
+  // Old documents (uploaded before the private-bucket fix) still have a
+  // full public URL stored and open directly. New ones store just the
+  // object's path in the private verification-docs bucket, so we resolve a
+  // short-lived signed URL on demand instead of storing a permanent link.
+  const open = async () => {
+    if (/^https?:\/\//.test(url)) {
+      window.open(url, "_blank", "noreferrer");
+      return;
+    }
+    setOpening(true);
+    try {
+      const signedUrl = await getVerificationDocSignedUrl(url);
+      window.open(signedUrl, "_blank", "noreferrer");
+    } catch (e) {
+      toast({ title: "Could not open document", description: e.message, variant: "destructive" });
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 rounded-xl border border-border p-2.5 hover:bg-muted transition-colors">
-      <FileText className="w-5 h-5 text-primary" />
+    <button
+      type="button"
+      onClick={open}
+      disabled={opening}
+      className="flex flex-col items-center gap-1 rounded-xl border border-border p-2.5 hover:bg-muted transition-colors disabled:opacity-60"
+    >
+      {opening ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <FileText className="w-5 h-5 text-primary" />}
       <span className="text-[11px] font-medium text-center">{label}</span>
-    </a>
+    </button>
   );
 }

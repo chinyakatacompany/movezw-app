@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2, FileCheck2, Car, Upload, Check } from "lucide-react
 import { VEHICLE_TYPES, VEHICLE_ICONS } from "@/lib/movezw";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { uploadVerificationDocument } from "@/lib/documents";
 
 async function uploadDocument(file) {
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
@@ -18,14 +19,17 @@ async function uploadDocument(file) {
   return data.publicUrl;
 }
 
+// National ID, driver's licence, vehicle registration — real ID documents,
+// so these go to the private verification-docs bucket (see lib/documents.js)
+// rather than the public bucket the profile picture below still uses.
 function DocField({ label, value, onChange, required }) {
   const [uploading, setUploading] = useState(false);
   const handle = async (file) => {
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadDocument(file);
-      onChange(url);
+      const path = await uploadVerificationDocument(file);
+      onChange(path);
     } catch (e) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
     } finally {
