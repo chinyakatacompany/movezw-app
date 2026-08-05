@@ -9,18 +9,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
-import { notifyCustomersAlongRoute } from "@/lib/matching";
+import { notifyCustomersAlongRoute, distanceKm } from "@/lib/matching";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason } from "@/lib/geo";
-const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 // Statuses during which the customer can see the driver moving live —
 // matches fn_get_trip_contact_phone's "en route or later" gate, so location
 // only becomes visible once contact details do too.
 const LIVE_TRACKING_STATUSES = ["en_route_pickup", "collected", "in_transit"];
 const LOCATION_REPORT_INTERVAL_MS = 5 * 60 * 1000;
+
+function formatDistanceLabel(km) {
+  if (km == null) return "Distance unavailable";
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
 
 export default function DriverJobDetail() {
   const { id } = useParams();
@@ -258,6 +262,7 @@ export default function DriverJobDetail() {
   const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const nextStep = STATUS_FLOW[activeStep + 1];
   const isOpen = request.status === "open";
+  const headedToDestination = ["collected", "in_transit", "delivered"].includes(request.status);
   // Real turn-by-turn (voice guidance, auto-advance, re-routing) isn't
   // something this app builds itself — deep-link into the driver's own
   // Google Maps app for that instead. Target is wherever they're headed
@@ -276,22 +281,22 @@ export default function DriverJobDetail() {
 
   return (
     <div className="p-4 pb-8 space-y-5">
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-4 h-4" /> Back
+      <div className="flex items-center gap-2 -ml-1.5">
+        <button onClick={() => navigate(-1)} aria-label="Back" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors shrink-0">
+          <ArrowLeft className="w-5 h-5" />
         </button>
+        <h1 className="text-xl font-bold flex-1">Job details</h1>
         {isMyJob && enRouteOrLater && customerPhone && (
-          <a href={`tel:${customerPhone}`} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+          <a href={`tel:${customerPhone}`} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors shrink-0">
             <Phone className="w-4 h-4 text-primary" />
           </a>
         )}
       </div>
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{request.cargo_type}</h1>
+      <div className="flex items-center justify-between pl-9 -mt-3">
+        <p className="text-xs text-muted-foreground">{isMyJob ? `${request.customer_name || "Customer"}` : "New request"} · {timeAgo(request.created_at)}</p>
         <StatusBadge status={request.status} />
       </div>
-      <p className="text-xs text-muted-foreground -mt-3">{isMyJob ? `${request.customer_name || "Customer"}` : "New request"} · {timeAgo(request.created_at)}</p>
 
       {/* Route */}
       <div className="bg-white rounded-2xl border border-border p-4">
@@ -324,45 +329,31 @@ export default function DriverJobDetail() {
         </div>
       </div>
 
-      {/* Trip route: pickup -> destination, so the driver can see the whole
-          job at a glance without needing to share their own GPS location. */}
-      {request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null && (
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Trip route</h2>
-          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-            <RouteMap
-              from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
-              to={{ lat: request.destination_lat, lng: request.destination_lng }}
-              fromLabel="Pickup"
-              toLabel="Destination"
-            />
-          </React.Suspense>
-        </div>
-      )}
-
-      {/* Route to pickup — driver location is fetched automatically, no button needed */}
+      {/* Distance only — no map here (was cluttering the screen). Driver ->
+          wherever they're headed next, plus the overall trip distance. */}
       {request.pickup_lat != null && request.pickup_lng != null && (
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Route to pickup</h2>
-          {driverPos ? (
-            <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-              <RouteMap from={driverPos} to={{ lat: request.pickup_lat, lng: request.pickup_lng }} />
-            </React.Suspense>
-          ) : locatingRoute ? (
-            <div className="h-[260px] rounded-xl bg-muted animate-pulse flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-4 h-4 animate-spin" /> Getting your location…
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-xs text-muted-foreground mb-3">{locationError || "Location access is needed to show the route to pickup."}</p>
-              <button
-                type="button"
-                onClick={fetchDriverLocation}
-                className="text-sm font-semibold text-primary bg-primary/10 border-2 border-primary/30 rounded-xl px-3 py-2 hover:bg-primary/15 transition-colors"
-              >
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Navigation className="w-4 h-4 text-primary" />
+              {driverPos ? (
+                `${formatDistanceLabel(distanceKm(driverPos.lat, driverPos.lng, headedToDestination ? request.destination_lat : request.pickup_lat, headedToDestination ? request.destination_lng : request.pickup_lng))} to ${headedToDestination ? "destination" : "pickup"}`
+              ) : locatingRoute ? (
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Getting your location…</span>
+              ) : (
+                <span className="text-muted-foreground">{locationError || "Location unavailable"}</span>
+              )}
+            </span>
+            {!driverPos && !locatingRoute && (
+              <button type="button" onClick={fetchDriverLocation} className="text-xs font-semibold text-primary underline">
                 Try again
               </button>
-            </div>
+            )}
+          </div>
+          {request.destination_lat != null && request.destination_lng != null && (
+            <p className="text-xs text-muted-foreground pl-6">
+              {formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))} pickup → destination
+            </p>
           )}
         </div>
       )}
@@ -370,26 +361,26 @@ export default function DriverJobDetail() {
       {/* Cargo */}
       <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
         <div className="grid grid-cols-3 gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"><Weight className="w-4 h-4 text-blue-600" /></span>
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground">Weight</p>
-              <p className="text-sm font-semibold truncate">{request.cargo_weight || "—"}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <Weight className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-[11px]">Weight</p>
             </div>
+            <p className="text-sm font-bold truncate">{request.cargo_weight || "—"}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><DollarSign className="w-4 h-4 text-primary" /></span>
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground">Budget</p>
-              <p className="text-sm font-semibold text-primary truncate">{formatMoney(request.budget)}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <DollarSign className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-[11px]">Customer budget</p>
             </div>
+            <p className="text-sm font-bold text-primary truncate">{formatMoney(request.budget)}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0"><Clock className="w-4 h-4 text-purple-600" /></span>
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground">Timing</p>
-              <p className="text-sm font-semibold truncate">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-[11px]">Timing</p>
             </div>
+            <p className="text-sm font-bold truncate">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 pt-2 border-t border-border">
@@ -506,27 +497,32 @@ export default function DriverJobDetail() {
           )}
 
           <div className="bg-white rounded-2xl border border-border p-4">
-            <h2 className="text-sm font-semibold mb-4">Delivery progress</h2>
-            <div className="space-y-0">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold">Delivery progress</h2>
+              <span className="text-xs text-muted-foreground">{Math.min(activeStep + 1, STATUS_FLOW.length)} of {STATUS_FLOW.length} completed</span>
+            </div>
+            <div className="flex items-start">
               {STATUS_FLOW.map((step, i) => {
                 const done = i <= activeStep;
                 const current = i === activeStep && request.status !== "completed";
                 return (
-                  <div key={step} className="flex gap-3">
-                    <div className="flex flex-col items-center">
+                  <React.Fragment key={step}>
+                    <div className="flex flex-col items-center w-12 shrink-0">
                       <span className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
+                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
                         done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
                         current && "ring-4 ring-primary/20"
                       )}>
                         {done && !current ? <Check className="w-3.5 h-3.5" /> : i + 1}
                       </span>
-                      {i < STATUS_FLOW.length - 1 && <span className={cn("w-0.5 h-8", done && i < activeStep ? "bg-primary" : "bg-border")} />}
+                      <p className={cn("text-[9px] leading-tight text-center mt-1.5", done ? "text-foreground font-medium" : "text-muted-foreground")}>
+                        {STATUS_LABELS[step]}
+                      </p>
                     </div>
-                    <div className="pt-1 pb-2">
-                      <p className={cn("text-sm font-medium", done ? "text-foreground" : "text-muted-foreground")}>{STATUS_LABELS[step]}</p>
-                    </div>
-                  </div>
+                    {i < STATUS_FLOW.length - 1 && (
+                      <div className={cn("flex-1 h-0.5 mt-3.5", i < activeStep ? "bg-primary" : "bg-border")} />
+                    )}
+                  </React.Fragment>
                 );
               })}
             </div>

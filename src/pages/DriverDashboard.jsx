@@ -11,13 +11,6 @@ import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
 import { geolocationUnavailableReason } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-const RouteMap = React.lazy(() => import("@/components/RouteMap"));
-
-// Active jobs only, not every "nearby open request" card — a live map is a
-// real WebGL instance with its own tile/route fetch, and a driver usually
-// has just one active job at a time. Many of these on one page (as "nearby
-// open requests" could be) would genuinely slow the dashboard down.
-const ROUTE_TILE_HEIGHT = 150;
 
 function timeOfDayGreeting() {
   const h = new Date().getHours();
@@ -32,37 +25,18 @@ export default function DriverDashboard() {
   const [openRequests, setOpenRequests] = useState(null);
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
-  const [locatingPos, setLocatingPos] = useState(true);
-  const [locationError, setLocationError] = useState(null);
 
-  // Lets each request card show "X km away", and gates the compact route
-  // tile under each active job. Unlike a silent best-effort failure, this
-  // surfaces WHY the map/distance isn't showing (permission denied, no GPS,
-  // insecure origin) with a retry — otherwise a driver who hasn't granted
-  // location just sees nothing there with no explanation.
-  const fetchDriverPos = () => {
-    const reason = geolocationUnavailableReason();
-    if (reason) {
-      setLocationError(reason);
-      setLocatingPos(false);
-      return;
-    }
-    setLocatingPos(true);
-    setLocationError(null);
+  // Best-effort — lets each request card show "X km away". No map, no
+  // dedicated loading/error UI: if location isn't available, cards simply
+  // show without a distance rather than taking up space explaining why.
+  useEffect(() => {
+    if (geolocationUnavailableReason()) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocatingPos(false);
-      },
-      (err) => {
-        setLocatingPos(false);
-        setLocationError(err.message || "Couldn't get your location. Enable location access to see distance and route to your jobs.");
-      },
+      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
       { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
     );
-  };
-
-  useEffect(() => { fetchDriverPos(); }, []);
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -293,51 +267,15 @@ export default function DriverDashboard() {
         <div>
           <h2 className="text-base font-semibold mb-3">{myJobs.length === 1 ? "Current job" : "Active jobs"}</h2>
           <div className="space-y-3">
-            {myJobs.map((r) => {
-              const headedToDestination = ["collected", "in_transit", "delivered"].includes(r.status);
-              const target = headedToDestination
-                ? (r.destination_lat != null && r.destination_lng != null ? { lat: r.destination_lat, lng: r.destination_lng } : null)
-                : (r.pickup_lat != null && r.pickup_lng != null ? { lat: r.pickup_lat, lng: r.pickup_lng } : null);
-              return (
-                <div key={r.id} className="space-y-2">
-                  <RequestCard
-                    request={r}
-                    to={`/driver/job/${r.id}`}
-                    showCustomer
-                    distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
-                  />
-                  {driverPos && target && (
-                    <React.Suspense fallback={<div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl bg-muted animate-pulse" />}>
-                      <RouteMap
-                        from={driverPos}
-                        to={target}
-                        fromLabel="You"
-                        toLabel={headedToDestination ? "Destination" : "Pickup"}
-                        height={ROUTE_TILE_HEIGHT}
-                      />
-                    </React.Suspense>
-                  )}
-                  {locatingPos && (
-                    <div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl bg-muted animate-pulse flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                      Getting your location…
-                    </div>
-                  )}
-                  {!locatingPos && locationError && (
-                    <div style={{ height: ROUTE_TILE_HEIGHT }} className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 px-4 text-center">
-                      <p className="text-xs text-muted-foreground">{locationError}</p>
-                      <button type="button" onClick={fetchDriverPos} className="text-xs font-semibold text-primary underline">
-                        Try again
-                      </button>
-                    </div>
-                  )}
-                  {!locatingPos && !locationError && driverPos && !target && (
-                    <p className="text-xs text-muted-foreground px-1">
-                      Map unavailable — this job's {headedToDestination ? "destination" : "pickup"} doesn't have a pinned location.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {myJobs.map((r) => (
+              <RequestCard
+                key={r.id}
+                request={r}
+                to={`/driver/job/${r.id}`}
+                showCustomer
+                distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
+              />
+            ))}
           </div>
         </div>
       )}
