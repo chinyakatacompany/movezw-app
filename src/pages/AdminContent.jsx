@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { FileText, Loader2, Save } from "lucide-react";
+import { FileText, Loader2, Save, Check } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { TERMS_SECTIONS } from "@/pages/Terms";
+import { THEMES, DEFAULT_THEME, applyTheme } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+
+const THEME_KEY = "site.theme";
 
 // Single source of truth for what's editable here. Each field's fallback
 // matches the default text hardcoded at its render site (Hero.jsx,
@@ -38,7 +42,10 @@ export default function AdminContent() {
       .then(({ data, error }) => {
         if (error) console.error("Failed to load site content:", error);
         const existing = Object.fromEntries((data || []).map((r) => [r.key, r.value]));
-        setValues(Object.fromEntries(FIELDS.map((f) => [f.key, existing[f.key] ?? f.fallback])));
+        setValues({
+          ...Object.fromEntries(FIELDS.map((f) => [f.key, existing[f.key] ?? f.fallback])),
+          [THEME_KEY]: existing[THEME_KEY] ?? DEFAULT_THEME,
+        });
       });
   }, []);
 
@@ -47,9 +54,13 @@ export default function AdminContent() {
   const save = async () => {
     setSaving(true);
     try {
-      const rows = FIELDS.map((f) => ({ key: f.key, value: values[f.key], updated_at: new Date().toISOString() }));
+      const rows = [
+        ...FIELDS.map((f) => ({ key: f.key, value: values[f.key], updated_at: new Date().toISOString() })),
+        { key: THEME_KEY, value: values[THEME_KEY], updated_at: new Date().toISOString() },
+      ];
       const { error } = await supabase.from("site_content").upsert(rows, { onConflict: "key" });
       if (error) throw error;
+      applyTheme(values[THEME_KEY]);
       toast({ title: "Content updated", description: "Changes are live immediately — no rebuild needed." });
     } catch (e) {
       toast({ title: "Could not save", description: e.message, variant: "destructive" });
@@ -70,6 +81,32 @@ export default function AdminContent() {
     <div className="p-6 max-w-3xl mx-auto pb-24">
       <h1 className="text-2xl font-bold tracking-tight mb-1 flex items-center gap-2"><FileText className="w-6 h-6 text-primary" /> Site content</h1>
       <p className="text-sm text-muted-foreground mb-6">Edit landing page copy and Terms of Service text without a code change. Live on the site as soon as you save.</p>
+
+      <div className="mb-8">
+        <h2 className="text-base font-semibold mb-3">Appearance</h2>
+        <p className="text-xs text-muted-foreground mb-3">Pick a color theme for the whole app — customer, driver and landing pages all switch to it once you save.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {Object.entries(THEMES).map(([key, theme]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => set(THEME_KEY, key)}
+              className={cn(
+                "relative rounded-2xl border-2 p-3 text-left transition-all bg-white",
+                values[THEME_KEY] === key ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+              )}
+            >
+              {values[THEME_KEY] === key && <Check className="w-4 h-4 text-primary absolute top-2 right-2" />}
+              <div className="flex gap-1.5 mb-2">
+                {theme.swatch.map((hsl, i) => (
+                  <span key={i} className="w-6 h-6 rounded-full border border-black/5" style={{ backgroundColor: `hsl(${hsl})` }} />
+                ))}
+              </div>
+              <p className="text-sm font-medium">{theme.label}</p>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {GROUPS.map((group) => (
         <div key={group} className="mb-8">

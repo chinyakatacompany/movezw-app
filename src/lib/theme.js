@@ -1,0 +1,99 @@
+// App-wide color themes, selectable by an admin (see AdminContent.jsx) and
+// applied globally via ThemeLoader.jsx. Each theme re-specifies the same
+// HSL custom properties index.css defines on :root — "classic" has no vars
+// because those defaults already match the current stylesheet, so selecting
+// it just means "use the stylesheet as-is" rather than duplicating values.
+export const THEME_VARS = [
+  "background", "foreground", "card", "card-foreground", "popover", "popover-foreground",
+  "primary", "primary-foreground", "secondary", "secondary-foreground", "muted", "muted-foreground",
+  "accent", "accent-foreground", "destructive", "destructive-foreground", "border", "input", "ring",
+  "header", "header-foreground",
+];
+
+export const DEFAULT_THEME = "classic";
+
+export const THEMES = {
+  classic: {
+    label: "Classic Terracotta",
+    swatch: ["20 65% 33%", "22 92% 24%", "220 55% 15%"],
+    vars: null,
+  },
+  ocean: {
+    label: "Ocean Blue",
+    swatch: ["199 75% 32%", "187 85% 28%", "205 60% 14%"],
+    vars: {
+      background: "205 30% 74%", foreground: "210 50% 20%",
+      card: "200 20% 98%", "card-foreground": "210 47% 11%",
+      popover: "0 0% 100%", "popover-foreground": "210 47% 11%",
+      primary: "199 75% 32%", "primary-foreground": "0 0% 100%",
+      secondary: "200 20% 96%", "secondary-foreground": "210 55% 19%",
+      muted: "200 30% 94%", "muted-foreground": "205 16% 42%",
+      accent: "187 85% 28%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "205 35% 22%", input: "205 32% 91%", ring: "205 76% 30%",
+      header: "205 60% 14%", "header-foreground": "0 0% 100%",
+    },
+  },
+  forest: {
+    label: "Forest Green",
+    swatch: ["142 55% 28%", "88 55% 30%", "140 45% 14%"],
+    vars: {
+      background: "130 18% 72%", foreground: "140 46% 22%",
+      card: "120 20% 98%", "card-foreground": "140 47% 11%",
+      popover: "0 0% 100%", "popover-foreground": "140 47% 11%",
+      primary: "142 55% 28%", "primary-foreground": "0 0% 100%",
+      secondary: "120 20% 96%", "secondary-foreground": "140 55% 19%",
+      muted: "120 25% 94%", "muted-foreground": "130 16% 38%",
+      accent: "88 55% 30%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "140 31% 20%", input: "130 25% 91%", ring: "142 55% 26%",
+      header: "140 45% 14%", "header-foreground": "0 0% 100%",
+    },
+  },
+  royal: {
+    label: "Royal Purple",
+    swatch: ["262 55% 38%", "292 60% 32%", "262 45% 16%"],
+    vars: {
+      background: "262 20% 76%", foreground: "262 40% 30%",
+      card: "260 25% 98%", "card-foreground": "262 47% 13%",
+      popover: "0 0% 100%", "popover-foreground": "262 47% 13%",
+      primary: "262 55% 38%", "primary-foreground": "0 0% 100%",
+      secondary: "260 25% 96%", "secondary-foreground": "262 50% 22%",
+      muted: "260 25% 94%", "muted-foreground": "262 16% 44%",
+      accent: "292 60% 32%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "262 31% 22%", input: "260 25% 91%", ring: "262 60% 32%",
+      header: "262 45% 16%", "header-foreground": "0 0% 100%",
+    },
+  },
+  sunset: {
+    label: "Sunset",
+    swatch: ["14 75% 40%", "350 65% 38%", "14 55% 15%"],
+    vars: {
+      background: "24 30% 76%", foreground: "14 55% 26%",
+      card: "30 25% 98%", "card-foreground": "14 47% 12%",
+      popover: "0 0% 100%", "popover-foreground": "14 47% 12%",
+      primary: "14 75% 40%", "primary-foreground": "0 0% 100%",
+      secondary: "30 25% 96%", "secondary-foreground": "14 55% 20%",
+      muted: "30 25% 94%", "muted-foreground": "20 18% 42%",
+      accent: "350 65% 38%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "14 35% 22%", input: "24 30% 91%", ring: "14 65% 32%",
+      header: "14 55% 15%", "header-foreground": "0 0% 100%",
+    },
+  },
+};
+
+// Sets/clears the inline :root overrides for every theme variable. Passing
+// "classic" (or an unknown key) clears all overrides so the stylesheet's
+// own :root defaults show through — no duplicated "default theme" values
+// to keep in sync.
+export function applyTheme(key) {
+  const theme = THEMES[key] || THEMES[DEFAULT_THEME];
+  const root = document.documentElement;
+  THEME_VARS.forEach((name) => {
+    const value = theme.vars?.[name];
+    if (value) root.style.setProperty(`--${name}`, value);
+    else root.style.removeProperty(`--${name}`);
+  });
+}

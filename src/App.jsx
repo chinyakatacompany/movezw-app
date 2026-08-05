@@ -47,6 +47,7 @@ import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
+import ThemeLoader from '@/components/ThemeLoader';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
@@ -196,6 +197,7 @@ function App() {
 
   return (
     <AuthProvider>
+      <ThemeLoader />
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
