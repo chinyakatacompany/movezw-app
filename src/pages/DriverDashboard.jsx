@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Shield, AlertCircle, Truck, ChevronRight } from "lucide-react";
+import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
@@ -219,7 +219,55 @@ export default function DriverDashboard() {
         </div>
       </div>
 
-      <div className="bg-card rounded-2xl border border-border p-4 card-shadow animate-fade-in">
+      <div className="grid grid-cols-2 gap-3">
+        <a href="#availability-toggle" className="bg-white rounded-2xl border border-border p-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
+            <Wifi className="w-5 h-5 text-emerald-600" />
+          </div>
+          <p className="text-sm font-semibold">Availability</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2.5">Set your availability to receive jobs</p>
+          <span className={cn(
+            "inline-block text-xs font-semibold px-2.5 py-1 rounded-full border",
+            (profile.availability_status || "offline") === "online"
+              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+              : profile.availability_status === "busy"
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-muted text-muted-foreground border-border"
+          )}>
+            {AVAILABILITY_LABELS[profile.availability_status] || "Offline"}
+          </span>
+        </a>
+
+        <Link to="/return-loads" className="bg-white rounded-2xl border border-border p-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+            <Briefcase className="w-5 h-5 text-blue-600" />
+          </div>
+          <p className="text-sm font-semibold">Loads</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2.5">View and manage available loads for you</p>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </Link>
+
+        <Link to="/driver/history" className="bg-white rounded-2xl border border-border p-4">
+          <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-2">
+            <RouteIcon className="w-5 h-5 text-purple-600" />
+          </div>
+          <p className="text-sm font-semibold">Trips</p>
+          <p className="text-xs text-muted-foreground mt-0.5 mb-2.5">Track your ongoing and past trips</p>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </Link>
+
+        <a href="#nearby-requests" className="bg-white rounded-2xl border border-border p-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+            <Target className="w-5 h-5 text-primary" />
+          </div>
+          <p className="text-sm font-semibold">Nearby Requests</p>
+          <p className="text-lg font-bold mt-0.5">{openRequests?.length ?? "—"}</p>
+          <p className="text-[11px] text-muted-foreground mb-2.5">Matching jobs near you</p>
+          <span className="text-xs font-semibold text-primary">View all</span>
+        </a>
+      </div>
+
+      <div id="availability-toggle" className="bg-card rounded-2xl border border-border p-4 card-shadow animate-fade-in">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm font-semibold">Availability</p>
@@ -243,7 +291,7 @@ export default function DriverDashboard() {
 
       {myJobs?.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold mb-3">Active jobs</h2>
+          <h2 className="text-base font-semibold mb-3">{myJobs.length === 1 ? "Current job" : "Active jobs"}</h2>
           <div className="space-y-3">
             {myJobs.map((r) => {
               const headedToDestination = ["collected", "in_transit", "delivered"].includes(r.status);
@@ -294,7 +342,7 @@ export default function DriverDashboard() {
         </div>
       )}
 
-      <div>
+      <div id="nearby-requests">
         <h2 className="text-base font-semibold mb-3">Nearby open requests</h2>
         {openRequests === null ? (
           <div className="space-y-3">
