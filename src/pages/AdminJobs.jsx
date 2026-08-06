@@ -3,7 +3,7 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Loader2, Search, X, CheckCircle2, Ban } from "lucide-react";
 import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange } from "@/lib/movezw";
-import { processCancellationRefund, processJobCompletion } from "@/lib/payments";
+import { cancelTransportRequest, processJobCompletion } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -62,9 +62,9 @@ export default function AdminJobs() {
       await Promise.all(
         targets.map(async (j) => {
           if (type === "cancel") {
-            const { error } = await supabase.from("transport_requests").update({ status: "cancelled" }).eq("id", j.id);
-            if (error) throw error;
-            try { await processCancellationRefund({ request: j, actorId: user.id }); } catch { /* best-effort */ }
+            // Cancelling and refunding any already-reserved commission
+            // happen atomically — see fn_cancel_transport_request.
+            await cancelTransportRequest({ requestId: j.id });
             try { await notifyJobStatusChange(j, "cancelled", user.id); } catch { /* best-effort */ }
           } else if (type === "complete") {
             const { error } = await supabase.from("transport_requests").update({ status: "completed" }).eq("id", j.id);

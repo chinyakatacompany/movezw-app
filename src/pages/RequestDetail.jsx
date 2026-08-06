@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
+import { acceptOffer as acceptOfferRpc, cancelTransportRequest } from "@/lib/payments";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
@@ -89,15 +90,10 @@ export default function RequestDetail() {
   const acceptOffer = async (offer) => {
     setAccepting(offer.id);
     try {
-      await supabase.from("transport_requests").update({
-        status: "confirmed",
-        accepted_offer_id: offer.id,
-        accepted_driver_id: offer.driver_id,
-        accepted_price: offer.price,
-      }).eq("id", request.id);
-
-      await supabase.from("offers").update({ status: "rejected" }).eq("request_id", request.id).eq("status", "pending");
-      await supabase.from("offers").update({ status: "accepted" }).eq("id", offer.id);
+      // Confirming the request and reserving the driver's commission from
+      // their wallet now happen atomically in one RPC — see fn_accept_offer.
+      // Throws if the driver's balance is below the low-balance threshold.
+      await acceptOfferRpc({ offerId: offer.id });
 
       await createNotification(offer.driver_id, "offer_accepted", "Offer accepted! 🎉", `Your offer for ${request.cargo_type} from ${request.pickup_location} was accepted.`, `/driver/job/${request.id}`);
       toast({ title: "Driver booked", description: `${offer.driver_name} has been notified.` });
@@ -133,8 +129,18 @@ export default function RequestDetail() {
   const cancelRequest = async () => {
     if (!window.confirm("Cancel this request? The assigned driver will be notified.")) return;
     try {
-      await supabase.from("transport_requests").update({ status: "cancelled" }).eq("id", request.id);
-      toast({ title: "Request cancelled" });
+      // Cancelling and refunding any already-reserved commission happen
+      // atomically — see fn_cancel_transport_request. Auto-refunds if the
+      // driver hadn't collected the cargo yet; otherwise queues it for
+      // admin approval.
+      const result = await cancelTransportRequest({ requestId: request.id });
+      if (result?.refund === "auto") {
+        toast({ title: "Request cancelled", description: `The driver's $${result.amount} commission was refunded automatically.` });
+      } else if (result?.refund === "pending") {
+        toast({ title: "Request cancelled", description: "The driver's commission refund is pending admin approval, since the cargo was already collected." });
+      } else {
+        toast({ title: "Request cancelled" });
+      }
       load();
     } catch (e) {
       toast({ title: "Could not cancel", description: e.message, variant: "destructive" });

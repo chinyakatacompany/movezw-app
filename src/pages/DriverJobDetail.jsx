@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
-import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
+import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason } from "@/lib/geo";
@@ -167,12 +167,18 @@ export default function DriverJobDetail() {
     }
     setSubmitting(true);
     try {
+      // Commission is reserved from the wallet the moment a customer
+      // accepts this quote (see fn_accept_offer), not at collection — so
+      // the gate here (and the matching offers_insert RLS check) is the
+      // low-balance threshold itself, not this specific job's commission.
+      // A driver who clears the threshold can still go negative on a job
+      // whose commission exceeds what's left, by design.
       const [wallet, cfg] = await Promise.all([ensureWallet(user.id), getCommissionConfig()]);
-      const likelyCommission = Math.round(Number(price) * (cfg.rate ?? COMMISSION_RATE) * 100) / 100;
-      if (!cfg.wallet_paused && (wallet.balance || 0) < likelyCommission) {
+      const threshold = cfg.low_balance_threshold ?? 5;
+      if (!cfg.wallet_paused && (wallet.balance || 0) < threshold) {
         toast({
           title: "Wallet balance too low",
-          description: `This quote needs a commission of ${formatMoney(likelyCommission)} when you collect the cargo. Top up your wallet before quoting.`,
+          description: `Your commission balance needs to be at least ${formatMoney(threshold)} to accept new jobs. Top up your wallet to continue.`,
           variant: "destructive",
         });
         setSubmitting(false);
@@ -272,14 +278,8 @@ export default function DriverJobDetail() {
   const updateStatus = async (newStatus) => {
     setUpdating(true);
     try {
-      if (newStatus === "collected") {
-        try {
-          await chargeCommissionOnCollection({ driverId: user.id, request, acceptedPrice: request.accepted_price, actorId: user.id });
-        } catch (e) {
-          toast({ title: "Cannot collect cargo yet", description: e.message, variant: "destructive" });
-          return;
-        }
-      }
+      // Commission is reserved at acceptance now (fn_accept_offer), not
+      // collection — nothing to charge or gate here anymore.
       const { error: statusErr } = await supabase.from("transport_requests").update({ status: newStatus }).eq("id", request.id);
       if (statusErr) throw statusErr;
       if (newStatus === "collected" && request.pickup_lat == null) {

@@ -49,19 +49,25 @@ export async function updateCommissionSettings({ rate, lowBalanceThreshold, poli
   return updated;
 }
 
-// ---- Charge commission when the driver collects the cargo ----
-export async function chargeCommissionOnCollection({ driverId, request }) {
-  return unwrapRpc(await supabase.rpc("fn_charge_commission_on_collection", { p_driver_id: driverId, p_request_id: request.id }));
+// ---- Accept an offer: atomically confirms the request and reserves the
+// driver's commission from their wallet in one step. Throws if the
+// driver's balance is below commission_config.low_balance_threshold.
+export async function acceptOffer({ offerId }) {
+  return unwrapRpc(await supabase.rpc("fn_accept_offer", { p_offer_id: offerId }));
 }
 
-// ---- Job completion: credit full job price, release held commission ----
+// ---- Cancel a request: atomically cancels and, if a commission was
+// already reserved, refunds it — automatically if cancelled before the
+// driver collected the cargo, or into the admin-approval queue otherwise.
+// Returns { refund: "none" | "auto" | "pending", amount?, refundRequestId? }.
+export async function cancelTransportRequest({ requestId }) {
+  return unwrapRpc(await supabase.rpc("fn_cancel_transport_request", { p_request_id: requestId }));
+}
+
+// ---- Job completion: credit full job price (commission was already
+// reserved at acceptance, not charged again here) ----
 export async function processJobCompletion({ driverId, request }) {
   return unwrapRpc(await supabase.rpc("fn_process_job_completion", { p_driver_id: driverId, p_request_id: request.id }));
-}
-
-// ---- Cancellation refund policy (admin-triggered) ----
-export async function processCancellationRefund({ request }) {
-  return unwrapRpc(await supabase.rpc("fn_process_cancellation_refund", { p_request_id: request.id }));
 }
 
 export async function approveRefundRequest(refundRequestId, _adminId, adminNote = "") {

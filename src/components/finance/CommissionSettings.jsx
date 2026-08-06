@@ -64,12 +64,12 @@ export default function CommissionSettings({ cfg, adminId }) {
           <div className="space-y-2">
             <Label htmlFor="rate">Platform commission rate (%)</Label>
             <Input id="rate" type="number" min="0" max="50" value={rate} onChange={(e) => setRate(e.target.value)} />
-            <p className="text-[11px] text-muted-foreground">Deducted from the driver's wallet when cargo is collected.</p>
+            <p className="text-[11px] text-muted-foreground">Reserved from the driver's wallet the moment a customer accepts their quote.</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="threshold">Low-balance alert threshold (USD)</Label>
+            <Label htmlFor="threshold">Minimum balance to accept jobs (USD)</Label>
             <Input id="threshold" type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} />
-            <p className="text-[11px] text-muted-foreground">Drivers are alerted below this balance.</p>
+            <p className="text-[11px] text-muted-foreground">Drivers below this balance can't submit quotes or be accepted for new jobs until they top up — a single job's commission can still push them below zero once they've cleared this bar.</p>
           </div>
         </div>
         <div className="space-y-2 mt-4">
@@ -86,7 +86,7 @@ export default function CommissionSettings({ cfg, adminId }) {
       <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
         <ShieldCheck className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <p className="text-xs text-blue-800">
-          Refunds for cancellations <strong>before cargo loading</strong> are automatic (nothing is charged yet). Refunds <strong>after loading</strong> appear in the Refunds tab for your approval; the driver claims the approved amount into their wallet.
+          Commission is reserved from the driver's wallet as soon as a customer accepts their quote. Cancellations <strong>before cargo loading</strong> refund that commission automatically. Cancellations <strong>after loading</strong> appear in the Refunds tab for your approval instead; the driver claims the approved amount into their wallet.
         </p>
       </div>
     </div>
