@@ -366,34 +366,50 @@ export default function DriverJobDetail() {
         </div>
       </div>
 
-      {/* Distance only — no map here (was cluttering the screen). Driver ->
-          wherever they're headed next, plus the overall trip distance. */}
-      {request.pickup_lat != null && request.pickup_lng != null && (
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Navigation className="w-4 h-4 text-primary" />
+      {/* Distance — no map here (was cluttering the screen). Trip distance
+          (pickup → destination) is what actually determines a fair quote,
+          so it's always shown with an explicit fallback rather than
+          silently disappearing when an address wasn't pinned exactly.
+          Distance-to-pickup below it only affects ETA, not price. */}
+      <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Navigation className="w-4 h-4 text-primary" />
+            Trip distance
+          </span>
+          <span className="text-sm font-bold text-primary">
+            {request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null
+              ? formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))
+              : "Not available"}
+          </span>
+        </div>
+        {(request.pickup_lat == null || request.pickup_lng == null || request.destination_lat == null || request.destination_lng == null) && (
+          <p className="text-xs text-muted-foreground">
+            {isOpen && !myOffer
+              ? "Pickup or destination wasn't pinned exactly — check the addresses above to estimate distance yourself before quoting."
+              : "Pickup or destination wasn't pinned exactly."}
+          </p>
+        )}
+        {request.pickup_lat != null && request.pickup_lng != null && (
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="w-3.5 h-3.5" />
               {driverPos ? (
                 `${formatDistanceLabel(distanceKm(driverPos.lat, driverPos.lng, headedToDestination ? request.destination_lat : request.pickup_lat, headedToDestination ? request.destination_lng : request.pickup_lng))} to ${headedToDestination ? "destination" : "pickup"}`
               ) : locatingRoute ? (
-                <span className="inline-flex items-center gap-1.5 text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Getting your location…</span>
+                <span className="inline-flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Getting your location…</span>
               ) : (
-                <span className="text-muted-foreground">{locationError || "Location unavailable"}</span>
+                locationError || "Your location unavailable"
               )}
             </span>
             {!driverPos && !locatingRoute && (
-              <button type="button" onClick={fetchDriverLocation} className="text-xs font-semibold text-primary underline">
+              <button type="button" onClick={fetchDriverLocation} className="text-xs font-semibold text-primary underline shrink-0">
                 Try again
               </button>
             )}
           </div>
-          {request.destination_lat != null && request.destination_lng != null && (
-            <p className="text-xs text-muted-foreground pl-6">
-              {formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))} pickup → destination
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Cargo */}
       <div className="bg-white rounded-2xl border border-border p-4 space-y-3">

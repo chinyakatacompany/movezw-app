@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Navigation, Clock, DollarSign, Package } from "lucide-react";
 import { StatusBadge, formatMoney, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
 
-export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm }) {
+export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm, tripDistanceKm }) {
   return (
     <Link
       to={to}
@@ -33,6 +33,11 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
           <Navigation className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
           <span className="text-foreground truncate">{request.destination}</span>
         </div>
+        {tripDistanceKm != null && (
+          <p className="text-xs font-semibold text-primary pl-6">
+            {tripDistanceKm < 1 ? `${Math.round(tripDistanceKm * 1000)} m` : `${tripDistanceKm.toFixed(1)} km`} trip distance
+          </p>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
