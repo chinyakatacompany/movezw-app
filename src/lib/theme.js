@@ -18,6 +18,24 @@ export const THEMES = {
     swatch: ["20 65% 33%", "22 92% 24%", "220 55% 15%"],
     vars: null,
   },
+  spectrum: {
+    label: "Spectrum",
+    swatch: ["330 75% 50%", "45 90% 50%", "265 60% 35%"],
+    swatchGradient: "linear-gradient(135deg, hsl(330 75% 55%), hsl(265 70% 45%), hsl(200 80% 50%), hsl(45 90% 55%))",
+    vars: {
+      background: "260 30% 92%", foreground: "260 25% 20%",
+      card: "0 0% 98%", "card-foreground": "260 30% 14%",
+      popover: "0 0% 100%", "popover-foreground": "260 30% 14%",
+      primary: "330 75% 50%", "primary-foreground": "0 0% 100%",
+      secondary: "260 20% 96%", "secondary-foreground": "260 25% 20%",
+      muted: "260 20% 92%", "muted-foreground": "260 12% 45%",
+      accent: "45 90% 50%", "accent-foreground": "260 30% 14%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "260 25% 25%", input: "260 20% 90%", ring: "330 70% 45%",
+      header: "265 60% 35%", "header-foreground": "0 0% 100%",
+      headerGradient: "linear-gradient(135deg, hsl(330 75% 55%) 0%, hsl(265 70% 45%) 45%, hsl(200 80% 50%) 75%, hsl(45 90% 55%) 100%)",
+    },
+  },
   ocean: {
     label: "Ocean Blue",
     swatch: ["199 75% 32%", "187 85% 28%", "205 60% 14%"],
@@ -146,6 +164,44 @@ export const THEMES = {
       header: "220 25% 15%", "header-foreground": "0 0% 100%",
     },
   },
+  nightfall: {
+    label: "Nightfall Gold",
+    swatch: ["40 70% 42%", "190 35% 30%", "200 30% 13%"],
+    vars: {
+      background: "200 18% 89%", foreground: "205 30% 20%",
+      card: "195 15% 98%", "card-foreground": "205 35% 13%",
+      popover: "0 0% 100%", "popover-foreground": "205 35% 13%",
+      primary: "40 70% 42%", "primary-foreground": "0 0% 100%",
+      secondary: "195 15% 96%", "secondary-foreground": "205 30% 20%",
+      muted: "195 15% 92%", "muted-foreground": "200 12% 42%",
+      accent: "190 35% 30%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "205 30% 18%", input: "195 15% 88%", ring: "40 65% 38%",
+      header: "200 30% 13%", "header-foreground": "40 75% 62%",
+    },
+  },
+  glass: {
+    label: "Aurora Glass",
+    swatch: ["262 70% 55%", "200 80% 52%", "255 45% 22%"],
+    // A "bit of transparency" theme — card/popover/header carry an alpha
+    // channel baked directly into the stored HSL value (hsl(var(--card))
+    // expands to a valid 4-part hsl(H S% L% / A)). It reads most clearly on
+    // surfaces that already pair a token with backdrop-blur in the markup
+    // (the bottom nav, the scrolled landing/auth headers) — the plain top
+    // app header has no blur behind it, so its translucency is subtler.
+    vars: {
+      background: "250 35% 90%", foreground: "250 25% 20%",
+      card: "250 40% 98% / 0.9", "card-foreground": "250 30% 14%",
+      popover: "250 40% 98% / 0.92", "popover-foreground": "250 30% 14%",
+      primary: "262 70% 55%", "primary-foreground": "0 0% 100%",
+      secondary: "250 30% 95%", "secondary-foreground": "250 25% 20%",
+      muted: "250 25% 92%", "muted-foreground": "250 15% 45%",
+      accent: "200 80% 52%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "250 25% 55% / 0.3", input: "250 25% 90%", ring: "262 65% 50%",
+      header: "255 45% 22% / 0.82", "header-foreground": "0 0% 100%",
+    },
+  },
   midnight: {
     label: "Midnight Cyan",
     swatch: ["174 65% 38%", "165 70% 34%", "200 25% 9%"],
@@ -183,4 +239,8 @@ export function applyTheme(key) {
     if (value) root.style.setProperty(`--${name}`, value);
     else root.style.removeProperty(`--${name}`);
   });
+  // Not a color token — a full background-image value, only set by themes
+  // that opt into a gradient header (see the .bg-header rule in index.css).
+  if (theme.vars?.headerGradient) root.style.setProperty("--header-gradient", theme.vars.headerGradient);
+  else root.style.removeProperty("--header-gradient");
 }

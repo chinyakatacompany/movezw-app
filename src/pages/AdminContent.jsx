@@ -97,11 +97,15 @@ export default function AdminContent() {
               )}
             >
               {values[THEME_KEY] === key && <Check className="w-4 h-4 text-primary absolute top-2 right-2" />}
-              <div className="flex gap-1.5 mb-2">
-                {theme.swatch.map((hsl, i) => (
-                  <span key={i} className="w-6 h-6 rounded-full border border-black/5" style={{ backgroundColor: `hsl(${hsl})` }} />
-                ))}
-              </div>
+              {theme.swatchGradient ? (
+                <div className="w-full h-6 rounded-full border border-black/5 mb-2" style={{ backgroundImage: theme.swatchGradient }} />
+              ) : (
+                <div className="flex gap-1.5 mb-2">
+                  {theme.swatch.map((hsl, i) => (
+                    <span key={i} className="w-6 h-6 rounded-full border border-black/5" style={{ backgroundColor: `hsl(${hsl})` }} />
+                  ))}
+                </div>
+              )}
               <p className="text-sm font-medium">{theme.label}</p>
             </button>
           ))}

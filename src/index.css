@@ -6,6 +6,11 @@
 
 @layer base {
   :root {
+    /* Unset by every theme except ones that opt in (see theme.js) — layers
+       a background-image on top of --header's flat background-color below,
+       so most themes render a plain header and a gradient theme can paint
+       a multi-stop gradient over it without any component markup change. */
+    --header-gradient: none;
     --background: 214 18% 72%;
     --foreground: 222 46% 38%;
     --card: 210 20% 98%;
@@ -95,6 +100,10 @@
 }
 
 @layer utilities {
+  /* Tailwind's own .bg-header rule (generated from tailwind.config.js) only
+     sets background-color; this adds background-image on the same
+     selector so the two merge instead of conflicting. */
+  .bg-header { background-image: var(--header-gradient); }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
