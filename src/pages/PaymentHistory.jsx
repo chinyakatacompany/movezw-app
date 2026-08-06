@@ -41,11 +41,11 @@ export default function PaymentHistory() {
       <p className="text-sm text-muted-foreground mb-5">Completed deliveries and their payment status.</p>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white rounded-2xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <p className="text-xs text-muted-foreground">Total settled</p>
           <p className="text-xl font-bold text-foreground mt-1">{formatMoney(total)}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <p className="text-xs text-muted-foreground">Completed payments</p>
           <p className="text-xl font-bold text-foreground mt-1">{paidCount}/{payments.length}</p>
         </div>
@@ -66,7 +66,7 @@ export default function PaymentHistory() {
             const PsIcon = ps.icon;
             const invNo = `INV-${(p.id || "").slice(-6).toUpperCase()}`;
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-border p-4">
+              <div key={p.id} className="bg-card rounded-2xl border border-border p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{p.pickup_location} → {p.destination}</p>

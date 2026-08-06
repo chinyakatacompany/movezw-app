@@ -52,7 +52,7 @@ export default function Notifications() {
         )}
       </div>
       {items.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={Bell} title="No notifications" subtitle="Updates about your deliveries will show up here." />
         </div>
       ) : (
@@ -62,7 +62,7 @@ export default function Notifications() {
               key={n.id}
               onClick={() => markRead(n)}
               className={cn(
-                "w-full text-left bg-white rounded-2xl border p-4 transition-colors",
+                "w-full text-left bg-card rounded-2xl border p-4 transition-colors",
                 n.is_read ? "border-border" : "border-primary/30 bg-primary/5"
               )}
             >

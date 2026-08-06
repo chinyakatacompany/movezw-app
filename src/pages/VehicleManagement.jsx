@@ -149,7 +149,7 @@ export default function VehicleManagement() {
       </div>
 
       <form onSubmit={submit} className="space-y-5">
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
           <h2 className="text-sm font-semibold flex items-center gap-2"><Car className="w-4 h-4 text-primary" /> Vehicle type</h2>
           <div className="grid grid-cols-2 gap-2">
             {VEHICLE_TYPES.map((v) => (
@@ -169,7 +169,7 @@ export default function VehicleManagement() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Specifications</h2>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

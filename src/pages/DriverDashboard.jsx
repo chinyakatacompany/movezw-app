@@ -194,7 +194,7 @@ export default function DriverDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <a href="#availability-toggle" className="bg-white rounded-2xl border border-border p-4">
+        <a href="#availability-toggle" className="bg-card rounded-2xl border border-border p-4">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
             <Wifi className="w-5 h-5 text-emerald-600" />
           </div>
@@ -212,7 +212,7 @@ export default function DriverDashboard() {
           </span>
         </a>
 
-        <Link to="/return-loads" className="bg-white rounded-2xl border border-border p-4">
+        <Link to="/return-loads" className="bg-card rounded-2xl border border-border p-4">
           <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
             <Briefcase className="w-5 h-5 text-blue-600" />
           </div>
@@ -221,7 +221,7 @@ export default function DriverDashboard() {
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </Link>
 
-        <Link to="/driver/history" className="bg-white rounded-2xl border border-border p-4">
+        <Link to="/driver/history" className="bg-card rounded-2xl border border-border p-4">
           <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-2">
             <RouteIcon className="w-5 h-5 text-purple-600" />
           </div>
@@ -230,7 +230,7 @@ export default function DriverDashboard() {
           <ChevronRight className="w-4 h-4 text-muted-foreground" />
         </Link>
 
-        <a href="#nearby-requests" className="bg-white rounded-2xl border border-border p-4">
+        <a href="#nearby-requests" className="bg-card rounded-2xl border border-border p-4">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
             <Target className="w-5 h-5 text-primary" />
           </div>
@@ -287,7 +287,7 @@ export default function DriverDashboard() {
             {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />)}
           </div>
         ) : openRequests.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-border">
+          <div className="bg-card rounded-2xl border border-border">
             <EmptyState icon={Package} title="No open requests" subtitle="New transport requests from customers will appear here." />
           </div>
         ) : (

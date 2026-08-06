@@ -18,6 +18,29 @@ export const THEMES = {
     swatch: ["20 65% 33%", "22 92% 24%", "220 55% 15%"],
     vars: null,
   },
+  movezwDark: {
+    label: "MoveZW Dark",
+    swatch: ["20 95% 55%", "35 92% 55%", "225 40% 6%"],
+    // The one true dark theme — background and card both go dark together
+    // (unlike the other dark-accented themes, which keep background light
+    // because most cards in this app are hardcoded bg-white rather than
+    // bg-card). This theme is why that conversion happened: RequestCard,
+    // AppLayout, and every customer/driver-facing page were switched from
+    // bg-white to bg-card so they'd actually turn dark instead of leaving
+    // stray white cards floating on a dark page.
+    vars: {
+      background: "225 35% 8%", foreground: "0 0% 98%",
+      card: "225 30% 13%", "card-foreground": "0 0% 98%",
+      popover: "225 30% 13%", "popover-foreground": "0 0% 98%",
+      primary: "20 95% 55%", "primary-foreground": "0 0% 100%",
+      secondary: "225 25% 16%", "secondary-foreground": "0 0% 95%",
+      muted: "225 25% 16%", "muted-foreground": "220 15% 65%",
+      accent: "35 92% 55%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 50%", "destructive-foreground": "0 0% 100%",
+      border: "225 20% 22%", input: "225 25% 16%", ring: "20 90% 55%",
+      header: "225 40% 6%", "header-foreground": "0 0% 98%",
+    },
+  },
   spectrum: {
     label: "Spectrum",
     swatch: ["330 75% 50%", "45 90% 50%", "265 60% 35%"],

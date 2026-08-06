@@ -154,7 +154,7 @@ export default function AddressSearchInput({
         required={required}
       />
       {open && (results.length > 0 || (searched && !loading)) && (
-        <ul className="absolute z-20 mt-1.5 w-full bg-white border border-border rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+        <ul className="absolute z-20 mt-1.5 w-full bg-card border border-border rounded-xl shadow-lg overflow-hidden max-h-64 overflow-y-auto">
           {results.length > 0 ? (
             results.map((r) => (
               <li key={r.place_id}>

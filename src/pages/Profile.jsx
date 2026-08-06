@@ -79,7 +79,7 @@ export default function Profile({ role }) {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-border divide-y divide-border">
+      <div className="bg-card rounded-2xl border border-border divide-y divide-border">
         <div className="flex items-center gap-3 p-4">
           <Mail className="w-5 h-5 text-muted-foreground" />
           <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{user?.email}</p></div>
@@ -130,46 +130,46 @@ export default function Profile({ role }) {
       </div>
 
       {role === "driver" && (
-        <button onClick={() => navigate("/vehicle-management")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+        <button onClick={() => navigate("/vehicle-management")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
           <Car className="w-5 h-5 text-primary" />
           <span className="text-sm font-medium flex-1 text-left">Manage vehicle</span>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       )}
 
-      <button onClick={() => navigate(role === "driver" ? "/driver/history" : "/customer/history")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+      <button onClick={() => navigate(role === "driver" ? "/driver/history" : "/customer/history")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <History className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Trip history</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 
       {role === "driver" && (
-        <button onClick={() => navigate("/return-loads/manage")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+        <button onClick={() => navigate("/return-loads/manage")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
           <Repeat className="w-5 h-5 text-primary" />
           <span className="text-sm font-medium flex-1 text-left">My return loads</span>
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       )}
 
-      <button onClick={() => navigate("/wallet")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+      <button onClick={() => navigate("/wallet")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <WalletIcon className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Wallet & payouts</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 
-      <button onClick={() => navigate("/payment-history")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+      <button onClick={() => navigate("/payment-history")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <Receipt className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Payment history</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 
-      <button onClick={() => navigate("/support")} className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+      <button onClick={() => navigate("/support")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <LifeBuoy className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Support center</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 
-      <Link to="/terms" className="w-full flex items-center gap-3 bg-white rounded-2xl border border-border p-4">
+      <Link to="/terms" className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <FileText className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Terms of service</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />

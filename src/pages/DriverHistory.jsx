@@ -31,7 +31,7 @@ export default function DriverHistory() {
           {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />)}
         </div>
       ) : jobs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={Package} title="No jobs yet" subtitle="Jobs you accept and complete will be listed here." />
         </div>
       ) : (

@@ -31,7 +31,7 @@ export default function CustomerHistory() {
           {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />)}
         </div>
       ) : requests.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={Package} title="No trips yet" subtitle="Your transport requests will appear here once you create one." />
         </div>
       ) : (

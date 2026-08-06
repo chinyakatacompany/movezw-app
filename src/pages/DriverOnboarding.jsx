@@ -175,7 +175,7 @@ export default function DriverOnboarding() {
       <p className="text-sm text-muted-foreground mb-6">Upload your documents to start receiving transport jobs.</p>
 
       <form onSubmit={submit} className="space-y-5">
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Profile</h2>
           <div className="flex justify-center">
             <label className="relative cursor-pointer">
@@ -209,7 +209,7 @@ export default function DriverOnboarding() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold flex items-center gap-2"><Car className="w-4 h-4 text-primary" /> Vehicle</h2>
           <div className="grid grid-cols-2 gap-2">
             {VEHICLE_TYPES.map((v) => (
@@ -239,7 +239,7 @@ export default function DriverOnboarding() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold flex items-center gap-2"><FileCheck2 className="w-4 h-4 text-primary" /> Documents</h2>
           <DocField label="National ID" value={form.national_id_url} onChange={(v) => set("national_id_url", v)} required />
           <DocField label="Driver's Licence" value={form.driver_licence_url} onChange={(v) => set("driver_licence_url", v)} required />

@@ -185,7 +185,7 @@ export default function Wallet() {
       )}
 
       {/* Payment methods (placeholder integrations) */}
-      <div className="bg-white rounded-2xl border border-border p-4 mb-5">
+      <div className="bg-card rounded-2xl border border-border p-4 mb-5">
         <h2 className="text-sm font-semibold mb-1">Payment methods</h2>
         <p className="text-xs text-muted-foreground mb-3">Live gateways connect here later without database changes.</p>
         <div className="grid grid-cols-3 gap-2">
@@ -205,7 +205,7 @@ export default function Wallet() {
         <span className="text-xs text-muted-foreground">{transactions.length} records</span>
       </div>
       {transactions.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={WalletIcon} title="No transactions yet" subtitle="Your top-ups, earnings and commission will appear here." />
         </div>
       ) : (
@@ -215,7 +215,7 @@ export default function Wallet() {
             const isIn = t.direction === "in";
             const StatusIcon = t.status === "completed" ? CheckCircle2 : t.status === "pending" ? Clock : X;
             return (
-              <div key={t.id} className="bg-white rounded-2xl border border-border p-3.5 flex items-center gap-3">
+              <div key={t.id} className="bg-card rounded-2xl border border-border p-3.5 flex items-center gap-3">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isIn ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>
                   {isIn ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
                 </div>
@@ -247,7 +247,7 @@ export default function Wallet() {
           <h2 className="text-base font-semibold mb-3">Commission refunds</h2>
           <div className="space-y-2">
             {refundReqs.map((rr) => (
-              <div key={rr.id} className="bg-white rounded-2xl border border-border p-3.5 flex items-center gap-3">
+              <div key={rr.id} className="bg-card rounded-2xl border border-border p-3.5 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                   <CheckCircle2 className="w-5 h-5" />
                 </div>
@@ -270,7 +270,7 @@ export default function Wallet() {
 
       {showTopUp && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4" onClick={() => setShowTopUp(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-1">Top up commission balance</h2>
             <p className="text-sm text-muted-foreground mb-4">An admin reviews and approves each top up before it's added to your balance.</p>
             <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-3.5 mb-4">
@@ -314,7 +314,7 @@ export default function Wallet() {
 
 function Stat({ icon: Icon, color, label, value }) {
   return (
-    <div className="bg-white rounded-2xl border border-border p-3">
+    <div className="bg-card rounded-2xl border border-border p-3">
       <Icon className={cn("w-4 h-4 mb-1", color)} />
       <p className="text-sm font-bold">{value}</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>

@@ -88,7 +88,7 @@ export default function Messages() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={MessageCircle} title="No conversations yet" subtitle="Start a chat from a transport request to message the other party." />
         </div>
       ) : (
@@ -100,7 +100,7 @@ export default function Messages() {
               <Link
                 key={c.id}
                 to={`/chat/${c.id}`}
-                className="flex items-center gap-3 bg-white rounded-2xl border border-border p-3.5 hover:border-primary/40 transition-colors"
+                className="flex items-center gap-3 bg-card rounded-2xl border border-border p-3.5 hover:border-primary/40 transition-colors"
               >
                 <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
                   {(otherName || "?").charAt(0).toUpperCase()}

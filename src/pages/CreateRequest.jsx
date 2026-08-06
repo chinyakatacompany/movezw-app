@@ -138,7 +138,7 @@ export default function CreateRequest() {
       <p className="text-sm text-muted-foreground mb-6">Tell drivers what you need moved and get competitive quotes.</p>
 
       <form onSubmit={submit} className="space-y-5">
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-primary" /> Locations</h2>
           <div className="space-y-2">
             <Label htmlFor="pickup">Pickup location</Label>
@@ -186,7 +186,7 @@ export default function CreateRequest() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold flex items-center gap-2"><Package className="w-4 h-4 text-primary" /> Cargo details</h2>
           <div>
             <Label className="mb-2 block">Cargo type</Label>
@@ -219,7 +219,7 @@ export default function CreateRequest() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing & budget</h2>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => set("timing", "now")}

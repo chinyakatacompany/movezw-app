@@ -47,7 +47,7 @@ export default function Support() {
       <h1 className="text-2xl font-bold tracking-tight mb-1">Support Center</h1>
       <p className="text-sm text-muted-foreground mb-6">Find quick answers or reach out to our team.</p>
 
-      <div className="bg-white rounded-2xl border border-border divide-y divide-border mb-6">
+      <div className="bg-card rounded-2xl border border-border divide-y divide-border mb-6">
         <a href="tel:+263780269976" className="flex items-center gap-3 p-4">
           <Phone className="w-5 h-5 text-primary shrink-0" />
           <div><p className="text-xs text-muted-foreground">Call or WhatsApp</p><p className="text-sm font-medium">0780 269 976</p></div>
@@ -66,7 +66,7 @@ export default function Support() {
         </a>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-4 mb-6">
+      <div className="bg-card rounded-2xl border border-border p-4 mb-6">
         <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><LifeBuoy className="w-4 h-4 text-primary" /> Common questions</h2>
         <div className="space-y-2">
           {FAQS.map((item, i) => {
@@ -87,7 +87,7 @@ export default function Support() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-4">
+      <div className="bg-card rounded-2xl border border-border p-4">
         <h2 className="text-sm font-semibold mb-1">Still need help?</h2>
         <p className="text-xs text-muted-foreground mb-4">Send us a message and we'll get back to you.</p>
 

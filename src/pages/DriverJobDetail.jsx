@@ -336,7 +336,7 @@ export default function DriverJobDetail() {
       </div>
 
       {/* Route */}
-      <div className="bg-white rounded-2xl border border-border p-4">
+      <div className="bg-card rounded-2xl border border-border p-4">
         <div className="flex gap-3">
           <div className="flex flex-col items-center pt-1">
             <span className="w-2.5 h-2.5 rounded-full bg-primary" />
@@ -371,7 +371,7 @@ export default function DriverJobDetail() {
           so it's always shown with an explicit fallback rather than
           silently disappearing when an address wasn't pinned exactly.
           Distance-to-pickup below it only affects ETA, not price. */}
-      <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
+      <div className="bg-card rounded-2xl border border-border p-4 space-y-2">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm font-semibold">
             <Navigation className="w-4 h-4 text-primary" />
@@ -412,7 +412,7 @@ export default function DriverJobDetail() {
       </div>
 
       {/* Cargo */}
-      <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+      <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
         <div className="grid grid-cols-3 gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -454,7 +454,7 @@ export default function DriverJobDetail() {
 
       {/* Offline — must go online before quoting */}
       {isOpen && !myOffer && profile?.availability_status === "offline" && (
-        <div className="bg-white rounded-2xl border border-border p-4 text-center">
+        <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <p className="text-sm font-semibold">You're offline</p>
           <p className="text-sm text-muted-foreground mt-1">Go online from your dashboard to submit a quote for this job.</p>
         </div>
@@ -462,7 +462,7 @@ export default function DriverJobDetail() {
 
       {/* Submit quote (open) */}
       {isOpen && !myOffer && profile?.availability_status !== "offline" && (
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-4">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Submit your quote</h2>
           <div className="space-y-2">
             <Label htmlFor="price">Your price (USD)</Label>
@@ -490,7 +490,7 @@ export default function DriverJobDetail() {
 
       {/* Quote pending */}
       {myOffer && myOffer.status === "pending" && (
-        <div className="bg-white rounded-2xl border border-border p-4 text-center">
+        <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
             <Loader2 className="w-6 h-6 text-amber-500" />
           </div>
@@ -501,7 +501,7 @@ export default function DriverJobDetail() {
 
       {/* Quote rejected */}
       {myOffer && myOffer.status === "rejected" && (
-        <div className="bg-white rounded-2xl border border-border p-4 text-center">
+        <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <p className="text-sm text-muted-foreground">The customer chose another driver for this job.</p>
         </div>
       )}
@@ -519,7 +519,7 @@ export default function DriverJobDetail() {
               <Navigation className="w-4 h-4" /> Navigate to {navigateTarget.label}
             </a>
           )}
-          <div className="bg-white rounded-2xl border border-border p-4">
+          <div className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-sm font-semibold">Agreed price</h2>
               <p className="text-lg font-bold text-primary">{formatMoney(request.accepted_price)}</p>
@@ -542,7 +542,7 @@ export default function DriverJobDetail() {
           </div>
 
           {!["delivered", "completed"].includes(request.status) && (
-            <div className="bg-white rounded-2xl border border-border p-4">
+            <div className="bg-card rounded-2xl border border-border p-4">
               <h2 className="text-sm font-semibold flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-primary" /> Got space for one more?</h2>
               <p className="text-xs text-muted-foreground mb-3">Let nearby customers know you can pick up a second delivery along this route — you can quote them a lower price since you're already headed that way.</p>
               <button
@@ -557,7 +557,7 @@ export default function DriverJobDetail() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-border p-4">
+          <div className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold">Delivery progress</h2>
               <span className="text-xs text-muted-foreground">{Math.min(activeStep + 1, STATUS_FLOW.length)} of {STATUS_FLOW.length} completed</span>
@@ -609,7 +609,7 @@ export default function DriverJobDetail() {
       )}
 
       {!isMyJob && !isOpen && myOffer?.status !== "pending" && (
-        <div className="bg-white rounded-2xl border border-border">
+        <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={Package} title="This job is no longer available" subtitle="The customer has selected a driver." />
         </div>
       )}

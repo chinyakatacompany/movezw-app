@@ -165,7 +165,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white border-b border-border">
+      <div className="sticky top-0 z-20 bg-card border-b border-border">
         <div className="max-w-2xl mx-auto px-3 h-14 flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
@@ -198,7 +198,7 @@ export default function Chat() {
                   </div>
                 )}
                 <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-primary-foreground rounded-br-md" : "bg-white border border-border rounded-bl-md"}`}>
+                  <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-primary-foreground rounded-br-md" : "bg-card border border-border rounded-bl-md"}`}>
                     {m.image_url && (
                       <a href={m.image_url} target="_blank" rel="noreferrer" className="block mb-1">
                         <img src={m.image_url} alt="" className="rounded-lg max-h-56 w-full object-cover" />
@@ -216,7 +216,7 @@ export default function Chat() {
           })}
           {otherTyping && (
             <div className="flex justify-start">
-              <div className="bg-white border border-border rounded-2xl rounded-bl-md px-4 py-2.5">
+              <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-2.5">
                 <div className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -229,7 +229,7 @@ export default function Chat() {
       </div>
 
       {/* Composer */}
-      <form onSubmit={sendMessage} className="sticky bottom-0 z-20 bg-white border-t border-border safe-bottom">
+      <form onSubmit={sendMessage} className="sticky bottom-0 z-20 bg-card border-t border-border safe-bottom">
         <div className="max-w-2xl mx-auto px-3 py-2.5 flex items-center gap-2">
           <label className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center cursor-pointer shrink-0">
             {uploading ? <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /> : <ImageIcon className="w-5 h-5 text-muted-foreground" />}

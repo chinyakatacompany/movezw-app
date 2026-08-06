@@ -177,7 +177,7 @@ export default function RequestDetail() {
         <p className="text-xs text-muted-foreground">Posted {timeAgo(request.created_at)}</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+      <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
         <div className="flex gap-3">
           <div className="flex flex-col items-center pt-1">
             <span className="w-2.5 h-2.5 rounded-full bg-primary" />
@@ -214,7 +214,7 @@ export default function RequestDetail() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+      <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
         <h2 className="text-sm font-semibold">Cargo details</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div><p className="text-xs text-muted-foreground">Weight</p><p className="font-medium">{request.cargo_weight || "—"}</p></div>
@@ -232,13 +232,13 @@ export default function RequestDetail() {
             <span className="text-xs text-muted-foreground">{pendingOffers.length} received</span>
           </div>
           {pendingOffers.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-border">
+            <div className="bg-card rounded-2xl border border-border">
               <EmptyState icon={Truck} title="Waiting for offers" subtitle="Drivers nearby will send you quotes. Check back shortly." />
             </div>
           ) : (
             <div className="space-y-3">
               {pendingOffers.slice().sort((a, b) => sortBy === "rating" ? (b.driver_rating || 0) - (a.driver_rating || 0) : a.price - b.price).map((o) => (
-                <div key={o.id} className="bg-white rounded-2xl border-2 border-border p-4">
+                <div key={o.id} className="bg-card rounded-2xl border-2 border-border p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
@@ -278,7 +278,7 @@ export default function RequestDetail() {
       )}
 
       {showLiveTracking && (
-        <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Live driver location</h2>
             <span className="text-[11px] text-muted-foreground">Updated {timeAgo(request.driver_location_updated_at)}</span>
@@ -296,7 +296,7 @@ export default function RequestDetail() {
       )}
 
       {showTracking && (
-        <div className="bg-white rounded-2xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-4">Delivery tracking</h2>
           <div className="space-y-0">
             {STATUS_FLOW.map((step, i) => {
@@ -320,7 +320,7 @@ export default function RequestDetail() {
       )}
 
       {acceptedOffer && (
-        <div className="bg-white rounded-2xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-3">Your driver</h2>
           <p className="text-sm font-semibold">{acceptedOffer.driver_name}</p>
           {enRouteOrLater ? (
@@ -351,7 +351,7 @@ export default function RequestDetail() {
       )}
 
       {request.status === "completed" && (
-        <div className="bg-white rounded-2xl border border-border p-4">
+        <div className="bg-card rounded-2xl border border-border p-4">
           <h2 className="text-sm font-semibold mb-1">Rate your driver</h2>
           {alreadyRated ? (
             <p className="text-sm text-emerald-600 flex items-center gap-1.5 mt-2"><Check className="w-4 h-4" /> You've rated this trip. Thanks!</p>

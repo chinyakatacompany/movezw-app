@@ -7,7 +7,7 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
   return (
     <Link
       to={to}
-      className="block bg-white rounded-2xl border border-border p-4 hover:border-primary/40 hover:shadow-sm transition-all"
+      className="block bg-card rounded-2xl border border-border p-4 hover:border-primary/40 hover:shadow-sm transition-all"
     >
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">

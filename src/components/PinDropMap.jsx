@@ -53,7 +53,7 @@ export default function PinDropMap({ initial, onConfirm, onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg sm:rounded-2xl overflow-hidden flex flex-col"
+        className="bg-card w-full sm:max-w-lg sm:rounded-2xl overflow-hidden flex flex-col"
         style={{ height: "min(90vh, 560px)" }}
         onClick={(e) => e.stopPropagation()}
       >

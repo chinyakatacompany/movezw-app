@@ -91,7 +91,7 @@ export default function CustomerDashboard() {
         <React.Suspense fallback={<div className="w-full h-full bg-muted animate-pulse" />}>
           <HomeMap height={256} />
         </React.Suspense>
-        <div className="absolute top-3 left-3 bg-white/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
+        <div className="absolute top-3 left-3 bg-card/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
           <Truck className="w-3.5 h-3.5 text-primary" />
           {onlineDrivers} driver{onlineDrivers === 1 ? "" : "s"} nearby
         </div>
@@ -111,7 +111,7 @@ export default function CustomerDashboard() {
       </div>
 
       <div className="p-4 space-y-6">
-        <Link to="/alerts" className="flex items-center gap-3 bg-white rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors">
+        <Link to="/alerts" className="flex items-center gap-3 bg-card rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors">
           <div className="relative shrink-0">
             <Bell className="w-5 h-5 text-primary" />
             {unreadAlerts > 0 && (
@@ -130,7 +130,7 @@ export default function CustomerDashboard() {
         </Link>
 
         {inTransit && (
-          <div className="bg-white rounded-2xl border border-border p-4">
+          <div className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-sm font-semibold flex items-center gap-1.5"><Truck className="w-4 h-4 text-primary" /> Trip in progress</h2>
               <Link to={`/customer/request/${inTransit.id}`} className="text-xs text-primary font-medium inline-flex items-center gap-1">
