@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X } from "lucide-react";
+import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { getOrCreateAdminDriverConversation } from "@/lib/messaging";
 
 export default function AdminUsers() {
+  const { user: admin } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState(null);
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [messaging, setMessaging] = useState(null);
 
   const load = () => {
     supabase
@@ -34,6 +40,23 @@ export default function AdminUsers() {
       load();
     } catch (e) {
       toast({ title: "Action failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const messageDriver = async (u) => {
+    setMessaging(u.id);
+    try {
+      const conv = await getOrCreateAdminDriverConversation({
+        adminId: admin.id,
+        adminName: admin.full_name || "MoveZW Admin",
+        driverId: u.id,
+        driverName: u.full_name || "Driver",
+      });
+      navigate(`/chat/${conv.id}`);
+    } catch (e) {
+      toast({ title: "Could not open chat", description: e.message, variant: "destructive" });
+    } finally {
+      setMessaging(null);
     }
   };
 
@@ -131,6 +154,11 @@ export default function AdminUsers() {
                   </>
                 ) : (
                   <>
+                    {u.role === "driver" && (
+                      <Button size="sm" variant="outline" onClick={() => messageDriver(u)} disabled={messaging === u.id} title="Message this driver (e.g. about a tender)">
+                        {messaging === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
                       <Pencil className="w-4 h-4" />
                     </Button>

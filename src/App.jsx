@@ -164,7 +164,7 @@ const AuthenticatedApp = () => {
       {/* Chat (full-screen, no app shell) */}
       <Route element={
         <ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
-        <Route path="/chat/:id" element={<RoleGuard allow={["customer", "driver"]}><Chat /></RoleGuard>} />
+        <Route path="/chat/:id" element={<RoleGuard allow={["customer", "driver", "admin"]}><Chat /></RoleGuard>} />
       </Route>
 
       {/* Admin area */}
@@ -183,6 +183,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/finance" element={<AdminFinance />} />
           <Route path="/admin/content" element={<AdminContent />} />
+          <Route path="/admin/messages" element={<Messages />} />
         </Route>
       </Route>
 
