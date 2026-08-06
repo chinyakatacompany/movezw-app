@@ -44,6 +44,7 @@ export default function DriverJobDetail() {
   const [locatingRoute, setLocatingRoute] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [findingSpace, setFindingSpace] = useState(false);
+  const [editingOffer, setEditingOffer] = useState(false);
   const [roadDistanceKm, setRoadDistanceKm] = useState(null);
   const [roadDistanceStatus, setRoadDistanceStatus] = useState("idle");
 
@@ -212,6 +213,39 @@ export default function DriverJobDetail() {
       load();
     } catch (e) {
       toast({ title: "Could not submit quote", description: e.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Revise a still-pending quote (e.g. after the customer asks for a lower
+  // price in chat) — both the RLS policy and the price-integrity trigger on
+  // offers already allow the submitting driver to update their own row;
+  // this was previously just missing from the UI entirely, so a driver had
+  // no way to send a counter-offer once their first quote was in.
+  const updateQuote = async () => {
+    if (!price || Number(price) <= 0) {
+      toast({ title: "Enter a valid price", variant: "destructive" });
+      return;
+    }
+    if (profile?.availability_status === "offline") {
+      toast({ title: "You're offline", description: "Go online from your dashboard to revise quotes.", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("offers")
+        .update({ price: Number(price), eta_minutes: eta ? Number(eta) : null, note })
+        .eq("id", myOffer.id);
+      if (error) throw error;
+      await createNotification(request.customer_id, "new_offer", "Updated offer 💬", `The driver revised their quote to ${formatMoney(price)} for your ${request.cargo_type} request.`, `/customer/request/${request.id}`);
+      try { await supabase.functions.invoke("notify-offer-push", { body: { offerId: myOffer.id } }); } catch (e) { console.error("Failed to send push alert:", e); }
+      toast({ title: "Quote updated!", description: "The customer has been notified of your new price." });
+      setEditingOffer(false);
+      load();
+    } catch (e) {
+      toast({ title: "Could not update quote", description: e.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -526,14 +560,59 @@ export default function DriverJobDetail() {
         </div>
       )}
 
-      {/* Quote pending */}
-      {myOffer && myOffer.status === "pending" && (
+      {/* Quote pending — can still be revised (a counter-offer) while the
+          customer hasn't accepted or rejected it yet. */}
+      {myOffer && myOffer.status === "pending" && !editingOffer && (
         <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
             <Loader2 className="w-6 h-6 text-amber-500" />
           </div>
           <h2 className="text-sm font-semibold">Quote sent — waiting for customer</h2>
           <p className="text-sm text-muted-foreground mt-1">You offered <span className="font-semibold text-foreground">{formatMoney(myOffer.price)}</span> for this job.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setPrice(String(myOffer.price ?? ""));
+              setEta(myOffer.eta_minutes != null ? String(myOffer.eta_minutes) : "");
+              setNote(myOffer.note || "");
+              setEditingOffer(true);
+            }}
+            className="mt-3 text-sm font-semibold text-primary underline"
+          >
+            Send a different price
+          </button>
+        </div>
+      )}
+
+      {myOffer && myOffer.status === "pending" && editingOffer && (
+        <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
+          <h2 className="text-sm font-semibold">Revise your quote</h2>
+          <div className="space-y-2">
+            <Label htmlFor="revise-price">Your price (USD)</Label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input id="revise-price" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} className="pl-10" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="revise-eta">ETA to pickup (minutes)</Label>
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input id="revise-eta" type="number" min="1" value={eta} onChange={(e) => setEta(e.target.value)} className="pl-10" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="revise-note">Message to customer (optional)</Label>
+            <Textarea id="revise-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={updateQuote} disabled={submitting} className="flex-1 h-12 font-semibold">
+              {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</> : "Send updated quote"}
+            </Button>
+            <Button variant="outline" onClick={() => setEditingOffer(false)} disabled={submitting} className="h-12">
+              Cancel
+            </Button>
+          </div>
         </div>
       )}
 
