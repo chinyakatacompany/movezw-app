@@ -52,7 +52,7 @@ export default function ShipmentMap({ shipments = [], height = 280 }) {
     mapRef.current = map;
     map.on("load", () => setMapLoaded(true));
     return () => map.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mapAttempt]);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function ShipmentMap({ shipments = [], height = 280 }) {
       el.addEventListener("mouseleave", () => popup.remove());
       return marker;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [JSON.stringify(markers.map((m) => [m.id, m.position, m.color, m.label]))]);
 
   return (

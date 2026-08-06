@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Search, Ban, CheckCircle2, Mail, Phone, Pencil, Check, X } from "lucide-react";
-import { formatDate } from "@/lib/movezw";
+import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 

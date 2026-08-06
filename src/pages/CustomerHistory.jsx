@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Loader2 } from "lucide-react";
+import { Package } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState } from "@/lib/movezw";
 

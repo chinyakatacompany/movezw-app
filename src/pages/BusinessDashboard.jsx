@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  Package, CheckCircle2, Gauge, DollarSign, Truck, Users, Wrench, Plus, X, Building2, TrendingUp, ArrowRight,
+  Package, CheckCircle2, Gauge, DollarSign, Truck, Users, Wrench, Plus, X, Building2, TrendingUp,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import PageHeader from "@/components/shared/PageHeader";
 import KPICard from "@/components/shared/KPICard";
 import DataTable from "@/components/shared/DataTable";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
-import { StatusBadge, formatDate, formatMoney, VEHICLE_TYPES, VEHICLE_ICONS, EmptyState } from "@/lib/movezw";
+import { StatusBadge, formatDate, formatMoney, VEHICLE_TYPES, VEHICLE_ICONS } from "@/lib/movezw";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, Send, Image as ImageIcon, Loader2, CheckCheck, Check } from "lucide-react";
@@ -60,7 +60,7 @@ export default function Chat() {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-    // eslint-disable-next-line
+     
   }, [id]);
 
   // Mark incoming messages as read

@@ -42,7 +42,7 @@ export default function Messages() {
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-    // eslint-disable-next-line
+     
   }, [user?.id]);
 
   useEffect(() => {

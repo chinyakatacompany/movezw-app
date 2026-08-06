@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, Star, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm } from "@/lib/matching";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
@@ -71,7 +71,7 @@ export default function DriverJobDetail() {
   useEffect(() => {
     if (request?.pickup_lat == null || request?.pickup_lng == null) return;
     fetchDriverLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [request?.pickup_lat, request?.pickup_lng]);
 
   const load = async () => {
@@ -92,7 +92,7 @@ export default function DriverJobDetail() {
     }
   };
 
-  useEffect(() => { if (user?.id) load(); /* eslint-disable-next-line */ }, [id, user?.id]);
+  useEffect(() => { if (user?.id) load();   }, [id, user?.id]);
 
   // Live-refresh this page the moment the customer accepts/rejects an offer
   // on this job, so the driver sees the accepted state without a manual reload.
@@ -104,7 +104,7 @@ export default function DriverJobDetail() {
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "offers", filter: `request_id=eq.${id}` }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-    /* eslint-disable-next-line */
+     
   }, [id, user?.id]);
 
   // Report this driver's position to the customer every 5 minutes while the

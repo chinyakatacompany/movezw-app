@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { UploadCloud, X, ImagePlus, Loader2 } from "lucide-react";
+import { X, ImagePlus, Loader2 } from "lucide-react";
 import { supabase } from "@/api/supabaseClient";
 import { cn } from "@/lib/utils";
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Bell, Loader2, Check } from "lucide-react";
+import { Bell, Loader2 } from "lucide-react";
 import { EmptyState, timeAgo } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 

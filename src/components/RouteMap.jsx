@@ -87,7 +87,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       .addTo(map);
 
     return () => map.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [mapAttempt]);
 
   useEffect(() => {

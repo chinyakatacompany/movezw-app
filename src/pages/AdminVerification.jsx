@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { BadgeCheck, Check, X, Loader2, FileText, Car, Star } from "lucide-react";
-import { StatusBadge, StarRating, formatDate } from "@/lib/movezw";
+import { Check, X, Loader2, FileText, Car } from "lucide-react";
+import { StarRating } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
@@ -24,7 +24,7 @@ export default function AdminVerification() {
     });
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
+  useEffect(() => { load();   }, [filter]);
 
   const decide = async (profile, decision) => {
     setActing(profile.id);

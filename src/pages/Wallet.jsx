@@ -70,7 +70,7 @@ export default function Wallet() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { load();   }, [user?.id]);
 
   const submitTopUp = async (e) => {
     e.preventDefault();

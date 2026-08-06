@@ -31,7 +31,7 @@ export default function AdminJobs() {
   useEffect(() => {
     load();
     setSelected(new Set());
-    /* eslint-disable-next-line */
+     
   }, [filter]);
 
   const filtered = (jobs || []).filter((j) =>

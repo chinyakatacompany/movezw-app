@@ -79,7 +79,7 @@ export default function HomeMap({ height = 260 }) {
     map.on("load", () => setMapLoaded(true));
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     return () => map.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [attempt]);
 
   useEffect(() => {

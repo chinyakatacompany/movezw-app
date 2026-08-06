@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Plus, MapPin, Calendar, Truck, X, Loader2, Package, Check, Repeat, ArrowRight } from "lucide-react";
+import { Plus, Calendar, Truck, X, Loader2, Package, Check, Repeat, ArrowRight } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import DataTable from "@/components/shared/DataTable";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";

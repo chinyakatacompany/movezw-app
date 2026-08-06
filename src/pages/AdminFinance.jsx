@@ -15,7 +15,6 @@ import RefundQueue from "@/components/finance/RefundQueue";
 import TopupQueue from "@/components/finance/TopupQueue";
 import CommissionSettings from "@/components/finance/CommissionSettings";
 import { cn } from "@/lib/utils";
-import { toast } from "@/components/ui/use-toast";
 
 const NAVY = "#1e2f5e";
 const ORANGE = "#c2410c";
@@ -105,7 +104,7 @@ export default function AdminFinance() {
 
   useEffect(() => {
     load();
-    /* eslint-disable-next-line */
+     
   }, []);
 
   const rate = cfg?.rate ?? 0.1;

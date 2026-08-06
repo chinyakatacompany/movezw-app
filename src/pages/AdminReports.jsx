@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Users, Package, BadgeCheck, CheckCircle2, Star } from "lucide-react";
-import { formatDate } from "@/lib/movezw";
 
 function MiniStat({ icon: Icon, label, value, color }) {
   return (

@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Clock, DollarSign, Package } from "lucide-react";
 import { StatusBadge, formatMoney, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
-import { cn } from "@/lib/utils";
 
 export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm }) {
   return (
