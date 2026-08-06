@@ -35,7 +35,7 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
         </div>
         {tripDistanceKm != null && (
           <p className="text-xs font-semibold text-primary pl-6">
-            {tripDistanceKm < 1 ? `${Math.round(tripDistanceKm * 1000)} m` : `${tripDistanceKm.toFixed(1)} km`} trip distance
+            ~{tripDistanceKm < 1 ? `${Math.round(tripDistanceKm * 1000)} m` : `${tripDistanceKm.toFixed(1)} km`} trip distance (straight-line estimate)
           </p>
         )}
       </div>

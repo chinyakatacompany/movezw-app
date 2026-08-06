@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState, COMMISSION_RATE } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
-import { notifyCustomersAlongRoute, distanceKm } from "@/lib/matching";
+import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
 import { processJobCompletion, chargeCommissionOnCollection, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -44,6 +44,32 @@ export default function DriverJobDetail() {
   const [locatingRoute, setLocatingRoute] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [findingSpace, setFindingSpace] = useState(false);
+  const [roadDistanceKm, setRoadDistanceKm] = useState(null);
+  const [roadDistanceStatus, setRoadDistanceStatus] = useState("idle");
+
+  // Real road distance, matching what the customer's own request page shows
+  // (RequestDetail.jsx's RouteMap, also OSRM) — a straight-line distance
+  // under-counts actual travel distance, so quoting off it read as "wrong"
+  // compared to the customer's number. Falls back to the straight-line
+  // figure (clearly labeled) if OSRM is unreachable.
+  useEffect(() => {
+    if (request?.pickup_lat == null || request?.pickup_lng == null || request?.destination_lat == null || request?.destination_lng == null) {
+      setRoadDistanceKm(null);
+      setRoadDistanceStatus("idle");
+      return;
+    }
+    let cancelled = false;
+    setRoadDistanceStatus("loading");
+    fetchRoadDistanceKm(
+      { lat: request.pickup_lat, lng: request.pickup_lng },
+      { lat: request.destination_lat, lng: request.destination_lng }
+    ).then((km) => {
+      if (cancelled) return;
+      setRoadDistanceKm(km);
+      setRoadDistanceStatus(km != null ? "ready" : "error");
+    });
+    return () => { cancelled = true; };
+  }, [request?.pickup_lat, request?.pickup_lng, request?.destination_lat, request?.destination_lng]);
 
   const fetchDriverLocation = () => {
     const reason = geolocationUnavailableReason();
@@ -370,6 +396,9 @@ export default function DriverJobDetail() {
           (pickup → destination) is what actually determines a fair quote,
           so it's always shown with an explicit fallback rather than
           silently disappearing when an address wasn't pinned exactly.
+          Uses the same real road-driving distance (OSRM) the customer's
+          own request page shows via RouteMap — a straight-line distance
+          under-counts actual travel and read as "wrong" next to that.
           Distance-to-pickup below it only affects ETA, not price. */}
       <div className="bg-card rounded-2xl border border-border p-4 space-y-2">
         <div className="flex items-center justify-between">
@@ -378,9 +407,15 @@ export default function DriverJobDetail() {
             Trip distance
           </span>
           <span className="text-sm font-bold text-primary">
-            {request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null
-              ? formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))
-              : "Not available"}
+            {request.pickup_lat == null || request.pickup_lng == null || request.destination_lat == null || request.destination_lng == null ? (
+              "Not available"
+            ) : roadDistanceStatus === "loading" ? (
+              <span className="inline-flex items-center gap-1.5 font-normal text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Calculating…</span>
+            ) : roadDistanceStatus === "ready" ? (
+              formatDistanceLabel(roadDistanceKm)
+            ) : (
+              `~${formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))}`
+            )}
           </span>
         </div>
         {(request.pickup_lat == null || request.pickup_lng == null || request.destination_lat == null || request.destination_lng == null) && (
@@ -389,6 +424,9 @@ export default function DriverJobDetail() {
               ? "Pickup or destination wasn't pinned exactly — check the addresses above to estimate distance yourself before quoting."
               : "Pickup or destination wasn't pinned exactly."}
           </p>
+        )}
+        {roadDistanceStatus === "error" && (
+          <p className="text-xs text-muted-foreground">Road route unavailable right now — showing a straight-line estimate instead.</p>
         )}
         {request.pickup_lat != null && request.pickup_lng != null && (
           <div className="flex items-center justify-between pt-2 border-t border-border">

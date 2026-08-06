@@ -37,6 +37,26 @@ export function distanceKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Real road-driving distance between two points, via the same free OSRM
+// endpoint RouteMap.jsx uses — a straight-line Haversine distance under-
+// counts actual travel distance (often significantly, depending on the
+// road network), so anywhere a number is used to price a job it should
+// match what the customer's own route map shows, not a straight line.
+// Returns null on any failure so callers can fall back to Haversine.
+export async function fetchRoadDistanceKm(from, to) {
+  try {
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`
+    );
+    const data = await res.json();
+    const route = data?.routes?.[0];
+    if (data.code !== "Ok" || !route) return null;
+    return route.distance / 1000;
+  } catch {
+    return null;
+  }
+}
+
 // Whether a driver's vehicle can service the request.
 // Today: any approved vehicle qualifies (request has no vehicle preference).
 // Future: map cargo_weight → required VEHICLE_CAPACITY_RANK and compare.
