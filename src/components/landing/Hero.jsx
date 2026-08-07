@@ -46,12 +46,12 @@ export default function Hero() {
           </div>
 
           {canInstall && (
-            <div className="mt-4 flex justify-center lg:justify-start">
+            <div className="mt-5 flex justify-center lg:justify-start">
               <button
                 onClick={promptInstall}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors"
+                className="inline-flex items-center gap-2.5 h-12 px-7 rounded-xl bg-accent text-accent-foreground text-base font-semibold shadow-lg shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle"
               >
-                <Download className="w-4 h-4" /> Install MoveZW app
+                <Download className="w-5 h-5" /> Install the MoveZW app
               </button>
             </div>
           )}
