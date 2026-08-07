@@ -1,7 +1,9 @@
 import React from "react";
-import { Truck } from "lucide-react";
+import { Truck, Download } from "lucide-react";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
 
-export default function AuthLayout({ icon: Icon, title, subtitle, footer, children }) {
+export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, showInstall }) {
+  const { canInstall, promptInstall } = useInstallPrompt();
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background px-4 py-10">
       <div className="w-full max-w-md">
@@ -11,6 +13,17 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
           </div>
           <span className="font-bold text-2xl tracking-tight">MoveZW</span>
         </div>
+
+        {showInstall && canInstall && (
+          <div className="flex justify-center mb-6">
+            <button
+              onClick={promptInstall}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle"
+            >
+              <Download className="w-4 h-4" /> Install MoveZW app
+            </button>
+          </div>
+        )}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
             <Icon className="w-7 h-7 text-primary" aria-hidden="true" />

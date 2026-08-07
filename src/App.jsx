@@ -40,6 +40,7 @@ import Support from '@/pages/Support';
 import AlertSettings from '@/pages/AlertSettings';
 import VehicleManagement from '@/pages/VehicleManagement';
 import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
 import Messages from '@/pages/Messages';
 import Chat from '@/pages/Chat';
 import Wallet from '@/pages/Wallet';
@@ -89,6 +90,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -75,6 +75,7 @@ export default function LandingFooter() {
               <li><Link to="/login" className="text-background/70 hover:text-background">Log in</Link></li>
               <li><Link to="/register" className="text-background/70 hover:text-background">Sign up</Link></li>
               <li><Link to="/terms" className="text-background/70 hover:text-background">Terms of Service</Link></li>
+              <li><Link to="/privacy" className="text-background/70 hover:text-background">Privacy Policy</Link></li>
             </ul>
           </div>
         </div>
@@ -83,6 +84,7 @@ export default function LandingFooter() {
           <p>© {new Date().getFullYear()} MoveZW. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link to="/terms" className="hover:text-background">Terms of Service</Link>
+            <Link to="/privacy" className="hover:text-background">Privacy Policy</Link>
             <p>Trusted transport, built for Zimbabwe.</p>
           </div>
         </div>

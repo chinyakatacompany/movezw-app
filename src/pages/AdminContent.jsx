@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { FileText, Loader2, Save, Check } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { TERMS_SECTIONS } from "@/pages/Terms";
+import { PRIVACY_SECTIONS } from "@/pages/Privacy";
 import { THEMES, DEFAULT_THEME, applyTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,10 @@ const FIELDS = [
   ...TERMS_SECTIONS.flatMap((s) => [
     { group: "Terms of Service", key: `${s.key}.title`, label: `${s.title} — heading`, fallback: s.title },
     { group: "Terms of Service", key: `${s.key}.body`, label: `${s.title} — body`, fallback: s.body, multiline: true },
+  ]),
+  ...PRIVACY_SECTIONS.flatMap((s) => [
+    { group: "Privacy Policy", key: `${s.key}.title`, label: `${s.title} — heading`, fallback: s.title },
+    { group: "Privacy Policy", key: `${s.key}.body`, label: `${s.title} — body`, fallback: s.body, multiline: true },
   ]),
 ];
 
