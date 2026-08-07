@@ -1,11 +1,14 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Truck, Star, ShieldCheck } from "lucide-react";
+import { ArrowRight, Truck, Star, ShieldCheck, Download } from "lucide-react";
 import { useSiteContent } from "@/lib/siteContent";
+import { useInstallPrompt, isIosSafari } from "@/lib/useInstallPrompt";
 
 export default function Hero() {
   const { t } = useSiteContent();
+  const { canInstall, installed, promptInstall } = useInstallPrompt();
+  const showIosHint = !installed && !canInstall && isIosSafari();
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-primary/5 via-background to-background">
       <div className="absolute inset-0 pointer-events-none">
@@ -41,6 +44,22 @@ export default function Hero() {
               </Button>
             </Link>
           </div>
+
+          {canInstall && (
+            <div className="mt-4 flex justify-center lg:justify-start">
+              <button
+                onClick={promptInstall}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium hover:bg-primary/10 transition-colors"
+              >
+                <Download className="w-4 h-4" /> Install MoveZW app
+              </button>
+            </div>
+          )}
+          {showIosHint && (
+            <p className="mt-4 text-xs text-muted-foreground text-center lg:text-left">
+              On iPhone: tap the Share icon, then "Add to Home Screen" to install MoveZW.
+            </p>
+          )}
 
           <div className="mt-8 flex items-center gap-5 justify-center lg:justify-start text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
