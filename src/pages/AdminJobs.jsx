@@ -88,7 +88,7 @@ export default function AdminJobs() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto pb-28">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto pb-28">
       <h1 className="text-2xl font-bold tracking-tight mb-1">Job management</h1>
       <p className="text-sm text-muted-foreground mb-5">All transport requests on the platform.</p>
 

@@ -86,7 +86,7 @@ export default function AdminUsers() {
   );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight mb-1">User management</h1>
       <p className="text-sm text-muted-foreground mb-5">All customers and drivers on MoveZW.</p>
 
@@ -110,39 +110,41 @@ export default function AdminUsers() {
       ) : (
         <div className="space-y-2">
           {filtered.map((u) => (
-            <div key={u.id} className="bg-white rounded-2xl border border-border p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
-                {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
-              </div>
-              {editingId === u.id ? (
-                <div className="flex-1 min-w-0 space-y-2">
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Full name"
-                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
-                  <input
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="Phone"
-                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+            <div key={u.id} className="bg-white rounded-2xl border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
+                  {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
                 </div>
-              ) : (
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold truncate">{u.full_name || "Unnamed"}</p>
-                    <span className={cn(
-                      "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded",
-                      u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
-                    )}>{u.role || "customer"}</span>
-                    {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700">Suspended</span>}
+                {editingId === u.id ? (
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="Full name"
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <input
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="Phone"
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    />
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
-                </div>
-              )}
-              <div className="flex gap-2 shrink-0">
+                ) : (
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold truncate">{u.full_name || "Unnamed"}</p>
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0",
+                        u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                      )}>{u.role || "customer"}</span>
+                      {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">Suspended</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 flex-wrap sm:shrink-0 sm:justify-end">
                 {editingId === u.id ? (
                   <>
                     <Button size="sm" onClick={() => saveEdit(u)} disabled={saving}>

@@ -71,14 +71,14 @@ export default function AdminContent() {
 
   if (!values) {
     return (
-      <div className="p-6 max-w-3xl mx-auto flex justify-center py-16">
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto flex justify-center py-16">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto pb-24">
       <h1 className="text-2xl font-bold tracking-tight mb-1 flex items-center gap-2"><FileText className="w-6 h-6 text-primary" /> Site content</h1>
       <p className="text-sm text-muted-foreground mb-6">Edit landing page copy and Terms of Service text without a code change. Live on the site as soon as you save.</p>
 

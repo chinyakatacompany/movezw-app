@@ -52,7 +52,7 @@ export default function AdminVerification() {
   const tabs = ["pending", "approved", "rejected", "all"];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight mb-1">Driver verification</h1>
       <p className="text-sm text-muted-foreground mb-5">Review submitted documents and approve drivers.</p>
 
