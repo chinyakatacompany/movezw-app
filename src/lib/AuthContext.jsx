@@ -84,6 +84,24 @@ export const AuthProvider = ({ children }) => {
         if (!roleErr) role = 'driver';
       }
 
+      // Register.jsx requires the terms checkbox to submit, but can't persist
+      // it itself (no session exists until after email confirmation) — so it
+      // stashes intent here, tagged with the owner id like the role flag
+      // above, and it's applied on the first real login. TermsGate still
+      // catches anyone this doesn't reach (confirmed on a different
+      // device/browser, or any pre-existing account from before this
+      // feature shipped).
+      let termsAcceptedAt = profile?.terms_accepted_at || null;
+      const pendingTerms = sessionStorage.getItem('movzw_signup_terms_accepted');
+      if (pendingTerms === '1' && pendingRoleOwner === authUser.id && !termsAcceptedAt) {
+        const now = new Date().toISOString();
+        const { error: termsErr } = await supabase
+          .from('profiles')
+          .update({ terms_accepted_at: now })
+          .eq('id', authUser.id);
+        if (!termsErr) termsAcceptedAt = now;
+      }
+
       setUser({
         id: authUser.id,
         email: authUser.email,
@@ -91,6 +109,7 @@ export const AuthProvider = ({ children }) => {
         phone,
         role,
         is_suspended: profile?.is_suspended || false,
+        terms_accepted_at: termsAcceptedAt,
       });
       setIsAuthenticated(true);
       setAuthError(null);

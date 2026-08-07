@@ -74,13 +74,17 @@ export default function LandingFooter() {
               <li><a href="#faq" className="text-background/70 hover:text-background">FAQ</a></li>
               <li><Link to="/login" className="text-background/70 hover:text-background">Log in</Link></li>
               <li><Link to="/register" className="text-background/70 hover:text-background">Sign up</Link></li>
+              <li><Link to="/terms" className="text-background/70 hover:text-background">Terms of Service</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="mt-12 pt-6 border-t border-background/15 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-background/60">
           <p>© {new Date().getFullYear()} MoveZW. All rights reserved.</p>
-          <p>Trusted transport, built for Zimbabwe.</p>
+          <div className="flex items-center gap-4">
+            <Link to="/terms" className="hover:text-background">Terms of Service</Link>
+            <p>Trusted transport, built for Zimbabwe.</p>
+          </div>
         </div>
       </div>
     </footer>);

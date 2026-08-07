@@ -24,6 +24,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +37,10 @@ export default function Register() {
       setError("Password must be at least 6 characters");
       return;
     }
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service to create an account");
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -45,7 +50,10 @@ export default function Register() {
       // profiles row from the start — sessionStorage alone doesn't survive
       // email confirmation reliably, since that link is often opened in a
       // different tab/app.
-      options: { data: { full_name: fullName, phone, role: accountType === "driver" ? "driver" : "customer" } },
+      options: {
+        data: { full_name: fullName, phone, role: accountType === "driver" ? "driver" : "customer" },
+        emailRedirectTo: `${window.location.origin}/login`,
+      },
     });
     setLoading(false);
     if (error) {
@@ -58,6 +66,7 @@ export default function Register() {
     sessionStorage.setItem("movzw_signup_role", accountType);
     sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
+    sessionStorage.setItem("movzw_signup_terms_accepted", "1");
     setDone(true);
   };
 
@@ -145,7 +154,21 @@ export default function Register() {
             </div>
           </div>
         </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+            className="mt-0.5 w-4 h-4 rounded border-border accent-primary shrink-0"
+          />
+          <span className="text-muted-foreground">
+            I agree to MoveZW's{" "}
+            <Link to="/terms" target="_blank" className="text-primary font-medium hover:underline">
+              Terms of Service
+            </Link>
+          </span>
+        </label>
+        <Button type="submit" className="w-full h-12 font-medium" disabled={loading || !agreedToTerms}>
           {loading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating account...</>) : "Create account"}
         </Button>
       </form>

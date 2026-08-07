@@ -31,42 +31,62 @@ export const TERMS_SECTIONS = [
   },
   {
     key: "terms.5",
-    title: "5. Driver Responsibilities",
-    body: "Drivers must hold a valid driver's licence and submit truthful vehicle and identity documents for verification. Drivers are independent contractors, not employees of MoveZW, and are responsible for the safe and lawful transport of goods.",
+    title: "5. Prohibited & Restricted Items",
+    body: "MoveZW does not permit the transport of hazardous materials, illegal drugs, weapons or sharp objects, or any other item that could pose a risk to people, property, or other goods travelling in the same vehicle. Where an item is accepted for transport, the customer is responsible for packing it securely enough to prevent injury, damage, leakage, or contamination during the trip.",
   },
   {
     key: "terms.6",
-    title: "6. Verification & Listings",
-    body: "MoveZW reviews submitted documents before approving drivers. Approval does not guarantee the quality of any individual service. Drivers and customers are responsible for their own conduct during a job.",
+    title: "6. Driver Responsibilities",
+    body: "Drivers must hold a valid driver's licence and submit truthful vehicle and identity documents for verification. Drivers are independent contractors, not employees of MoveZW, and are responsible for the safe and lawful transport of goods.",
   },
   {
     key: "terms.7",
-    title: "7. Payments",
-    body: "MoveZW currently facilitates cash-on-delivery payments directly between customers and drivers. Additional payment methods may be introduced. Any platform service fees will be clearly disclosed before they apply.",
+    title: "7. Verification & Listings",
+    body: "MoveZW reviews submitted documents before approving drivers. Approval does not guarantee the quality of any individual service. Drivers and customers are responsible for their own conduct during a job.",
   },
   {
     key: "terms.8",
-    title: "8. Cancellations & Disputes",
-    body: "Either party may cancel an open request before a driver is en route to pickup. For disputes, users should first attempt to resolve directly, then contact MoveZW support. MoveZW may mediate but is not liable for the outcome.",
+    title: "8. Payments",
+    body: "MoveZW currently facilitates cash-on-delivery payments directly between customers and drivers, based on the price a driver quotes and the customer accepts for a given job. Additional payment methods may be introduced. Any platform service fees will be clearly disclosed before they apply.",
   },
   {
     key: "terms.9",
-    title: "9. Prohibited Conduct",
-    body: "Users must not use MoveZW to transport illegal, hazardous or stolen goods, to harass others, to circumvent the platform's processes, or to misrepresent themselves or their vehicles.",
+    title: "9. Cancellations & Disputes",
+    body: "Either party may cancel an open request before a driver is en route to pickup. For disputes, users should first attempt to resolve directly, then contact MoveZW support. MoveZW may mediate but is not liable for the outcome.",
   },
   {
     key: "terms.10",
-    title: "10. Limitation of Liability",
-    body: "MoveZW provides the platform 'as is' and is not liable for loss or damage to goods, delays, or the conduct of other users. Liability is limited to the maximum extent permitted by applicable Zimbabwean law.",
+    title: "10. Governing Law & Dispute Settlement",
+    body: "These Terms are governed by the laws of Zimbabwe. Any dispute arising from or in connection with these Terms, or your use of the MoveZW platform, that cannot be resolved directly between the parties or through MoveZW support is subject to the jurisdiction of the courts of Zimbabwe.",
   },
   {
     key: "terms.11",
-    title: "11. Changes to Terms",
-    body: "MoveZW may update these Terms from time to time. Continued use of the platform after changes constitutes acceptance of the revised Terms. Material changes will be communicated to active users.",
+    title: "11. Prohibited Conduct",
+    body: "Users must not use MoveZW to transport illegal, hazardous or stolen goods, to harass others, to circumvent the platform's processes, or to misrepresent themselves or their vehicles.",
   },
   {
     key: "terms.12",
-    title: "12. Contact",
+    title: "12. Limitation of Liability",
+    body: "MoveZW provides the platform 'as is' and is not liable for loss or damage to goods, delays, or the conduct of other users. Liability is limited to the maximum extent permitted by applicable Zimbabwean law.",
+  },
+  {
+    key: "terms.13",
+    title: "13. Force Majeure",
+    body: "MoveZW is not liable for any loss, damage, delay, or failure to perform arising from circumstances beyond its reasonable control, including but not limited to acts of God, fire, floods, earthquakes, civil unrest, government action, or other events that could not reasonably have been foreseen or prevented.",
+  },
+  {
+    key: "terms.14",
+    title: "14. Severability",
+    body: "If any provision of these Terms is found to be invalid or unenforceable, that finding does not affect the validity or enforceability of the remaining provisions, which continue in full force and effect.",
+  },
+  {
+    key: "terms.15",
+    title: "15. Changes to Terms",
+    body: "MoveZW may update these Terms from time to time. Continued use of the platform after changes constitutes acceptance of the revised Terms. Material changes will be communicated to active users.",
+  },
+  {
+    key: "terms.16",
+    title: "16. Contact",
     body: "Questions about these Terms can be sent to movezwsupport@gmail.com or through the in-app Support Center.",
   },
 ];
@@ -106,9 +126,9 @@ export default function Terms() {
         </div>
 
         <div className="mt-10 text-center">
-          <Link to="/support">
+          <a href="https://wa.me/263715837174" target="_blank" rel="noopener noreferrer">
             <Button variant="outline">Questions? Contact support</Button>
-          </Link>
+          </a>
         </div>
       </main>
     </div>
