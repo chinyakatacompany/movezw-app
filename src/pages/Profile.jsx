@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2 } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { hasPin } from "@/lib/pinLock";
 
 export default function Profile({ role }) {
   const { user, logout, checkUserAuth } = useAuth();
@@ -166,6 +167,12 @@ export default function Profile({ role }) {
       <button onClick={() => navigate("/support")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <LifeBuoy className="w-5 h-5 text-primary" />
         <span className="text-sm font-medium flex-1 text-left">Support center</span>
+        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </button>
+
+      <button onClick={() => navigate("/pin-setup")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
+        <Lock className="w-5 h-5 text-primary" />
+        <span className="text-sm font-medium flex-1 text-left">{hasPin(user?.id) ? "Change app PIN" : "Set up app PIN"}</span>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
       </button>
 

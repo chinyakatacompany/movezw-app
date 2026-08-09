@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { markFreshLogin } from "@/lib/pinLock";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,11 +18,15 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
+      // Just proved identity with the real password — don't also demand
+      // the PIN right away. It only guards silently-restored sessions on
+      // later visits, see PinGate.jsx.
+      if (data?.user?.id) markFreshLogin(data.user.id);
       window.location.href = "/";
     }
   };

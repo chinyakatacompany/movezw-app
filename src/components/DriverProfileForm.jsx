@@ -65,7 +65,7 @@ function DocField({ label, value, onChange, required }) {
 // `userId` is whoever the resulting driver_profiles row belongs to — the
 // logged-in driver in the self-service case, or the selected driver in the
 // admin case — never assumed to be the current session's own id.
-export default function DriverProfileForm({ userId, prefill, existing, autoApprove, submitLabel, onSaved }) {
+export default function DriverProfileForm({ userId, prefill, existing, autoApprove, docsOptional, submitLabel, onSaved }) {
   const [form, setForm] = useState({
     full_name: prefill?.full_name || "",
     phone: prefill?.phone || "",
@@ -108,7 +108,7 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
       toast({ title: "Vehicle make/model and licence plate are required", variant: "destructive" });
       return;
     }
-    if (!form.national_id_url || !form.driver_licence_url || !form.vehicle_registration_url) {
+    if (!docsOptional && (!form.national_id_url || !form.driver_licence_url || !form.vehicle_registration_url)) {
       toast({ title: "All three documents are required", variant: "destructive" });
       return;
     }
@@ -130,6 +130,10 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
         vehicle_registration_url: form.vehicle_registration_url,
         profile_picture_url: form.profile_picture_url,
         verification_status: status,
+        // Flags this driver as approved without the normal document check
+        // so it's visible later in AdminVerification's list (shown for any
+        // non-pending status) — a trail for revisiting once testing ends.
+        ...(docsOptional ? { verification_note: "Approved without documents — testing phase." } : {}),
       };
       let saved;
       if (existing) {
@@ -231,9 +235,14 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
 
       <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
         <h2 className="text-sm font-semibold flex items-center gap-2"><FileCheck2 className="w-4 h-4 text-primary" /> Documents</h2>
-        <DocField label="National ID" value={form.national_id_url} onChange={(v) => set("national_id_url", v)} required />
-        <DocField label="Driver's Licence" value={form.driver_licence_url} onChange={(v) => set("driver_licence_url", v)} required />
-        <DocField label="Vehicle Registration" value={form.vehicle_registration_url} onChange={(v) => set("vehicle_registration_url", v)} required />
+        {docsOptional && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Optional for now — testing phase. Add them later once available.
+          </p>
+        )}
+        <DocField label="National ID" value={form.national_id_url} onChange={(v) => set("national_id_url", v)} required={!docsOptional} />
+        <DocField label="Driver's Licence" value={form.driver_licence_url} onChange={(v) => set("driver_licence_url", v)} required={!docsOptional} />
+        <DocField label="Vehicle Registration" value={form.vehicle_registration_url} onChange={(v) => set("vehicle_registration_url", v)} required={!docsOptional} />
       </div>
 
       <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={saving}>

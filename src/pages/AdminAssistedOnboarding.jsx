@@ -15,6 +15,7 @@ export default function AdminAssistedOnboarding() {
   const [target, setTarget] = useState(null);
   const [existing, setExisting] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [skipDocs, setSkipDocs] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -55,11 +56,28 @@ export default function AdminAssistedOnboarding() {
         Upload their documents below — submitting {existing ? "saves changes" : "verifies this driver immediately"}.
       </p>
 
+      <label className="flex items-start gap-2.5 mb-5 bg-amber-50 border border-amber-200 rounded-xl p-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={skipDocs}
+          onChange={(e) => setSkipDocs(e.target.checked)}
+          className="mt-0.5 w-4 h-4 rounded border-border accent-primary shrink-0"
+        />
+        <span>
+          <span className="text-sm font-medium block">Allow without documents (testing phase)</span>
+          <span className="text-xs text-muted-foreground block mt-0.5">
+            Vehicle make/model and licence plate are still required. Use this to get a driver receiving jobs quickly
+            while testing, and add their ID/licence/registration later.
+          </span>
+        </span>
+      </label>
+
       <DriverProfileForm
         userId={target.id}
         prefill={{ full_name: target.full_name, phone: target.phone }}
         existing={existing}
         autoApprove
+        docsOptional={skipDocs}
         submitLabel={existing ? "Save changes" : "Save & verify driver"}
         onSaved={() => navigate("/admin/verification")}
       />
