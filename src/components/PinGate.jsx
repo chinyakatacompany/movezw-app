@@ -1,21 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Truck, Delete } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { hasPin, verifyPin, consumeFreshLogin } from "@/lib/pinLock";
 
 // Sits between auth resolving and the routed app — if the signed-in user
-// has a PIN set on this device and this isn't the one reload right after a
-// real password login, this replaces the route with a PIN screen instead
-// of rendering it. "Unlocked" is plain React state from here on — it only
-// needs to survive client-side navigation, not reloads (see pinLock.js).
-// Mount after AuthenticatedApp's isLoadingAuth check so `user` is already
-// settled by the time the lazy useState below evaluates.
+// has a PIN set on this device and it's currently locked, this replaces
+// the route with a PIN screen instead of rendering it. "Unlocked" is plain
+// React state — the fresh-login token (pinLock.js) resets it for a normal
+// browser reload, but an installed PWA on mobile often survives being
+// closed/backgrounded without ever actually reloading the page, so the
+// visibilitychange listener below re-locks on that transition too — that's
+// the moment "reopening the app" actually means for a PWA. Mount after
+// AuthenticatedApp's isLoadingAuth check so `user` is already settled by
+// the time the lazy useState below evaluates.
 export default function PinGate({ children }) {
   const { user, isAuthenticated, logout } = useAuth();
   const [unlocked, setUnlocked] = useState(() => consumeFreshLogin(user?.id));
   const [digits, setDigits] = useState("");
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
+  const wasHidden = useRef(false);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        wasHidden.current = true;
+      } else if (document.visibilityState === "visible" && wasHidden.current) {
+        wasHidden.current = false;
+        if (hasPin(user?.id)) setUnlocked(false);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [user?.id]);
 
   const locked = isAuthenticated && hasPin(user?.id) && !unlocked;
   if (!locked) return children;
