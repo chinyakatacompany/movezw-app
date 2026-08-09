@@ -4,7 +4,7 @@ import { Users, Package, BadgeCheck, CheckCircle2, Star } from "lucide-react";
 
 function MiniStat({ icon: Icon, label, value, color }) {
   return (
-    <div className="bg-white rounded-2xl border border-border p-4">
+    <div className="bg-card rounded-2xl border border-border p-4">
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${color}`}>
         <Icon className="w-5 h-5" />
       </div>
@@ -65,7 +65,7 @@ export default function AdminReports() {
           <p className="text-4xl font-bold mt-1">${data.totalValue.toLocaleString()}</p>
           <p className="text-xs text-white/70 mt-2">Sum of accepted prices across completed deliveries</p>
         </div>
-        <div className="bg-white rounded-2xl border border-border p-6">
+        <div className="bg-card rounded-2xl border border-border p-6">
           <div className="flex items-center gap-2 mb-1">
             <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
             <p className="text-sm text-muted-foreground">Average driver rating</p>
@@ -75,7 +75,7 @@ export default function AdminReports() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border p-6">
+      <div className="bg-card rounded-2xl border border-border p-6">
         <h2 className="text-base font-semibold mb-1">Payment integration (future-ready)</h2>
         <p className="text-sm text-muted-foreground">
           Delivery records include <code className="text-xs bg-muted px-1.5 py-0.5 rounded">payment_status</code> and <code className="text-xs bg-muted px-1.5 py-0.5 rounded">payment_method</code> fields

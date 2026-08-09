@@ -89,7 +89,7 @@ export default function AdminVerification() {
               <Link
                 key={d.id}
                 to={`/admin/verification/${d.id}/onboard`}
-                className="flex items-center gap-3 bg-white rounded-xl border border-amber-200/60 p-3 hover:border-amber-300 transition-colors"
+                className="flex items-center gap-3 bg-card rounded-xl border border-amber-200/60 p-3 hover:border-amber-300 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{d.full_name || "Unnamed"}</p>
@@ -111,7 +111,7 @@ export default function AdminVerification() {
             onClick={() => setFilter(t)}
             className={cn(
               "px-4 py-2 rounded-full text-sm font-medium capitalize whitespace-nowrap transition-colors",
-              filter === t ? "bg-primary text-primary-foreground" : "bg-white border border-border text-foreground hover:bg-muted"
+              filter === t ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-muted"
             )}
           >
             {t}
@@ -126,7 +126,7 @@ export default function AdminVerification() {
       ) : (
         <div className="space-y-3">
           {profiles.map((p) => (
-            <div key={p.id} className="bg-white rounded-2xl border border-border p-4">
+            <div key={p.id} className="bg-card rounded-2xl border border-border p-4">
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                   {p.profile_picture_url ? <img src={p.profile_picture_url} alt="" className="w-full h-full object-cover" /> : <Car className="w-5 h-5 text-primary" />}

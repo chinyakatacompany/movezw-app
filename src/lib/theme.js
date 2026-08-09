@@ -1,8 +1,6 @@
 // App-wide color themes, selectable by an admin (see AdminContent.jsx) and
 // applied globally via ThemeLoader.jsx. Each theme re-specifies the same
-// HSL custom properties index.css defines on :root — "classic" has no vars
-// because those defaults already match the current stylesheet, so selecting
-// it just means "use the stylesheet as-is" rather than duplicating values.
+// HSL custom properties index.css defines on :root.
 export const THEME_VARS = [
   "background", "foreground", "card", "card-foreground", "popover", "popover-foreground",
   "primary", "primary-foreground", "secondary", "secondary-foreground", "muted", "muted-foreground",
@@ -10,35 +8,59 @@ export const THEME_VARS = [
   "header", "header-foreground",
 ];
 
-export const DEFAULT_THEME = "classic";
+export const DEFAULT_THEME = "movezw";
 
 export const THEMES = {
-  classic: {
-    label: "Classic Terracotta",
-    swatch: ["20 65% 33%", "22 92% 24%", "220 55% 15%"],
-    vars: null,
+  movezw: {
+    label: "MoveZW",
+    swatch: ["22 92% 42%", "223 51% 25%", "225 50% 10%"],
+    vars: {
+      background: "214 35% 96%", foreground: "223 51% 18%",
+      card: "0 0% 100%", "card-foreground": "223 51% 18%",
+      popover: "0 0% 100%", "popover-foreground": "223 51% 18%",
+      primary: "22 92% 42%", "primary-foreground": "0 0% 100%",
+      secondary: "220 35% 94%", "secondary-foreground": "223 51% 25%",
+      muted: "220 30% 93%", "muted-foreground": "220 15% 43%",
+      accent: "28 96% 40%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "220 25% 84%", input: "220 25% 90%", ring: "22 92% 42%",
+      header: "223 51% 25%", "header-foreground": "0 0% 100%",
+      headerGradient: "linear-gradient(135deg, hsl(223 51% 25%) 0%, hsl(225 50% 18%) 65%, hsl(22 92% 42%) 100%)",
+    },
   },
   movezwDark: {
     label: "MoveZW Dark",
-    swatch: ["20 95% 55%", "35 92% 55%", "225 40% 6%"],
-    // The one true dark theme — background and card both go dark together
-    // (unlike the other dark-accented themes, which keep background light
-    // because most cards in this app are hardcoded bg-white rather than
-    // bg-card). This theme is why that conversion happened: RequestCard,
-    // AppLayout, and every customer/driver-facing page were switched from
-    // bg-white to bg-card so they'd actually turn dark instead of leaving
-    // stray white cards floating on a dark page.
+    swatch: ["14 88% 44%", "223 51% 25%", "225 45% 14%"],
+    // Dark navy page chrome, navy-blue content cards with soft white
+    // (not pure white) text and an orange stroke — background/header/card
+    // all share the same dark-blue family, orange carries the brand accent.
     vars: {
-      background: "225 35% 8%", foreground: "0 0% 98%",
-      card: "225 30% 13%", "card-foreground": "0 0% 98%",
-      popover: "225 30% 13%", "popover-foreground": "0 0% 98%",
-      primary: "20 95% 55%", "primary-foreground": "0 0% 100%",
-      secondary: "225 25% 16%", "secondary-foreground": "0 0% 95%",
-      muted: "225 25% 16%", "muted-foreground": "220 15% 65%",
-      accent: "35 92% 55%", "accent-foreground": "0 0% 100%",
+      background: "225 42% 11%", foreground: "0 0% 98%",
+      card: "224 38% 15%", "card-foreground": "0 0% 92%",
+      popover: "224 38% 15%", "popover-foreground": "0 0% 92%",
+      primary: "14 88% 44%", "primary-foreground": "0 0% 100%",
+      secondary: "224 32% 19%", "secondary-foreground": "0 0% 95%",
+      muted: "224 32% 19%", "muted-foreground": "220 15% 68%",
+      accent: "18 90% 40%", "accent-foreground": "0 0% 100%",
       destructive: "0 72% 50%", "destructive-foreground": "0 0% 100%",
-      border: "225 20% 22%", input: "225 25% 16%", ring: "20 90% 55%",
-      header: "225 40% 6%", "header-foreground": "0 0% 98%",
+      border: "16 85% 48%", input: "224 28% 20%", ring: "14 88% 44%",
+      header: "225 45% 14%", "header-foreground": "0 0% 98%",
+    },
+  },
+  classic: {
+    label: "Classic Terracotta",
+    swatch: ["20 65% 33%", "22 92% 24%", "220 55% 15%"],
+    vars: {
+      background: "214 18% 72%", foreground: "222 46% 38%",
+      card: "210 20% 98%", "card-foreground": "222 47% 11%",
+      popover: "0 0% 100%", "popover-foreground": "222 47% 11%",
+      primary: "20 65% 33%", "primary-foreground": "0 0% 100%",
+      secondary: "210 20% 96%", "secondary-foreground": "222 55% 19%",
+      muted: "210 30% 94%", "muted-foreground": "215 16% 42%",
+      accent: "22 92% 24%", "accent-foreground": "0 0% 100%",
+      destructive: "0 72% 45%", "destructive-foreground": "0 0% 100%",
+      border: "214 31% 21%", input: "214 32% 91%", ring: "224 76% 26%",
+      header: "220 55% 15%", "header-foreground": "0 0% 100%",
     },
   },
   spectrum: {

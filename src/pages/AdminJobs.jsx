@@ -99,7 +99,7 @@ export default function AdminJobs() {
             onClick={() => setFilter(f)}
             className={cn(
               "px-3.5 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors",
-              filter === f ? "bg-primary text-primary-foreground" : "bg-white border border-border text-foreground hover:bg-muted"
+              filter === f ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground hover:bg-muted"
             )}
           >
             {f === "all" ? "All" : STATUS_LABELS[f] || f}
@@ -113,19 +113,19 @@ export default function AdminJobs() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by route, customer, cargo..."
-          className="w-full h-10 pl-10 pr-3 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full h-10 pl-10 pr-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
       {jobs === null ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border py-16 text-center">
+        <div className="bg-card rounded-2xl border border-border py-16 text-center">
           <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No jobs found.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-border divide-y divide-border">
+        <div className="bg-card rounded-2xl border border-border divide-y divide-border">
           <div className="flex items-center gap-3 px-4 py-2.5 bg-muted/40">
             <button onClick={toggleAll} className="p-1 rounded hover:bg-muted" aria-label="Select all">
               {allSelected ? <CheckCircle2 className="w-5 h-5 text-primary" /> : <span className="block w-5 h-5 rounded-md border-2 border-border" />}
@@ -160,7 +160,7 @@ export default function AdminJobs() {
 
       {selected.size > 0 && (
         <div className="fixed bottom-4 inset-x-0 z-40 flex justify-center px-4">
-          <div className="w-full max-w-3xl bg-white border border-border rounded-2xl shadow-lg p-3 flex items-center gap-3">
+          <div className="w-full max-w-3xl bg-card border border-border rounded-2xl shadow-lg p-3 flex items-center gap-3">
             <span className="text-sm font-semibold pl-1">{selected.size} selected</span>
             <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground p-1" aria-label="Clear selection">
               <X className="w-4 h-4" />

@@ -97,7 +97,7 @@ export default function AdminContent() {
               type="button"
               onClick={() => set(THEME_KEY, key)}
               className={cn(
-                "relative rounded-2xl border-2 p-3 text-left transition-all bg-white",
+                "relative rounded-2xl border-2 p-3 text-left transition-all bg-card",
                 values[THEME_KEY] === key ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
               )}
             >
@@ -122,7 +122,7 @@ export default function AdminContent() {
           <h2 className="text-base font-semibold mb-3">{group}</h2>
           <div className="space-y-4">
             {FIELDS.filter((f) => f.group === group).map((f) => (
-              <div key={f.key} className="bg-white rounded-2xl border border-border p-4 space-y-2">
+              <div key={f.key} className="bg-card rounded-2xl border border-border p-4 space-y-2">
                 <Label htmlFor={f.key}>{f.label}</Label>
                 {f.multiline ? (
                   <Textarea id={f.key} value={values[f.key]} onChange={(e) => set(f.key, e.target.value)} rows={3} />
@@ -135,7 +135,7 @@ export default function AdminContent() {
         </div>
       ))}
 
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-border p-4">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur-md border-t border-border p-4">
         <div className="max-w-3xl mx-auto">
           <Button onClick={save} disabled={saving} className="w-full h-12 font-semibold">
             {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save changes</>}

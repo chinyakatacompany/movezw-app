@@ -96,21 +96,21 @@ export default function AdminUsers() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Search by name or phone..."
-          className="w-full h-10 pl-10 pr-3 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full h-10 pl-10 pr-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
       {users === null ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border py-16 text-center">
+        <div className="bg-card rounded-2xl border border-border py-16 text-center">
           <Users className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No users found.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {filtered.map((u) => (
-            <div key={u.id} className="bg-white rounded-2xl border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={u.id} className="bg-card rounded-2xl border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shrink-0">
                   {(u.full_name || u.email || "?").charAt(0).toUpperCase()}
@@ -121,13 +121,13 @@ export default function AdminUsers() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       placeholder="Full name"
-                      className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <input
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
                       placeholder="Phone"
-                      className="w-full h-9 px-3 rounded-lg border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full h-9 px-3 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                 ) : (

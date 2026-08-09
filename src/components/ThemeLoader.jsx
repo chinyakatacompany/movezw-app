@@ -10,10 +10,13 @@ export default function ThemeLoader() {
   useEffect(() => {
     // Local-only override for previewing an unreleased theme before it's
     // set live in site_content (which is shared with production) — e.g.
-    // http://localhost:5177/?previewTheme=movezwDark. Only read once on
-    // boot; the app is a SPA so this stays applied through client-side
-    // navigation without needing to repeat it on every page.
-    const previewTheme = new URLSearchParams(window.location.search).get("previewTheme");
+    // http://localhost:5177/?previewTheme=movezwDark. Stashed in
+    // sessionStorage so a full reload or a fresh tab (not just client-side
+    // navigation) keeps previewing it for the rest of this browser session,
+    // without writing anything to the shared site_content row.
+    const urlPreviewTheme = new URLSearchParams(window.location.search).get("previewTheme");
+    if (urlPreviewTheme) sessionStorage.setItem("movzw_preview_theme", urlPreviewTheme);
+    const previewTheme = urlPreviewTheme || sessionStorage.getItem("movzw_preview_theme");
     if (previewTheme) {
       applyTheme(previewTheme);
       return;
