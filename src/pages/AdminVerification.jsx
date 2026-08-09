@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, FileText, Car } from "lucide-react";
+import { Check, X, Loader2, FileText, Car, UserPlus, ArrowRight } from "lucide-react";
 import { StarRating } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -14,6 +15,7 @@ export default function AdminVerification() {
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState("");
   const [acting, setActing] = useState(null);
+  const [noProfileDrivers, setNoProfileDrivers] = useState(null);
 
   const load = () => {
     let query = supabase.from("driver_profiles").select("*").order("created_at", { ascending: false }).limit(50);
@@ -24,7 +26,24 @@ export default function AdminVerification() {
     });
   };
 
+  // Someone can register with role "driver" (Register.jsx) but never finish
+  // DriverOnboarding.jsx, so there's no driver_profiles row for them at all
+  // — they'd otherwise be invisible here even though they're a registered
+  // driver waiting on documents. Diffed client-side rather than a SQL NOT
+  // EXISTS since both tables are small at this app's scale.
+  const loadNoProfile = async () => {
+    const [{ data: driverAccounts, error: accErr }, { data: withProfile, error: dpErr }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, phone, created_at").eq("role", "driver").order("created_at", { ascending: false }),
+      supabase.from("driver_profiles").select("user_id"),
+    ]);
+    if (accErr) console.error("Failed to load driver accounts:", accErr);
+    if (dpErr) console.error("Failed to load driver profiles:", dpErr);
+    const withProfileIds = new Set((withProfile || []).map((p) => p.user_id));
+    setNoProfileDrivers((driverAccounts || []).filter((d) => !withProfileIds.has(d.id)));
+  };
+
   useEffect(() => { load();   }, [filter]);
+  useEffect(() => { loadNoProfile(); }, []);
 
   const decide = async (profile, decision) => {
     setActing(profile.id);
@@ -55,6 +74,35 @@ export default function AdminVerification() {
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <h1 className="text-2xl font-bold tracking-tight mb-1">Driver verification</h1>
       <p className="text-sm text-muted-foreground mb-5">Review submitted documents and approve drivers.</p>
+
+      {noProfileDrivers && noProfileDrivers.length > 0 && (
+        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <h2 className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-1">
+            <UserPlus className="w-4 h-4" /> Registered but no documents yet ({noProfileDrivers.length})
+          </h2>
+          <p className="text-xs text-amber-700/80 mb-3">
+            These accounts signed up as a driver but never finished uploading documents. If you received their ID/licence/vehicle
+            documents another way (e.g. WhatsApp), you can upload on their behalf and verify them here.
+          </p>
+          <div className="space-y-2">
+            {noProfileDrivers.map((d) => (
+              <Link
+                key={d.id}
+                to={`/admin/verification/${d.id}/onboard`}
+                className="flex items-center gap-3 bg-white rounded-xl border border-amber-200/60 p-3 hover:border-amber-300 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{d.full_name || "Unnamed"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{d.phone || "No phone on file"}</p>
+                </div>
+                <span className="text-xs font-semibold text-amber-700 inline-flex items-center gap-1 shrink-0">
+                  Upload documents <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-5 overflow-x-auto no-scrollbar">
         {tabs.map((t) => (

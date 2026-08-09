@@ -27,6 +27,7 @@ import DriverJobDetail from '@/pages/DriverJobDetail';
 import DriverHistory from '@/pages/DriverHistory';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AdminVerification from '@/pages/AdminVerification';
+import AdminAssistedOnboarding from '@/pages/AdminAssistedOnboarding';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminJobs from '@/pages/AdminJobs';
 import AdminReports from '@/pages/AdminReports';
@@ -179,6 +180,7 @@ const AuthenticatedApp = () => {
         }>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/verification" element={<AdminVerification />} />
+          <Route path="/admin/verification/:userId/onboard" element={<AdminAssistedOnboarding />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/jobs" element={<AdminJobs />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />

@@ -58,20 +58,25 @@ export default function LandingNav() {
             </button>
           )}
           <Link to="/login">
-            <Button variant="ghost" size="sm">Log in</Button>
+            <Button variant="outline" size="sm">Log in</Button>
           </Link>
           <Link to="/register">
             <Button size="sm">Get started</Button>
           </Link>
         </div>
 
-        <button
-          className="md:hidden p-2 -mr-2 text-foreground"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-1 md:hidden">
+          <Link to="/login">
+            <Button variant="outline" size="sm">Log in</Button>
+          </Link>
+          <button
+            className="p-2 -mr-2 text-foreground"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </nav>
 
       {open && (
@@ -95,10 +100,7 @@ export default function LandingNav() {
                 <Download className="w-4 h-4" /> Install MoveZW app
               </button>
             )}
-            <div className="pt-3 grid grid-cols-2 gap-2">
-              <Link to="/login" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="w-full">Log in</Button>
-              </Link>
+            <div className="pt-3">
               <Link to="/register" onClick={() => setOpen(false)}>
                 <Button className="w-full">Get started</Button>
               </Link>
