@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target } from "lucide-react";
+import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
@@ -22,6 +22,7 @@ function timeOfDayGreeting() {
 export default function DriverDashboard() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [openRequests, setOpenRequests] = useState(null);
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
@@ -49,6 +50,7 @@ export default function DriverDashboard() {
       .then(({ data, error }) => {
         if (error) console.error("Failed to load driver profile:", error);
         setProfile(data?.[0] || null);
+        setProfileLoading(false);
       });
     supabase
       .from("transport_requests")
@@ -128,6 +130,10 @@ export default function DriverDashboard() {
       setToggling(false);
     }
   };
+
+  if (profileLoading) {
+    return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+  }
 
   if (!profile) {
     return (

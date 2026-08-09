@@ -272,20 +272,39 @@ export const THEMES = {
   },
 };
 
-// Sets/clears the inline :root overrides for every theme variable. Passing
-// "classic" (or an unknown key) clears all overrides so the stylesheet's
-// own :root defaults show through — no duplicated "default theme" values
-// to keep in sync.
+// Cache key read by the inline bootstrap script in index.html — keep the
+// two in sync if this ever changes.
+export const THEME_CACHE_KEY = "movzw_theme_vars";
+
+// Sets the inline :root overrides for every theme variable, and stashes the
+// resolved values in localStorage so index.html's inline bootstrap script
+// can re-apply them synchronously before the app mounts on the next load —
+// otherwise every page load repaints once from index.css's baseline colors
+// to the real theme the moment this module's Supabase fetch (see
+// ThemeLoader.jsx) resolves, which is the flash-of-wrong-theme this exists
+// to avoid.
 export function applyTheme(key) {
   const theme = THEMES[key] || THEMES[DEFAULT_THEME];
   const root = document.documentElement;
+  const resolved = {};
   THEME_VARS.forEach((name) => {
     const value = theme.vars?.[name];
-    if (value) root.style.setProperty(`--${name}`, value);
-    else root.style.removeProperty(`--${name}`);
+    if (value) {
+      root.style.setProperty(`--${name}`, value);
+      resolved[name] = value;
+    } else {
+      root.style.removeProperty(`--${name}`);
+    }
   });
   // Not a color token — a full background-image value, only set by themes
   // that opt into a gradient header (see the .bg-header rule in index.css).
-  if (theme.vars?.headerGradient) root.style.setProperty("--header-gradient", theme.vars.headerGradient);
-  else root.style.removeProperty("--header-gradient");
+  if (theme.vars?.headerGradient) {
+    root.style.setProperty("--header-gradient", theme.vars.headerGradient);
+    resolved["header-gradient"] = theme.vars.headerGradient;
+  } else {
+    root.style.removeProperty("--header-gradient");
+  }
+  try {
+    localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(resolved));
+  } catch {}
 }

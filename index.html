@@ -7,6 +7,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1e2f5e" />
     <title>MoveZW</title>
+    <script>
+      // Re-applies the last-resolved theme colors (cached by applyTheme in
+      // src/lib/theme.js under the same key) before the app mounts or
+      // anything paints, so a repeat visit doesn't flash index.css's light
+      // baseline before ThemeLoader's Supabase fetch resolves the real
+      // theme. Must stay a plain blocking script (not type="module") so it
+      // runs before first paint.
+      (function () {
+        try {
+          var cached = localStorage.getItem("movzw_theme_vars");
+          if (!cached) return;
+          var vars = JSON.parse(cached);
+          var root = document.documentElement;
+          for (var name in vars) root.style.setProperty("--" + name, vars[name]);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
