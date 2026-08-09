@@ -30,4 +30,3 @@ dev-dist
 
 .env
 .vite
-base44/.app.jsonc
