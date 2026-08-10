@@ -50,8 +50,6 @@ import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import ThemeLoader from '@/components/ThemeLoader';
-import PinGate from '@/components/PinGate';
-import PinSetup from '@/pages/PinSetup';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
@@ -90,7 +88,6 @@ const AuthenticatedApp = () => {
   return (
     <>
     <DriverLocationPing />
-    <PinGate>
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
@@ -153,7 +150,6 @@ const AuthenticatedApp = () => {
           <Route path="/payment-history" element={<PaymentHistory />} />
           <Route path="/support" element={<Support />} />
           <Route path="/alerts" element={<AlertSettings />} />
-          <Route path="/pin-setup" element={<PinSetup />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/return-loads" element={<ReturnMarketplace />} />
@@ -197,7 +193,6 @@ const AuthenticatedApp = () => {
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>
-    </PinGate>
     </>
   );
 };
