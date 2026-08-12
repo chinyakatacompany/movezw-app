@@ -10,12 +10,20 @@ import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Pa
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
+import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm, distanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason } from "@/lib/geo";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+
+// Floor on what a customer can offer, so a driver's trip is never priced
+// below what fuel/time on the road is actually worth. Only enforceable when
+// both ends are pinned to real coordinates — an address typed without
+// picking a suggestion has no distance to check the budget against, so
+// submission isn't blocked in that case (best-effort, matches how distance
+// is treated elsewhere in this app rather than forcing exact pins).
+const MIN_RATE_PER_KM = 0.9;
 
 // Build the most locally-specific label the free OSM data actually has —
 // road + suburb + city — instead of Nominatim's default display_name, which
@@ -90,6 +98,22 @@ export default function CreateRequest() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (pickupCoords && destinationCoords) {
+        const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords);
+        const tripKm = roadKm ?? distanceKm(pickupCoords.lat, pickupCoords.lng, destinationCoords.lat, destinationCoords.lng);
+        if (tripKm) {
+          const minBudget = tripKm * MIN_RATE_PER_KM;
+          if ((Number(form.budget) || 0) < minBudget) {
+            toast({
+              title: "Budget too low for this distance",
+              description: `This trip is about ${tripKm.toFixed(1)} km — the minimum budget is $${minBudget.toFixed(2)} (${MIN_RATE_PER_KM.toFixed(2)}/km) so drivers can actually afford to take it.`,
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      }
       const payload = {
         customer_id: user.id,
         customer_name: user.full_name || user.email,
