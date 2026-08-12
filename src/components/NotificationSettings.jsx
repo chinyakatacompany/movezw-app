@@ -23,7 +23,7 @@ export default function NotificationSettings({ description }) {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [vibration, setVibrationState] = useState("default");
+  const [vibration, setVibrationState] = useState("long");
 
   useEffect(() => {
     if (!user?.id) return;
@@ -43,7 +43,7 @@ export default function NotificationSettings({ description }) {
       }
       if (!active) return;
       setSubscribed(!!sub);
-      setVibrationState(prof?.notification_vibration || "default");
+      setVibrationState(prof?.notification_vibration || "long");
       setChecking(false);
     });
     return () => { active = false; };

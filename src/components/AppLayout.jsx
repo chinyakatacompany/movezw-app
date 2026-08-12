@@ -29,20 +29,32 @@ export default function AppLayout() {
   const isDriver = user?.role === "driver";
   const nav = isDriver ? driverNav : customerNav;
 
+  // Refetches on any insert/update to this user's notifications — not just
+  // on navigation — so the badge reflects a new notification arriving (or
+  // being marked read, including "mark all read" on the Notifications page
+  // itself) without needing a route change to notice.
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
-    supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false)
-      .then(({ count, error }) => {
-        if (error) console.error("Failed to load unread count:", error);
-        if (active) setUnread(count || 0);
-      });
-    return () => { active = false; };
-  }, [user?.id, location.pathname]);
+    const refreshUnread = () => {
+      supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false)
+        .then(({ count, error }) => {
+          if (error) console.error("Failed to load unread count:", error);
+          if (active) setUnread(count || 0);
+        });
+    };
+    refreshUnread();
+    const channel = supabase
+      .channel(`applayout-unread-${user.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, refreshUnread)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, refreshUnread)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id || !isDriver) return;

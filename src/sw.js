@@ -25,7 +25,7 @@ self.addEventListener("push", (event) => {
   }
 
   const title = payload.title || "New job request";
-  const vibrate = VIBRATION_PATTERNS[payload.vibration] || VIBRATION_PATTERNS.default;
+  const vibrate = VIBRATION_PATTERNS[payload.vibration] || VIBRATION_PATTERNS.long;
 
   event.waitUntil(
     self.registration.showNotification(title, {

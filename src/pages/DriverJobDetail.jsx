@@ -6,14 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { geolocationUnavailableReason } from "@/lib/geo";
+import { geolocationUnavailableReason, geocodeAddress } from "@/lib/geo";
+
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 // Statuses during which the customer can see the driver moving live —
 // matches fn_get_trip_contact_phone's "en route or later" gate, so location
@@ -47,14 +49,48 @@ export default function DriverJobDetail() {
   const [editingOffer, setEditingOffer] = useState(false);
   const [roadDistanceKm, setRoadDistanceKm] = useState(null);
   const [roadDistanceStatus, setRoadDistanceStatus] = useState("idle");
+  const [roadDistanceRetryTick, setRoadDistanceRetryTick] = useState(0);
+  const [resolved, setResolved] = useState({ pickup: null, destination: null });
+  const [showRouteMap, setShowRouteMap] = useState(false);
+
+  // pickup_lat/lng and destination_lat/lng are only ever set when the
+  // customer picked a suggestion (or used pin-drop / "use my location") in
+  // AddressSearchInput.jsx — typing an address and never selecting a match
+  // leaves them null, which used to mean "Distance unavailable" here even
+  // though the address text itself is fine. Best-effort client-side geocode
+  // fallback so a driver still sees a distance in that case; not persisted
+  // back to transport_requests, so this re-resolves each time it's needed
+  // rather than assuming every viewer has write access to the row.
+  useEffect(() => {
+    if (!request) return;
+    let cancelled = false;
+    (async () => {
+      if (request.pickup_lat == null && request.pickup_location && !resolved.pickup) {
+        const geo = await geocodeAddress(request.pickup_location);
+        if (!cancelled && geo) setResolved((r) => ({ ...r, pickup: geo }));
+      }
+      if (request.destination_lat == null && request.destination && !resolved.destination) {
+        const geo = await geocodeAddress(request.destination);
+        if (!cancelled && geo) setResolved((r) => ({ ...r, destination: geo }));
+      }
+    })();
+    return () => { cancelled = true; };
+
+  }, [request?.id, request?.pickup_lat, request?.pickup_location, request?.destination_lat, request?.destination]);
+
+  const effPickupLat = request?.pickup_lat ?? resolved.pickup?.lat ?? null;
+  const effPickupLng = request?.pickup_lng ?? resolved.pickup?.lng ?? null;
+  const effDestLat = request?.destination_lat ?? resolved.destination?.lat ?? null;
+  const effDestLng = request?.destination_lng ?? resolved.destination?.lng ?? null;
 
   // Real road distance, matching what the customer's own request page shows
   // (RequestDetail.jsx's RouteMap, also OSRM) — a straight-line distance
-  // under-counts actual travel distance, so quoting off it read as "wrong"
-  // compared to the customer's number. Falls back to the straight-line
-  // figure (clearly labeled) if OSRM is unreachable.
+  // under-counts actual travel distance (often significantly), so quoting
+  // off it read as "wrong" compared to the customer's own number. Always
+  // shows the real road distance or an explicit retry state — never a
+  // straight-line number presented as if it were the distance.
   useEffect(() => {
-    if (request?.pickup_lat == null || request?.pickup_lng == null || request?.destination_lat == null || request?.destination_lng == null) {
+    if (effPickupLat == null || effPickupLng == null || effDestLat == null || effDestLng == null) {
       setRoadDistanceKm(null);
       setRoadDistanceStatus("idle");
       return;
@@ -62,15 +98,15 @@ export default function DriverJobDetail() {
     let cancelled = false;
     setRoadDistanceStatus("loading");
     fetchRoadDistanceKm(
-      { lat: request.pickup_lat, lng: request.pickup_lng },
-      { lat: request.destination_lat, lng: request.destination_lng }
+      { lat: effPickupLat, lng: effPickupLng },
+      { lat: effDestLat, lng: effDestLng }
     ).then((km) => {
       if (cancelled) return;
       setRoadDistanceKm(km);
       setRoadDistanceStatus(km != null ? "ready" : "error");
     });
     return () => { cancelled = true; };
-  }, [request?.pickup_lat, request?.pickup_lng, request?.destination_lat, request?.destination_lng]);
+  }, [effPickupLat, effPickupLng, effDestLat, effDestLng, roadDistanceRetryTick]);
 
   const fetchDriverLocation = () => {
     const reason = geolocationUnavailableReason();
@@ -96,10 +132,10 @@ export default function DriverJobDetail() {
   // Auto-fetch the driver's location the moment there's a pickup point to
   // route to — no manual "Get directions" tap needed.
   useEffect(() => {
-    if (request?.pickup_lat == null || request?.pickup_lng == null) return;
+    if (effPickupLat == null || effPickupLng == null) return;
     fetchDriverLocation();
-     
-  }, [request?.pickup_lat, request?.pickup_lng]);
+
+  }, [effPickupLat, effPickupLng]);
 
   const load = async () => {
     const [{ data: req, error: reqErr }, { data: prof }, { data: offers }] = await Promise.all([
@@ -356,7 +392,6 @@ export default function DriverJobDetail() {
 
   const isMyJob = request.accepted_driver_id === user.id;
   const activeStep = STATUS_FLOW.indexOf(request.status);
-  const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const nextStep = STATUS_FLOW[activeStep + 1];
   const isOpen = request.status === "open";
   const headedToDestination = ["collected", "in_transit", "delivered"].includes(request.status);
@@ -369,11 +404,11 @@ export default function DriverJobDetail() {
   // better geocoder resolves it query-side, at no cost to us since it's
   // just handing off to their consumer app, not calling their paid API.
   const navigateTarget = !["collected", "in_transit", "delivered", "completed"].includes(request.status)
-    ? (request.pickup_lat != null && request.pickup_lng != null
-        ? { query: `${request.pickup_lat},${request.pickup_lng}`, label: "pickup" }
+    ? (effPickupLat != null && effPickupLng != null
+        ? { query: `${effPickupLat},${effPickupLng}`, label: "pickup" }
         : request.pickup_location ? { query: request.pickup_location, label: "pickup" } : null)
-    : (request.destination_lat != null && request.destination_lng != null
-        ? { query: `${request.destination_lat},${request.destination_lng}`, label: "destination" }
+    : (effDestLat != null && effDestLng != null
+        ? { query: `${effDestLat},${effDestLng}`, label: "destination" }
         : request.destination ? { query: request.destination, label: "destination" } : null);
 
   return (
@@ -383,7 +418,7 @@ export default function DriverJobDetail() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold flex-1">Job details</h1>
-        {isMyJob && enRouteOrLater && customerPhone && (
+        {isMyJob && customerPhone && (
           <a href={`tel:${customerPhone}`} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors shrink-0">
             <Phone className="w-4 h-4 text-primary" />
           </a>
@@ -407,9 +442,9 @@ export default function DriverJobDetail() {
             <div>
               <p className="text-[11px] tracking-wide text-muted-foreground">PICKUP</p>
               <p className="text-base font-bold text-primary">{request.pickup_location}</p>
-              {request.pickup_lat != null && request.pickup_lng != null && (
+              {effPickupLat != null && effPickupLng != null && (
                 <a
-                  href={`https://www.openstreetmap.org/?mlat=${request.pickup_lat}&mlon=${request.pickup_lng}#map=17/${request.pickup_lat}/${request.pickup_lng}`}
+                  href={`https://www.openstreetmap.org/?mlat=${effPickupLat}&mlon=${effPickupLng}#map=17/${effPickupLat}/${effPickupLng}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary bg-primary/10 border-2 border-primary/30 rounded-xl px-3 py-2 mt-1.5 hover:bg-primary/15 transition-colors"
@@ -441,18 +476,18 @@ export default function DriverJobDetail() {
             Trip distance
           </span>
           <span className="text-sm font-bold text-primary">
-            {request.pickup_lat == null || request.pickup_lng == null || request.destination_lat == null || request.destination_lng == null ? (
+            {effPickupLat == null || effPickupLng == null || effDestLat == null || effDestLng == null ? (
               "Not available"
             ) : roadDistanceStatus === "loading" ? (
               <span className="inline-flex items-center gap-1.5 font-normal text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Calculating…</span>
             ) : roadDistanceStatus === "ready" ? (
               formatDistanceLabel(roadDistanceKm)
             ) : (
-              `~${formatDistanceLabel(distanceKm(request.pickup_lat, request.pickup_lng, request.destination_lat, request.destination_lng))}`
+              "Unavailable"
             )}
           </span>
         </div>
-        {(request.pickup_lat == null || request.pickup_lng == null || request.destination_lat == null || request.destination_lng == null) && (
+        {(effPickupLat == null || effPickupLng == null || effDestLat == null || effDestLng == null) && (
           <p className="text-xs text-muted-foreground">
             {isOpen && !myOffer
               ? "Pickup or destination wasn't pinned exactly — check the addresses above to estimate distance yourself before quoting."
@@ -460,14 +495,23 @@ export default function DriverJobDetail() {
           </p>
         )}
         {roadDistanceStatus === "error" && (
-          <p className="text-xs text-muted-foreground">Road route unavailable right now — showing a straight-line estimate instead.</p>
+          <p className="text-xs text-muted-foreground flex items-center justify-between gap-2">
+            <span>Couldn't calculate the real road distance right now.</span>
+            <button
+              type="button"
+              onClick={() => setRoadDistanceRetryTick((t) => t + 1)}
+              className="font-semibold text-primary underline shrink-0"
+            >
+              Retry
+            </button>
+          </p>
         )}
-        {request.pickup_lat != null && request.pickup_lng != null && (
+        {effPickupLat != null && effPickupLng != null && (
           <div className="flex items-center justify-between pt-2 border-t border-border">
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <MapPin className="w-3.5 h-3.5" />
               {driverPos ? (
-                `${formatDistanceLabel(distanceKm(driverPos.lat, driverPos.lng, headedToDestination ? request.destination_lat : request.pickup_lat, headedToDestination ? request.destination_lng : request.pickup_lng))} to ${headedToDestination ? "destination" : "pickup"}`
+                `${formatDistanceLabel(distanceKm(driverPos.lat, driverPos.lng, headedToDestination ? effDestLat : effPickupLat, headedToDestination ? effDestLng : effPickupLng))} to ${headedToDestination ? "destination" : "pickup"}`
               ) : locatingRoute ? (
                 <span className="inline-flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> Getting your location…</span>
               ) : (
@@ -480,6 +524,40 @@ export default function DriverJobDetail() {
               </button>
             )}
           </div>
+        )}
+        {!isMyJob && effPickupLat != null && effPickupLng != null && effDestLat != null && effDestLng != null && (
+          <>
+            <button
+              type="button"
+              onClick={() => setShowRouteMap((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary/10 border-2 border-primary/30 text-primary font-semibold text-sm mt-1 hover:bg-primary/15 transition-colors"
+            >
+              <MapIcon className="w-4 h-4" /> {showRouteMap ? "Hide route map" : "Show route: pickup → destination"}
+            </button>
+            {showRouteMap && (
+              <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse mt-2" />}>
+                <RouteMap
+                  from={{ lat: effPickupLat, lng: effPickupLng }}
+                  to={{ lat: effDestLat, lng: effDestLng }}
+                  fromLabel="Pickup"
+                  toLabel="Destination"
+                  height={220}
+                />
+              </React.Suspense>
+            )}
+          </>
+        )}
+        {!isMyJob && effPickupLat != null && effPickupLng != null && (
+          <a
+            href={`https://www.google.com/maps/dir/?api=1&origin=${effPickupLat},${effPickupLng}&destination=${
+              effDestLat != null && effDestLng != null ? `${effDestLat},${effDestLng}` : encodeURIComponent(request.destination || "")
+            }&travelmode=driving`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border text-sm font-medium mt-1 hover:bg-muted transition-colors"
+          >
+            <Navigation className="w-4 h-4 text-primary" /> Open full route in Google Maps
+          </a>
         )}
       </div>
 
@@ -642,20 +720,16 @@ export default function DriverJobDetail() {
               <p className="text-lg font-bold text-primary">{formatMoney(request.accepted_price)}</p>
             </div>
             <p className="text-xs text-muted-foreground">Payment: {request.payment_status === "cod" ? "Cash on delivery" : request.payment_status}</p>
-            {enRouteOrLater ? (
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
-                  <MessageCircle className="w-4 h-4 text-primary" /> Message
-                </button>
-                {customerPhone && (
-                  <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
-                    <Phone className="w-4 h-4 text-primary" /> Call
-                  </a>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-3">Customer contact details will appear once you mark yourself en route to pickup.</p>
-            )}
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                <MessageCircle className="w-4 h-4 text-primary" /> Message
+              </button>
+              {customerPhone && (
+                <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+                  <Phone className="w-4 h-4 text-primary" /> Call
+                </a>
+              )}
+            </div>
           </div>
 
           {!["delivered", "completed"].includes(request.status) && (

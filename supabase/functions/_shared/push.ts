@@ -71,7 +71,10 @@ export async function sendPushToUsers(
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
-          buildPayload(s.user_id, vibrationByUser[s.user_id] || "default")
+          // Long buzz by default for anyone who hasn't picked a preference
+          // yet in NotificationSettings.jsx — easier to feel/notice than
+          // the short double-buzz "default" pattern was.
+          buildPayload(s.user_id, vibrationByUser[s.user_id] || "long")
         );
         sent++;
       } catch (err) {

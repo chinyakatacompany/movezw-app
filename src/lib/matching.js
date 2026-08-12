@@ -42,19 +42,25 @@ export function distanceKm(lat1, lng1, lat2, lng2) {
 // counts actual travel distance (often significantly, depending on the
 // road network), so anywhere a number is used to price a job it should
 // match what the customer's own route map shows, not a straight line.
-// Returns null on any failure so callers can fall back to Haversine.
-export async function fetchRoadDistanceKm(from, to) {
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`
-    );
-    const data = await res.json();
-    const route = data?.routes?.[0];
-    if (data.code !== "Ok" || !route) return null;
-    return route.distance / 1000;
-  } catch {
-    return null;
+// OSRM's free demo server is occasionally flaky, so this retries a couple
+// of times before giving up rather than immediately handing back null —
+// callers should show a retry/unavailable state on null, not silently
+// substitute a straight-line estimate as if it were the real distance.
+export async function fetchRoadDistanceKm(from, to, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`
+      );
+      const data = await res.json();
+      const route = data?.routes?.[0];
+      if (data.code === "Ok" && route) return route.distance / 1000;
+    } catch {
+      // fall through to retry
+    }
+    if (attempt < retries) await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
+  return null;
 }
 
 // Whether a driver's vehicle can service the request.
