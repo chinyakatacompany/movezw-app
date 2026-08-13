@@ -17,11 +17,12 @@ export const AVAILABILITY_LABELS = {
 export const VEHICLE_CAPACITY_RANK = {
   Motorcycle: 1,
   Pickup: 2,
-  "1 Ton Truck": 3,
-  "3 Ton Truck": 4,
-  "5 Ton Truck": 5,
-  "10 Ton Truck": 6,
-  "Articulated Truck": 7,
+  "Cargo Van": 3,
+  "1 Ton Truck": 4,
+  "3 Ton Truck": 5,
+  "5 Ton Truck": 6,
+  "10 Ton Truck": 7,
+  "Articulated Truck": 8,
 };
 
 // Haversine distance in km — ready for future live GPS proximity matching

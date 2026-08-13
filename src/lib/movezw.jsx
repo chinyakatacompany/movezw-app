@@ -14,6 +14,7 @@ export const CARGO_TYPES = [
 export const VEHICLE_TYPES = [
   "Motorcycle",
   "Pickup",
+  "Cargo Van",
   "1 Ton Truck",
   "3 Ton Truck",
   "5 Ton Truck",
@@ -24,6 +25,7 @@ export const VEHICLE_TYPES = [
 export const VEHICLE_ICONS = {
   Motorcycle: "🏍️",
   Pickup: "🛻",
+  "Cargo Van": "🚐",
   "1 Ton Truck": "🚚",
   "3 Ton Truck": "🚚",
   "5 Ton Truck": "🚚",
