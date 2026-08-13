@@ -33,7 +33,9 @@ export default function Wallet() {
   const [loading, setLoading] = useState(true);
   const [showTopUp, setShowTopUp] = useState(false);
   const [topupAmount, setTopupAmount] = useState("");
-  const [topupMethod, setTopupMethod] = useState("ecocash");
+  // EcoCash is the only top-up method with a working flow behind it right
+  // now (see the payment methods card below), so this isn't a user choice.
+  const topupMethod = "ecocash";
   const [topupDest, setTopupDest] = useState("");
   const [topupProcessing, setTopupProcessing] = useState(false);
   const [lowThreshold, setLowThreshold] = useState(5);
@@ -166,7 +168,7 @@ export default function Wallet() {
         {isDriver ? (
           <>
             <Stat icon={TrendingUp} color="text-emerald-500" label="Earned" value={formatMoney(wallet.total_earned)} />
-            <Stat icon={Percent} color="text-amber-500" label="Commission" value={formatMoney(wallet.total_commission)} />
+            <Stat icon={Percent} color="text-amber-500" label="Commission paid" value={formatMoney(wallet.total_commission)} />
             <Stat icon={Coins} color="text-blue-500" label="Net income" value={formatMoney(netIncome)} />
           </>
         ) : (
@@ -184,16 +186,26 @@ export default function Wallet() {
         </Button>
       )}
 
-      {/* Payment methods (placeholder integrations) */}
+      {/* Payment methods */}
       <div className="bg-card rounded-2xl border border-border p-4 mb-5">
         <h2 className="text-sm font-semibold mb-1">Payment methods</h2>
-        <p className="text-xs text-muted-foreground mb-3">Live gateways connect here later without database changes.</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          {isDriver
+            ? "EcoCash is currently supported for topping up your commission balance. More options are on the way."
+            : "Cash on Delivery is currently supported for paying your driver. More options are on the way."}
+        </p>
         <div className="grid grid-cols-3 gap-2">
           {PAYMENT_METHODS.map((m) => (
-            <div key={m.id} className="flex flex-col items-center gap-1 rounded-xl border border-border p-3 text-center">
+            <div
+              key={m.id}
+              className={cn(
+                "relative flex flex-col items-center gap-1 rounded-xl border p-3 text-center",
+                m.available ? "border-border" : "border-border opacity-50"
+              )}
+            >
               <span className="text-xl">{m.icon}</span>
               <span className="text-[11px] font-medium">{m.label}</span>
-              <span className="text-[9px] text-muted-foreground">{m.group}</span>
+              <span className="text-[9px] text-muted-foreground">{m.available ? m.group : "Coming soon"}</span>
             </div>
           ))}
         </div>
@@ -274,7 +286,7 @@ export default function Wallet() {
             <h2 className="text-lg font-bold mb-1">Top up commission balance</h2>
             <p className="text-sm text-muted-foreground mb-4">An admin reviews and approves each top up before it's added to your balance.</p>
             <div className="bg-primary/5 border-2 border-primary/20 rounded-xl p-3.5 mb-4">
-              <p className="text-xs font-semibold text-primary mb-1">Send your payment to</p>
+              <p className="text-xs font-semibold text-primary mb-1 flex items-center gap-1.5">📱 Send via EcoCash to</p>
               <p className="text-base font-bold text-foreground">0780269976</p>
               <p className="text-sm text-muted-foreground">ASHER CHINYAKATA</p>
             </div>
@@ -282,17 +294,6 @@ export default function Wallet() {
               <div className="space-y-2">
                 <Label htmlFor="tamount">Amount (USD)</Label>
                 <Input id="tamount" type="number" min="1" value={topupAmount} onChange={(e) => setTopupAmount(e.target.value)} placeholder="e.g. 20" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Method</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHODS.filter((m) => ["ecocash", "onemoney", "zipit", "visa", "mastercard", "bank"].includes(m.id)).map((m) => (
-                    <button key={m.id} type="button" onClick={() => setTopupMethod(m.id)}
-                      className={cn("flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left", topupMethod === m.id ? "border-primary bg-primary/5" : "border-border")}>
-                      <span>{m.icon}</span><span className="text-xs font-medium">{m.label}</span>
-                    </button>
-                  ))}
-                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tdest">The number you paid from</Label>

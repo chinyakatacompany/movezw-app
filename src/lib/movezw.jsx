@@ -160,14 +160,20 @@ export function formatDate(dateStr) {
 
 export const COMMISSION_RATE = 0.1; // 10% platform commission
 
+// `available` reflects what's actually wired up today, not the eventual
+// goal — EcoCash top-ups are a manual admin-approved transfer (see
+// Wallet.jsx's top-up flow), and Cash on Delivery is the only supported way
+// to pay for a delivery. Everything else here is listed for the roadmap
+// but has no working payment flow behind it yet, so the UI must say so
+// rather than presenting all of these as equally available.
 export const PAYMENT_METHODS = [
-  { id: "ecocash", label: "EcoCash", icon: "📱", group: "Mobile money" },
-  { id: "onemoney", label: "OneMoney", icon: "📲", group: "Mobile money" },
-  { id: "zipit", label: "ZIPIT", icon: "🏦", group: "Bank transfer" },
-  { id: "bank", label: "Bank Transfer", icon: "🏦", group: "Bank transfer" },
-  { id: "visa", label: "Visa", icon: "💳", group: "Card" },
-  { id: "mastercard", label: "Mastercard", icon: "💳", group: "Card" },
-  { id: "cod", label: "Cash on delivery", icon: "💵", group: "Cash" },
+  { id: "ecocash", label: "EcoCash", icon: "📱", group: "Mobile money", available: true },
+  { id: "onemoney", label: "OneMoney", icon: "📲", group: "Mobile money", available: false },
+  { id: "zipit", label: "ZIPIT", icon: "🏦", group: "Bank transfer", available: false },
+  { id: "bank", label: "Bank Transfer", icon: "🏦", group: "Bank transfer", available: false },
+  { id: "visa", label: "Visa", icon: "💳", group: "Card", available: false },
+  { id: "mastercard", label: "Mastercard", icon: "💳", group: "Card", available: false },
+  { id: "cod", label: "Cash on delivery", icon: "💵", group: "Cash", available: true },
 ];
 
 export async function createNotification(userId, type, title, message, link) {

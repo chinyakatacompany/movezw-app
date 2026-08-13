@@ -124,7 +124,7 @@ export default function Profile({ role }) {
         {role === "driver" && profile && (
           <div className="flex items-center gap-3 p-4">
             <div className="w-5 h-5" />
-            <div><p className="text-xs text-muted-foreground">Rating</p><p className="text-sm font-medium">{profile.rating_avg?.toFixed(1) || "0.0"} ⭐ ({profile.rating_count || 0} reviews)</p></div>
+            <div><p className="text-xs text-muted-foreground">Rating</p><p className="text-sm font-medium">{profile.rating_avg?.toFixed(1) || "0.0"} ⭐ ({profile.rating_count || 0} review{(profile.rating_count || 0) === 1 ? "" : "s"})</p></div>
           </div>
         )}
       </div>
