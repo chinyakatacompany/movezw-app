@@ -80,10 +80,12 @@ export default function Profile({ role }) {
       </div>
 
       <div className="bg-card rounded-2xl border border-border divide-y divide-border">
-        <div className="flex items-center gap-3 p-4">
-          <Mail className="w-5 h-5 text-muted-foreground" />
-          <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{user?.email}</p></div>
-        </div>
+        {user?.email && (
+          <div className="flex items-center gap-3 p-4">
+            <Mail className="w-5 h-5 text-muted-foreground" />
+            <div><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-medium">{user.email}</p></div>
+          </div>
+        )}
         <div className="flex items-center gap-3 p-4">
           <Phone className="w-5 h-5 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">

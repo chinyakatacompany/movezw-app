@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2, Truck, ShoppingBag, Check, Building2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -29,16 +30,43 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!agreedToTerms) {
+      setError("You must agree to the Terms of Service to create an account");
+      return;
+    }
+
+    // Customers get a frictionless, no-email/no-password signup — a real
+    // Supabase auth session via signInAnonymously(), just tagged with their
+    // name/phone/role like a normal signup. Temporary while the customer
+    // base is still small; trades away password-based account recovery
+    // (clearing the browser or switching devices loses this account) for
+    // zero signup friction. Drivers keep full email/password + confirmation
+    // below, unchanged — they're handling cargo and need to be reachable.
+    if (accountType === "customer") {
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInAnonymously({
+        options: { data: { full_name: fullName, phone, role: "customer" } },
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      sessionStorage.setItem("movzw_signup_role", "customer");
+      sessionStorage.setItem("movzw_signup_user_id", data.user.id);
+      sessionStorage.setItem("movzw_signup_phone", phone);
+      sessionStorage.setItem("movzw_signup_terms_accepted", "1");
+      toast({ title: `Welcome, ${fullName.split(" ")[0]}!`, description: "Your account is ready." });
+      navigate("/");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
-      return;
-    }
-    if (!agreedToTerms) {
-      setError("You must agree to the Terms of Service to create an account");
       return;
     }
     setLoading(true);
@@ -51,7 +79,7 @@ export default function Register() {
       // email confirmation reliably, since that link is often opened in a
       // different tab/app.
       options: {
-        data: { full_name: fullName, phone, role: accountType === "driver" ? "driver" : "customer" },
+        data: { full_name: fullName, phone, role: "driver" },
         emailRedirectTo: `${window.location.origin}/login`,
       },
     });
@@ -63,7 +91,7 @@ export default function Register() {
     // Tagged with the exact account it belongs to so a stale flag from an
     // earlier signup in this same browser tab can never be misread as
     // belonging to a different account that logs in later — see AuthContext.jsx.
-    sessionStorage.setItem("movzw_signup_role", accountType);
+    sessionStorage.setItem("movzw_signup_role", "driver");
     sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
     sessionStorage.setItem("movzw_signup_terms_accepted", "1");
@@ -131,29 +159,33 @@ export default function Register() {
           <Label htmlFor="phone">Phone number</Label>
           <Input id="phone" type="tel" placeholder="0772 123 456" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-12" required />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12" required />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="password" type="password" autoComplete="new-password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required />
+        {accountType === "driver" && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12" required />
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm">Confirm</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 h-12" required />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="password" type="password" autoComplete="new-password" placeholder="••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm">Confirm</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input id="confirm" type="password" autoComplete="new-password" placeholder="••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 h-12" required />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
         <label className="flex items-start gap-2.5 text-sm cursor-pointer select-none">
           <input
             type="checkbox"
