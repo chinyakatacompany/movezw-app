@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon } from "lucide-react";
+import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download } from "lucide-react";
 import { STATUS_FLOW } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
+import { useInstallPrompt, isIosSafari } from "@/lib/useInstallPrompt";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
 
 const TRIP_STEPS = [
@@ -21,6 +22,12 @@ export default function CustomerDashboard() {
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripDriver, setTripDriver] = useState(null);
   const [tripPhone, setTripPhone] = useState(null);
+  // Customers now sign up and land straight on this page (see Register.jsx's
+  // frictionless anonymous signup) without ever passing through Login.jsx /
+  // AuthLayout, which is where the install prompt used to live for them —
+  // so it needs its own spot here instead.
+  const { canInstall, installed, promptInstall } = useInstallPrompt();
+  const showIosHint = !installed && !canInstall && isIosSafari();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -128,6 +135,27 @@ export default function CustomerDashboard() {
           </div>
           <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
         </Link>
+
+        {canInstall && (
+          <button
+            type="button"
+            onClick={promptInstall}
+            className="w-full flex items-center gap-3 bg-accent text-accent-foreground rounded-2xl px-4 py-3.5 shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+              <Download className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="font-semibold text-sm">Install MoveZW app</p>
+              <p className="text-xs text-accent-foreground/80">Faster access, right from your home screen</p>
+            </div>
+          </button>
+        )}
+        {showIosHint && (
+          <p className="text-xs text-muted-foreground text-center -mt-2">
+            On iPhone: tap the Share icon, then "Add to Home Screen" to install MoveZW.
+          </p>
+        )}
 
         {inTransit && (
           <div className="bg-card rounded-2xl border border-border p-4">
