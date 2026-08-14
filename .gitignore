@@ -30,3 +30,9 @@ dev-dist
 
 .env
 .vite
+
+# Android release signing / machine-local SDK path — never commit
+*.jks
+*.keystore
+android/local.properties
+android/key.properties

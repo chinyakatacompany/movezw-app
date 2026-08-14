@@ -1,5 +1,19 @@
 apply plugin: 'com.android.application'
 
+// Release signing credentials — loaded from android/key.properties (gitignored,
+// never committed) when present, so a local release build just works without
+// passing anything on the command line. CI/other machines without that file
+// can still supply the same values as -P Gradle properties (MOVEZW_STORE_FILE
+// etc.) instead. Either way, a plain debug/local build still works unsigned
+// if neither source is available.
+def keystorePropertiesFile = rootProject.file('key.properties')
+def keystoreProperties = new Properties()
+def hasKeystoreProperties = keystorePropertiesFile.exists()
+if (hasKeystoreProperties) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+def hasSigningConfig = hasKeystoreProperties || project.hasProperty('MOVEZW_STORE_FILE')
+
 android {
     namespace = "com.movezw.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,18 +30,13 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-    // Signing credentials are passed as -P Gradle properties on the command
-    // line (see the build command), never written into this file or any
-    // other tracked file, so the release keystore password can't leak via
-    // git. Falls back to unsigned if the properties aren't supplied, so a
-    // plain debug/local build still works without them.
-    if (project.hasProperty('MOVEZW_STORE_FILE')) {
+    if (hasSigningConfig) {
         signingConfigs {
             release {
-                storeFile file(MOVEZW_STORE_FILE)
-                storePassword MOVEZW_STORE_PASSWORD
-                keyAlias MOVEZW_KEY_ALIAS
-                keyPassword MOVEZW_KEY_PASSWORD
+                storeFile hasKeystoreProperties ? file(keystoreProperties['storeFile']) : file(MOVEZW_STORE_FILE)
+                storePassword hasKeystoreProperties ? keystoreProperties['storePassword'] : MOVEZW_STORE_PASSWORD
+                keyAlias hasKeystoreProperties ? keystoreProperties['keyAlias'] : MOVEZW_KEY_ALIAS
+                keyPassword hasKeystoreProperties ? keystoreProperties['keyPassword'] : MOVEZW_KEY_PASSWORD
             }
         }
     }
@@ -35,7 +44,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            if (project.hasProperty('MOVEZW_STORE_FILE')) {
+            if (hasSigningConfig) {
                 signingConfig signingConfigs.release
             }
         }

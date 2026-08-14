@@ -38,4 +38,12 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Foreground-only: matching, live delivery tracking, and "use my
+         location" all call navigator.geolocation while a page is open —
+         nothing runs once the app is backgrounded, so this deliberately
+         does not request ACCESS_BACKGROUND_LOCATION, which would trigger
+         a much stricter Play Store review requirement this app doesn't
+         need and shouldn't claim. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>
