@@ -102,9 +102,17 @@ export const AuthProvider = ({ children }) => {
         if (!termsErr) termsAcceptedAt = now;
       }
 
+      // customer-relogin (Login.jsx) assigns customers a synthetic,
+      // never-emailed address ending in @relogin.movezw.internal purely so
+      // it can reuse Supabase's email/password sign-in path — it's an
+      // internal auth implementation detail, never a real address, so it
+      // must never surface in the UI (Profile.jsx's email row, "from"
+      // fields, etc.) the way a real driver email would.
+      const realEmail = authUser.email && !authUser.email.endsWith('@relogin.movezw.internal') ? authUser.email : null;
+
       setUser({
         id: authUser.id,
-        email: authUser.email,
+        email: realEmail,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
         phone,
         role,
