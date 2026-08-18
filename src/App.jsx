@@ -50,6 +50,7 @@ import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
+import NativePushRegistration from '@/components/NativePushRegistration';
 import ThemeLoader from '@/components/ThemeLoader';
 
 const AuthenticatedApp = () => {
@@ -89,6 +90,7 @@ const AuthenticatedApp = () => {
   return (
     <>
     <DriverLocationPing />
+    <NativePushRegistration />
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />

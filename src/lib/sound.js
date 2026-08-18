@@ -25,11 +25,15 @@ export function unlockAudioOnFirstGesture() {
 
 // Short two-tone chime for incoming notifications — synthesized via Web
 // Audio so no audio asset needs to be bundled/loaded.
-export function playNotificationChime() {
+export async function playNotificationChime() {
   const ctx = getAudioContext();
   if (!ctx) return;
   try {
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    // Scheduling oscillators against a still-suspended context produces no
+    // audible sound at all (no error either) — resume() must be awaited
+    // before scheduling starts, not fired-and-forgotten, or a chime that
+    // arrives before the page's first tap/keypress plays silently.
+    if (ctx.state === "suspended") await ctx.resume();
     const now = ctx.currentTime;
     [880, 1175].forEach((freq, i) => {
       const osc = ctx.createOscillator();

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "410840653221",
+    "project_id": "movezw-e6ec3",
+    "storage_bucket": "movezw-e6ec3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:410840653221:android:03480a6c1a123802d35c4c",
+        "android_client_info": {
+          "package_name": "com.movezw.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqF5v3xTy0r6GY3MqQ4utRHZN-V76bbJw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

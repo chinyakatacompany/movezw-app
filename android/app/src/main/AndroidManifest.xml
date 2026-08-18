@@ -27,6 +27,14 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- FCM falls back to these when a message doesn't specify its own
+             icon/color/channel (background/killed-app delivery), so a
+             color icon here would render as a solid blob — Android masks
+             notification icons by alpha channel only, ignoring color. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@mipmap/ic_stat_notify" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_accent" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="job_alerts" />
     </application>
 
     <!-- Permissions -->
@@ -40,4 +48,7 @@
          need and shouldn't claim. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Android 13+ (API 33) requires this to show any notification at all,
+         including job-alert push while the app is backgrounded/killed. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>
