@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2, User, Phone, ShoppingBag, Truck, Check } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { cn } from "@/lib/utils";
+import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 export default function Login() {
+  useDocumentMeta("Log In | MoveZW", "Log in to your MoveZW account to book transport or manage your driver profile.");
   const [searchParams] = useSearchParams();
   const [accountType, setAccountType] = useState(searchParams.get("role") === "driver" ? "driver" : "customer");
   const [email, setEmail] = useState("");

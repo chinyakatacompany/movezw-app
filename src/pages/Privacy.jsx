@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Truck, ArrowLeft, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteContent } from "@/lib/siteContent";
+import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 // Same admin-editable pattern as Terms.jsx (see TERMS_SECTIONS there) — text
 // is pulled from site_content via each section's key so admins can edit it
@@ -63,6 +64,7 @@ export const PRIVACY_SECTIONS = [
 
 export default function Privacy() {
   const { t } = useSiteContent();
+  useDocumentMeta("Privacy Policy | MoveZW", "Learn how MoveZW collects, uses, and protects your personal data on Zimbabwe's transport marketplace.");
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border">

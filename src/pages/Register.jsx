@@ -8,8 +8,10 @@ import { UserPlus, Mail, Lock, Loader2, Truck, ShoppingBag, Check, Building2 } f
 import AuthLayout from "@/components/AuthLayout";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 export default function Register() {
+  useDocumentMeta("Sign Up | MoveZW", "Create a free MoveZW account to book verified transport or start earning as a driver in Zimbabwe.");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // Landing page CTAs link here with ?role=driver or ?role=customer so

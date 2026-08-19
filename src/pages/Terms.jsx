@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Truck, ArrowLeft, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteContent } from "@/lib/siteContent";
+import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 // Defines structure/order/count of sections and their default text. Actual
 // rendered text is pulled from site_content via each section's key, so
@@ -93,6 +94,7 @@ export const TERMS_SECTIONS = [
 
 export default function Terms() {
   const { t } = useSiteContent();
+  useDocumentMeta("Terms of Service | MoveZW", "Read the terms and conditions for using MoveZW's transport marketplace in Zimbabwe.");
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
       <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border">

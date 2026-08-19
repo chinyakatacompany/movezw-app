@@ -1,0 +1,21 @@
+# MoveZW
+
+> MoveZW is a transport and delivery marketplace for Zimbabwe. Customers post a transport request (pickup, destination, cargo, budget); ID-verified drivers respond with competitive offers; the customer picks one and tracks the delivery in real time. It's free to join and post a request — the only cost is the agreed delivery price paid directly to the driver (cash on delivery).
+
+Coverage: nationwide across Zimbabwe, including Harare and Bulawayo. Cargo types: furniture, building materials, farm produce, parcels, and general goods. Vehicle types range from motorcycles and pickups to articulated trucks, so both small parcels and large loads can be matched to an appropriate vehicle.
+
+Driver verification: every driver submits a national ID, driver's licence, and vehicle registration, reviewed by MoveZW's admin team before the driver can accept jobs.
+
+## Key pages
+
+- [Homepage](https://www.movezw.co.zw/): overview, how it works, FAQ
+- [Sign up as a customer](https://www.movezw.co.zw/register?role=customer)
+- [Sign up as a driver](https://www.movezw.co.zw/register?role=driver)
+- [Terms of Service](https://www.movezw.co.zw/terms)
+- [Privacy Policy](https://www.movezw.co.zw/privacy)
+
+## Contact
+
+- Email: movezwsupport@gmail.com
+- Phone / WhatsApp: +263 780 269 976
+- Based in Harare, Zimbabwe

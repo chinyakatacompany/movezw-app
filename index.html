@@ -6,7 +6,126 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#1e2f5e" />
-    <title>MoveZW</title>
+
+    <title>MoveZW — Move Anything, Anywhere in Zimbabwe | Trusted Transport Marketplace</title>
+    <meta name="description" content="Book verified drivers to move your cargo anywhere in Zimbabwe. Post a transport request, compare offers from local drivers, and track your delivery in real time. Free to join." />
+    <link rel="canonical" href="https://www.movezw.co.zw/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MoveZW" />
+    <meta property="og:title" content="MoveZW — Move Anything, Anywhere in Zimbabwe" />
+    <meta property="og:description" content="Zimbabwe's trusted transport marketplace. Post a request, compare offers from verified drivers, and track your delivery in real time." />
+    <meta property="og:url" content="https://www.movezw.co.zw/" />
+    <meta property="og:image" content="https://www.movezw.co.zw/icon-512.png" />
+    <meta property="og:locale" content="en_ZW" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MoveZW — Move Anything, Anywhere in Zimbabwe" />
+    <meta name="twitter:description" content="Book verified drivers to move your cargo anywhere in Zimbabwe. Free to join." />
+    <meta name="twitter:image" content="https://www.movezw.co.zw/icon-512.png" />
+
+    <!-- Structured data for search + answer/generative engines. The FAQ
+         entries are hand-mirrored from src/components/landing/FAQ.jsx — this
+         file is static and can't import from it, so keep the two in sync
+         when that copy changes. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.movezw.co.zw/#organization",
+          "name": "MoveZW",
+          "url": "https://www.movezw.co.zw/",
+          "logo": "https://www.movezw.co.zw/icon-512.png",
+          "description": "Zimbabwe's trusted transport marketplace connecting customers with verified drivers to move goods anywhere in the country.",
+          "email": "movezwsupport@gmail.com",
+          "telephone": "+263780269976",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Harare",
+            "addressCountry": "ZW"
+          },
+          "areaServed": "ZW"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.movezw.co.zw/#website",
+          "url": "https://www.movezw.co.zw/",
+          "name": "MoveZW",
+          "publisher": { "@id": "https://www.movezw.co.zw/#organization" }
+        },
+        {
+          "@type": "Service",
+          "name": "On-demand transport and delivery marketplace",
+          "provider": { "@id": "https://www.movezw.co.zw/#organization" },
+          "areaServed": { "@type": "Country", "name": "Zimbabwe" },
+          "description": "Post a transport request, receive offers from ID-verified drivers, and track your delivery in real time. Covers furniture, building materials, farm produce and parcels nationwide, from Harare to Bulawayo and beyond.",
+          "offers": {
+            "@type": "Offer",
+            "priceCurrency": "USD",
+            "description": "Free to post a request and receive offers — pay only the agreed delivery price to your chosen driver."
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How do I book transport on MoveZW?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Create a free account, tap 'Book Transport', enter your pickup, destination, cargo details and budget, then post your request. Verified drivers will send you offers to compare."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are the drivers verified?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Every driver submits their National ID, driver's licence and vehicle registration, which our admin team reviews before approval. Only approved drivers can send offers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I pay for my delivery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "MoveZW currently supports cash on delivery. Additional secure payment options are coming soon."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I track my delivery?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Absolutely. Once you accept an offer, you can follow the status of your delivery in real time — from pickup, through transit, to final delivery."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do I become a driver?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sign up as a driver, complete your profile, and upload your documents. After admin verification you'll start receiving transport requests in your area."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is there a fee to use MoveZW?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Creating an account and posting transport requests is free. You only pay the agreed delivery price to your chosen driver."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <script>
       // Re-applies the last-resolved theme colors (cached by applyTheme in
       // src/lib/theme.js under the same key) before the app mounts or
@@ -26,7 +145,38 @@
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static fallback for crawlers that don't execute JavaScript (most
+           AI/LLM bots — GPTBot, ClaudeBot, PerplexityBot, etc — unlike
+           Googlebot, which does render JS). React's createRoot() fully
+           replaces this the instant it mounts, so real visitors never
+           notice it; keep it in sync with Hero.jsx/HowItWorks.jsx/FAQ.jsx's
+           copy when that changes. -->
+      <main>
+        <h1>MoveZW — Move Anything, Anywhere in Zimbabwe</h1>
+        <p>Zimbabwe's trusted transport marketplace. Post a transport request, compare offers from ID-verified drivers, and track your delivery in real time — from Harare to Bulawayo and beyond. Free to join; you only pay the agreed delivery price to your driver.</p>
+        <h2>How it works</h2>
+        <ol>
+          <li>Post your transport request — tell us what you're moving, where it's going, and your budget.</li>
+          <li>Receive offers from verified drivers — background-checked transporters send competitive quotes.</li>
+          <li>Choose the best offer and track delivery in real time until it arrives.</li>
+        </ol>
+        <h2>Frequently asked questions</h2>
+        <h3>How do I book transport on MoveZW?</h3>
+        <p>Create a free account, tap "Book Transport", enter your pickup, destination, cargo details and budget, then post your request. Verified drivers will send you offers to compare.</p>
+        <h3>Are the drivers verified?</h3>
+        <p>Yes. Every driver submits their National ID, driver's licence and vehicle registration, which our admin team reviews before approval.</p>
+        <h3>How do I pay for my delivery?</h3>
+        <p>MoveZW currently supports cash on delivery.</p>
+        <h3>Can I track my delivery?</h3>
+        <p>Yes — once you accept an offer, you can follow your delivery in real time from pickup through to final delivery.</p>
+        <h3>How do I become a driver?</h3>
+        <p>Sign up as a driver, complete your profile, and upload your documents. After admin verification you'll start receiving transport requests in your area.</p>
+        <h3>Is there a fee to use MoveZW?</h3>
+        <p>Creating an account and posting transport requests is free. You only pay the agreed delivery price to your chosen driver.</p>
+        <p><a href="/register?role=customer">Book transport</a> · <a href="/register?role=driver">Become a driver</a></p>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
