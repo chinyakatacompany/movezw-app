@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { useEffect, useState } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
 
 // Guards a route so only the given role(s) may access it.
 // For drivers, also checks whether a DriverProfile exists (or onboarding is pending).
@@ -52,11 +53,7 @@ export default function RoleGuard({ allow, children }) {
   }, [user?.id, authChecked, allow]);
 
   if (!authChecked || checking) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) return <Navigate to="/login" replace />;

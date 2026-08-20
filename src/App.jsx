@@ -52,6 +52,7 @@ import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
 import ThemeLoader from '@/components/ThemeLoader';
+import LoadingScreen from '@/components/LoadingScreen';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
@@ -68,11 +69,7 @@ const AuthenticatedApp = () => {
 
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Handle authentication errors

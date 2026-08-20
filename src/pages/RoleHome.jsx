@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/api/supabaseClient";
-import { Loader2 } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function RoleHome() {
   const { user, authChecked } = useAuth();
@@ -33,11 +33,7 @@ export default function RoleHome() {
   }, [user?.id, authChecked]);
 
   if (!authChecked || checking) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) return <Navigate to="/login" replace />;
