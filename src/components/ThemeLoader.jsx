@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/api/supabaseClient";
-import { applyTheme, DEFAULT_THEME } from "@/lib/theme";
+import { applyTheme, DEFAULT_THEME, getUserThemeOverride } from "@/lib/theme";
 
 // Applies the admin-selected app theme (site_content key "site.theme") as
 // soon as the app boots, before any route renders — mounted once at the top
@@ -19,6 +19,15 @@ export default function ThemeLoader() {
     const previewTheme = urlPreviewTheme || sessionStorage.getItem("movzw_preview_theme");
     if (previewTheme) {
       applyTheme(previewTheme);
+      return;
+    }
+    // A user's own light/dark choice (Profile page) beats the admin's
+    // site-wide default — set once, it sticks across visits/devices... this
+    // browser, at least, since it's stored locally rather than on the
+    // profile row.
+    const userOverride = getUserThemeOverride();
+    if (userOverride) {
+      applyTheme(userOverride);
       return;
     }
     let active = true;

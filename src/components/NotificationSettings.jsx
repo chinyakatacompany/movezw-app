@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { pushSupported, getExistingSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+
+// The installed Android app doesn't use this browser Web Push path at all —
+// Android's WebView doesn't expose PushManager, so pushSupported() below
+// correctly returns false there, but that's not actually a problem: the app
+// registers for real native push automatically in the background (see
+// NativePushRegistration.jsx / FCM) the moment someone's logged in, no
+// toggle needed. Without this check that automatic, working setup would
+// read to a driver as "notifications are broken on your phone."
+const isNativeAndroid = Capacitor.getPlatform() === "android";
 
 // Browsers don't expose a way to pick a custom notification *sound* — only
 // the vibration pattern is actually controllable via the Notification API,
@@ -80,6 +90,17 @@ export default function NotificationSettings({ description }) {
     const { error } = await supabase.from("profiles").update({ notification_vibration: pattern }).eq("id", user.id);
     if (error) toast({ title: "Could not save vibration setting", variant: "destructive" });
   };
+
+  if (isNativeAndroid) {
+    return (
+      <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
+        <p className="text-sm font-semibold flex items-center gap-2"><Bell className="w-4 h-4 text-primary" /> Alerts</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Notifications are on for the app — you'll get an alert with a long vibration for new jobs, even if the app is closed.
+        </p>
+      </div>
+    );
+  }
 
   if (!pushSupported()) {
     return (

@@ -276,6 +276,27 @@ export const THEMES = {
 // two in sync if this ever changes.
 export const THEME_CACHE_KEY = "movzw_theme_vars";
 
+// A signed-in user's personal light/dark choice (Profile page), which beats
+// the admin's site-wide default (site_content "site.theme") once set — see
+// ThemeLoader.jsx for the full precedence order. Only ever "movezw" (light)
+// or "movezwDark"; the rest of the THEMES catalog stays admin-only branding.
+export const THEME_USER_OVERRIDE_KEY = "movzw_theme_override";
+
+export function getUserThemeOverride() {
+  try {
+    return localStorage.getItem(THEME_USER_OVERRIDE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setUserThemeOverride(key) {
+  try {
+    localStorage.setItem(THEME_USER_OVERRIDE_KEY, key);
+  } catch {}
+  applyTheme(key);
+}
+
 // Sets the inline :root overrides for every theme variable, and stashes the
 // resolved values in localStorage so index.html's inline bootstrap script
 // can re-apply them synchronously before the app mounts on the next load —

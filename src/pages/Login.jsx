@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 export default function Login() {
   useDocumentMeta("Log In | MoveZW", "Log in to your MoveZW account to book transport or manage your driver profile.");
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [accountType, setAccountType] = useState(searchParams.get("role") === "driver" ? "driver" : "customer");
   const [email, setEmail] = useState("");
@@ -29,7 +30,11 @@ export default function Login() {
       setError(error.message);
       setLoading(false);
     } else {
-      window.location.href = "/";
+      // A client-side navigate here (not a hard window.location.href reload)
+      // — AuthContext's onAuthStateChange listener already picks up the new
+      // session reactively, so a full reload just adds a flash of the old
+      // page as the browser tears down and repaints from scratch.
+      navigate("/");
     }
   };
 
@@ -56,7 +61,11 @@ export default function Login() {
       setError(signInError.message);
       setLoading(false);
     } else {
-      window.location.href = "/";
+      // A client-side navigate here (not a hard window.location.href reload)
+      // — AuthContext's onAuthStateChange listener already picks up the new
+      // session reactively, so a full reload just adds a flash of the old
+      // page as the browser tears down and repaints from scratch.
+      navigate("/");
     }
   };
 

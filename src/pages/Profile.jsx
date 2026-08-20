@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2 } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { THEMES, setUserThemeOverride } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 export default function Profile({ role }) {
   const { user, logout, checkUserAuth } = useAuth();
@@ -14,6 +16,20 @@ export default function Profile({ role }) {
   const [editingPhone, setEditingPhone] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
+  // Reflects whichever theme is actually live right now (a personal
+  // override, an admin site-wide change, or a dev ?previewTheme= — see
+  // ThemeLoader.jsx) rather than assuming light, so the toggle opens on the
+  // correct selection even before the user has ever touched it themselves.
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--background").trim();
+    return bg === THEMES.movezwDark.vars.background;
+  });
+
+  const chooseTheme = (dark) => {
+    setUserThemeOverride(dark ? "movezwDark" : "movezw");
+    setIsDark(dark);
+  };
 
   const startEditPhone = () => {
     setPhoneInput(user?.phone || profile?.phone || "");
@@ -129,6 +145,32 @@ export default function Profile({ role }) {
             <div><p className="text-xs text-muted-foreground">Rating</p><p className="text-sm font-medium">{profile.rating_avg?.toFixed(1) || "0.0"} ⭐ ({profile.rating_count || 0} review{(profile.rating_count || 0) === 1 ? "" : "s"})</p></div>
           </div>
         )}
+      </div>
+
+      <div className="bg-card rounded-2xl border border-border p-4">
+        <p className="text-xs text-muted-foreground mb-3">Appearance</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => chooseTheme(false)}
+            className={cn(
+              "flex items-center justify-center gap-2 h-11 rounded-xl border-2 text-sm font-medium transition-colors",
+              !isDark ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+            )}
+          >
+            <Sun className="w-4 h-4" /> Light
+          </button>
+          <button
+            type="button"
+            onClick={() => chooseTheme(true)}
+            className={cn(
+              "flex items-center justify-center gap-2 h-11 rounded-xl border-2 text-sm font-medium transition-colors",
+              isDark ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+            )}
+          >
+            <Moon className="w-4 h-4" /> Dark
+          </button>
+        </div>
       </div>
 
       {role === "driver" && (
