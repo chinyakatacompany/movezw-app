@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useDocumentMeta } from "@/lib/useDocumentMeta";
 export default function Register() {
   useDocumentMeta("Sign Up | MoveZW", "Create a free MoveZW account to book verified transport or start earning as a driver in Zimbabwe.");
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   // Landing page CTAs link here with ?role=driver or ?role=customer so
   // "Become a Driver" / "Book Transport" land pre-selected instead of
@@ -26,7 +27,10 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  // Driven off history state (set via the replace-then-push below) rather
+  // than plain local state, so the back button from this screen lands on
+  // /login instead of wherever the person was before /register.
+  const done = location.state?.justRegistered === true;
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -118,7 +122,12 @@ export default function Register() {
     sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
     sessionStorage.setItem("movzw_signup_terms_accepted", "1");
-    setDone(true);
+    // Swaps this history entry for /login, then lands back on /register
+    // (now showing the "check your email" screen via location.state) — so
+    // pressing back from here goes straight to /login, the actual next
+    // step, rather than back to the empty form or wherever they started.
+    navigate("/login", { replace: true });
+    navigate("/register", { state: { justRegistered: true } });
   };
 
   if (done) {
