@@ -122,6 +122,17 @@ export default function Register() {
     sessionStorage.setItem("movzw_signup_user_id", data.user.id);
     sessionStorage.setItem("movzw_signup_phone", phone);
     sessionStorage.setItem("movzw_signup_terms_accepted", "1");
+
+    // Supabase only asks for email confirmation when that's actually turned
+    // on ("Confirm email" in Auth settings) — when it's off, signUp() logs
+    // the person straight in (data.session is set) and there's nothing to
+    // check their email for, so showing "check your email" here would be
+    // straight-up wrong, not just premature.
+    if (data.session) {
+      toast({ title: `Welcome, ${fullName.split(" ")[0]}!`, description: "Your account is ready." });
+      navigate("/");
+      return;
+    }
     // Swaps this history entry for /login, then lands back on /register
     // (now showing the "check your email" screen via location.state) — so
     // pressing back from here goes straight to /login, the actual next
