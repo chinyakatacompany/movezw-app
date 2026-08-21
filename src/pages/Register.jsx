@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Mail, Lock, Loader2, Truck, ShoppingBag, Check, Building2 } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
@@ -51,7 +51,7 @@ export default function Register() {
       });
       setLoading(false);
       if (error) {
-        setError(error.message);
+        setError(getErrorMessage(error));
         return;
       }
       sessionStorage.setItem("movzw_signup_role", "customer");
@@ -87,7 +87,7 @@ export default function Register() {
     });
     setLoading(false);
     if (error) {
-      setError(error.message);
+      setError(getErrorMessage(error));
       return;
     }
     // Tagged with the exact account it belongs to so a stale flag from an

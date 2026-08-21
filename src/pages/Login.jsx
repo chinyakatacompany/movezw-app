@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2, User, Phone, ShoppingBag, Truck, Check } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
 export default function Login() {
@@ -27,7 +27,7 @@ export default function Login() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      setError(getErrorMessage(error));
       setLoading(false);
     } else {
       // A client-side navigate here (not a hard window.location.href reload)
@@ -52,13 +52,13 @@ export default function Login() {
       body: { full_name: fullName, phone },
     });
     if (fnError || data?.error) {
-      setError(data?.error || fnError.message);
+      setError(data?.error || getErrorMessage(fnError));
       setLoading(false);
       return;
     }
     const { error: signInError } = await supabase.auth.signInWithPassword({ email: data.email, password: data.password });
     if (signInError) {
-      setError(signInError.message);
+      setError(getErrorMessage(signInError));
       setLoading(false);
     } else {
       // A client-side navigate here (not a hard window.location.href reload)
