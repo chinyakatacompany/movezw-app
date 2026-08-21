@@ -37,6 +37,37 @@ export default function Register() {
       return;
     }
 
+    if (accountType === "driver") {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+    }
+
+    // Caps each phone number at one customer account and one driver
+    // account — someone can legitimately have both (they use the app both
+    // ways), but not two of the same. Checked server-side (fn_phone_has_account)
+    // since profiles RLS blocks looking up anyone else's row from the client.
+    setLoading(true);
+    const { data: hasAccount, error: checkErr } = await supabase.rpc("fn_phone_has_account", {
+      p_phone: phone,
+      p_role: accountType,
+    });
+    if (checkErr) {
+      setLoading(false);
+      setError(getErrorMessage(checkErr));
+      return;
+    }
+    if (hasAccount) {
+      setLoading(false);
+      setError(`This phone number is already registered as a ${accountType} account.`);
+      return;
+    }
+
     // Customers get a frictionless, no-email/no-password signup — a real
     // Supabase auth session via signInAnonymously(), just tagged with their
     // name/phone/role like a normal signup. Temporary while the customer
@@ -45,7 +76,6 @@ export default function Register() {
     // zero signup friction. Drivers keep full email/password + confirmation
     // below, unchanged — they're handling cargo and need to be reachable.
     if (accountType === "customer") {
-      setLoading(true);
       const { data, error } = await supabase.auth.signInAnonymously({
         options: { data: { full_name: fullName, phone, role: "customer" } },
       });
@@ -63,15 +93,6 @@ export default function Register() {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-    setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
