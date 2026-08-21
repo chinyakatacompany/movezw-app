@@ -153,32 +153,43 @@ function routesMatch(originA, destA, originB, destB) {
   return placesMatch(originA, originB) && placesMatch(destA, destB);
 }
 
-// When a driver lists empty return-trip space, notify customers who already
-// have an open request heading the same way — they may prefer the driver's
-// return-load price to waiting for regular offers.
+// When a driver lists empty return-trip space, notify every customer so the
+// listing gets real visibility (customers browse-and-book return loads the
+// same way they'd post a fresh request — there's no reason to limit this to
+// people who happen to already have a matching open request). Customers
+// whose open request's route actually matches get a specific, personalized
+// message; everyone else gets a general heads-up about the new route.
 export async function notifyMatchingCustomersForReturnLoad(load) {
-  const { data: requests, error } = await supabase
-    .from("transport_requests")
-    .select("*")
-    .eq("status", "open")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) console.error("Failed to load requests for return-load matching:", error);
-  const matched = (requests || []).filter((r) =>
-    routesMatch(load.origin, load.destination, r.pickup_location, r.destination)
-  );
+  const [{ data: requests, error: reqErr }, { data: allCustomers, error: custErr }] = await Promise.all([
+    supabase.from("transport_requests").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(200),
+    supabase.rpc("fn_all_customer_ids"),
+  ]);
+  if (reqErr) console.error("Failed to load requests for return-load matching:", reqErr);
+  if (custErr) console.error("Failed to load customers for return-load broadcast:", custErr);
+
+  const matchedByCustomer = new Map();
+  for (const r of requests || []) {
+    if (routesMatch(load.origin, load.destination, r.pickup_location, r.destination)) {
+      matchedByCustomer.set(r.customer_id, r);
+    }
+  }
+
+  const routeLabel = `${load.origin} → ${load.destination}`;
   await Promise.all(
-    matched.map((r) =>
-      createNotification(
-        r.customer_id,
+    (allCustomers || []).map((c) => {
+      const matchedRequest = matchedByCustomer.get(c.id);
+      return createNotification(
+        c.id,
         "return_load_match",
         "Return-trip space available 🚚",
-        `A driver has space ${load.origin} → ${load.destination} for ${formatMoney(load.price)} — could suit your ${r.cargo_type} request.`,
+        matchedRequest
+          ? `A driver has space ${routeLabel} for ${formatMoney(load.price)} — could suit your ${matchedRequest.cargo_type} request.`
+          : `A driver has space ${routeLabel} for ${formatMoney(load.price)}. Need something moved that way?`,
         "/return-loads"
-      )
-    )
+      );
+    })
   );
-  return matched.length;
+  return { matched: matchedByCustomer.size, total: (allCustomers || []).length };
 }
 
 // When a customer posts a new request, notify drivers who already listed
