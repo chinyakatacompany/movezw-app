@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { THEMES, setUserThemeOverride } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { cn, getErrorMessage } from "@/lib/utils";
 
 export default function Profile({ role }) {
   const { user, logout, checkUserAuth } = useAuth();
@@ -29,6 +30,44 @@ export default function Profile({ role }) {
   const chooseTheme = (dark) => {
     setUserThemeOverride(dark ? "movezwDark" : "movezw");
     setIsDark(dark);
+  };
+
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const cancelPasswordChange = () => {
+    setChangingPassword(false);
+    setNewPassword("");
+    setConfirmNewPassword("");
+  };
+
+  // Changing while already signed in — Supabase's updateUser() only needs
+  // the active session, not the current password, unlike a typical
+  // "confirm your old password" flow. Driver-only: customers sign up
+  // passwordless (see Register.jsx's anonymous signup) so there's no
+  // password for them to change here.
+  const savePassword = async () => {
+    if (newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast({ title: "Password updated" });
+      cancelPasswordChange();
+    } catch (e) {
+      toast({ title: "Could not update password", description: getErrorMessage(e), variant: "destructive" });
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const startEditPhone = () => {
@@ -172,6 +211,36 @@ export default function Profile({ role }) {
           </button>
         </div>
       </div>
+
+      {role === "driver" && (
+        <div className="bg-card rounded-2xl border border-border p-4">
+          {changingPassword ? (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Change password</p>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New password</Label>
+                <Input id="new-password" type="password" autoComplete="new-password" placeholder="••••••" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-11" autoFocus />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password">Confirm new password</Label>
+                <Input id="confirm-new-password" type="password" autoComplete="new-password" placeholder="••••••" value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} className="h-11" />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={savePassword} disabled={savingPassword} className="flex-1 h-11">
+                  {savingPassword ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : "Save password"}
+                </Button>
+                <Button onClick={cancelPasswordChange} disabled={savingPassword} variant="outline" className="h-11">Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setChangingPassword(true)} className="w-full flex items-center gap-3">
+              <Lock className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium flex-1 text-left">Change password</span>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      )}
 
       {role === "driver" && (
         <button onClick={() => navigate("/vehicle-management")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
