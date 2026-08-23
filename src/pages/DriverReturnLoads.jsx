@@ -109,6 +109,16 @@ export default function DriverReturnLoads() {
       } catch (e) {
         console.error("Failed to notify matching customers:", e);
       }
+      // The in-app notification above only surfaces via the realtime chime
+      // while a customer already has the app open — this reaches everyone
+      // else too, including a fully closed native app (FCM).
+      try {
+        await supabase.functions.invoke("notify-return-load-push", {
+          body: { origin: form.origin, destination: form.destination, price: Number(form.price) },
+        });
+      } catch (e) {
+        console.error("Failed to send return-load push alerts:", e);
+      }
       setShowCreate(false);
       setForm({ origin: "", destination: "", departure_date: "", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
       await loadAll();
