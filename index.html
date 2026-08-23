@@ -129,6 +129,14 @@
     }
     </script>
 
+    <style>
+      /* Hides the static SEO fallback below from real browsers starting at
+         first paint (render-blocking, so there's no gap for it to flash
+         during) — it exists only for crawlers that read raw HTML without
+         executing JS or applying CSS, which still see the text fine. */
+      #seo-fallback { display: none; }
+    </style>
+
     <script>
       // Re-applies the last-resolved theme colors (cached by applyTheme in
       // src/lib/theme.js under the same key) before the app mounts or
@@ -151,11 +159,12 @@
     <div id="root">
       <!-- Static fallback for crawlers that don't execute JavaScript (most
            AI/LLM bots — GPTBot, ClaudeBot, PerplexityBot, etc — unlike
-           Googlebot, which does render JS). React's createRoot() fully
-           replaces this the instant it mounts, so real visitors never
-           notice it; keep it in sync with Hero.jsx/HowItWorks.jsx/FAQ.jsx's
+           Googlebot, which does render JS). Hidden from real browsers via
+           #seo-fallback in the <style> above so it never flashes on a cold
+           load; React's createRoot() fully replaces this the instant it
+           mounts regardless. Keep in sync with Hero.jsx/HowItWorks.jsx/FAQ.jsx's
            copy when that changes. -->
-      <main>
+      <main id="seo-fallback">
         <h1>MoveZW — Move Anything, Anywhere in Zimbabwe</h1>
         <p>Zimbabwe's trusted transport marketplace. Post a transport request, compare offers from ID-verified drivers, and track your delivery in real time — from Harare to Bulawayo and beyond. Free to join; you only pay the agreed delivery price to your driver.</p>
         <h2>How it works</h2>
