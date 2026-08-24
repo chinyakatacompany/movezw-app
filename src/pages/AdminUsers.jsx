@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { getOrCreateAdminDriverConversation } from "@/lib/messaging";
+import { getOrCreateAdminConversation } from "@/lib/messaging";
 
 export default function AdminUsers() {
   const { user: admin } = useAuth();
@@ -43,14 +43,14 @@ export default function AdminUsers() {
     }
   };
 
-  const messageDriver = async (u) => {
+  const messageUser = async (u) => {
     setMessaging(u.id);
     try {
-      const conv = await getOrCreateAdminDriverConversation({
+      const conv = await getOrCreateAdminConversation({
         adminId: admin.id,
         adminName: admin.full_name || "MoveZW Admin",
-        driverId: u.id,
-        driverName: u.full_name || "Driver",
+        userId: u.id,
+        userName: u.full_name || (u.role === "driver" ? "Driver" : "Customer"),
       });
       navigate(`/chat/${conv.id}`);
     } catch (e) {
@@ -156,11 +156,9 @@ export default function AdminUsers() {
                   </>
                 ) : (
                   <>
-                    {u.role === "driver" && (
-                      <Button size="sm" variant="outline" onClick={() => messageDriver(u)} disabled={messaging === u.id} title="Message this driver (e.g. about a tender)">
-                        {messaging === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-                      </Button>
-                    )}
+                    <Button size="sm" variant="outline" onClick={() => messageUser(u)} disabled={messaging === u.id} title="Message this user">
+                      {messaging === u.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                    </Button>
                     <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
