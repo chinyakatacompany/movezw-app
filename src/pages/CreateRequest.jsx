@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES } from "@/lib/movezw";
@@ -62,6 +62,7 @@ export default function CreateRequest() {
     budget: "",
   });
   const [loads, setLoads] = useState(1);
+  const [showRouteMap, setShowRouteMap] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pickupCoords, setPickupCoords] = useState(null);
@@ -233,9 +234,20 @@ export default function CreateRequest() {
             />
           </div>
           {pickupCoords && destinationCoords && (
-            <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
-              <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
-            </React.Suspense>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowRouteMap((v) => !v)}
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary/10 border-2 border-primary/30 text-primary font-semibold text-sm hover:bg-primary/15 transition-colors"
+              >
+                <MapIcon className="w-4 h-4" /> {showRouteMap ? "Hide route map" : "Show route: pickup → destination"}
+              </button>
+              {showRouteMap && (
+                <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
+                  <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
+                </React.Suspense>
+              )}
+            </>
           )}
         </div>
 
