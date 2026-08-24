@@ -56,6 +56,23 @@ export default function AppLayout() {
     return () => { active = false; supabase.removeChannel(channel); };
   }, [user?.id]);
 
+  // Marks read any of this user's unread notifications whose link points to
+  // wherever they've just navigated — this is what "viewing" a notification
+  // means in practice: tapping a push notification, clicking a toast's
+  // "View" action, or clicking "View" on the Notifications list all land
+  // here the same way, so one check on route change covers every entry
+  // point instead of wiring mark-read into each one separately.
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false)
+      .eq("link", location.pathname)
+      .then(({ error }) => { if (error) console.error("Failed to auto-mark notification read:", error); });
+  }, [user?.id, location.pathname]);
+
   useEffect(() => {
     if (!user?.id || !isDriver) return;
     let active = true;
