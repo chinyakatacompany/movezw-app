@@ -176,6 +176,23 @@ export default function DriverJobDetail() {
      
   }, [id, user?.id]);
 
+  // While this job is still open (pre-acceptance, the bidding stage), join
+  // a presence channel so the customer can see a live "N drivers viewing"
+  // count — pure social proof/urgency signal. Presence drops automatically
+  // the moment this driver navigates away or the job stops being open;
+  // once a job is actually accepted, driver_lat/driver_lng reporting below
+  // takes over as the trust signal instead.
+  useEffect(() => {
+    if (!id || !user?.id || request?.status !== "open") return;
+    const channel = supabase.channel(`job-presence-${id}`, { config: { presence: { key: user.id } } });
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await channel.track({ driver_name: profile?.full_name || "A driver" });
+      }
+    });
+    return () => { supabase.removeChannel(channel); };
+  }, [id, user?.id, request?.status, profile?.full_name]);
+
   // Report this driver's position to the customer every 5 minutes while the
   // job is actively moving (en route to pickup through in transit). Stops
   // automatically once delivered/completed/cancelled, or if this isn't the

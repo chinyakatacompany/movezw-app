@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, User as UserIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
@@ -32,6 +32,7 @@ export default function RequestDetail() {
   const [submittingRating, setSubmittingRating] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
   const [driverPhone, setDriverPhone] = useState(null);
+  const [viewerCount, setViewerCount] = useState(0);
 
   const load = async () => {
     const { data: req } = await supabase.from("transport_requests").select("*").eq("id", id).single();
@@ -61,6 +62,22 @@ export default function RequestDetail() {
     return () => { supabase.removeChannel(channel); };
      
   }, [id]);
+
+  // Joins the same presence channel drivers track while browsing this open
+  // job (see DriverJobDetail.jsx) in read-only mode — never calls .track()
+  // here, just watches who's currently present — to show live "N drivers
+  // viewing" social proof while offers are still coming in.
+  useEffect(() => {
+    if (!id || request?.status !== "open") { setViewerCount(0); return; }
+    const channel = supabase.channel(`job-presence-${id}`, { config: { presence: { key: user?.id || "customer" } } });
+    const updateCount = () => setViewerCount(Object.keys(channel.presenceState()).length);
+    channel
+      .on("presence", { event: "sync" }, updateCount)
+      .on("presence", { event: "join" }, updateCount)
+      .on("presence", { event: "leave" }, updateCount)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); setViewerCount(0); };
+  }, [id, request?.status, user?.id]);
 
   useEffect(() => {
     if (!request?.status || request.status !== "completed" || !user?.id) return;
@@ -244,6 +261,16 @@ export default function RequestDetail() {
             <h2 className="text-base font-semibold">Driver offers</h2>
             <span className="text-xs text-muted-foreground">{pendingOffers.length} received</span>
           </div>
+          {viewerCount > 0 && (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-500/10 rounded-full px-3 py-1.5 mb-3 w-fit">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <Eye className="w-3.5 h-3.5" />
+              {viewerCount === 1 ? "1 driver viewing your job right now" : `${viewerCount} drivers viewing your job right now`}
+            </div>
+          )}
           {pendingOffers.length === 0 ? (
             <div className="bg-card rounded-2xl border border-border">
               <EmptyState icon={Truck} title="Waiting for offers" subtitle="Drivers nearby will send you quotes. Check back shortly." />
