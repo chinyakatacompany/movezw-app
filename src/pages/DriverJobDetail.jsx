@@ -433,7 +433,14 @@ export default function DriverJobDetail() {
 
       <div className="flex items-center justify-between pl-9 -mt-3">
         <p className="text-xs text-muted-foreground">{isMyJob ? `${request.customer_name || "Customer"}` : "New request"} · {timeAgo(request.created_at)}</p>
-        <StatusBadge status={request.status} />
+        <div className="flex items-center gap-1.5">
+          {request.batch_total > 1 && (
+            <span className="text-[11px] font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full whitespace-nowrap">
+              Load {request.batch_index} of {request.batch_total}
+            </span>
+          )}
+          <StatusBadge status={request.status} />
+        </div>
       </div>
 
       {/* Route */}

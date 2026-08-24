@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES } from "@/lib/movezw";
@@ -24,6 +24,11 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // submission isn't blocked in that case (best-effort, matches how distance
 // is treated elsewhere in this app rather than forcing exact pins).
 const MIN_RATE_PER_KM = 0.9;
+
+// Sensible ceiling on how many loads one submit can post — a fat-fingered
+// large number would flood the open-jobs feed for every nearby driver with
+// near-duplicate postings.
+const MAX_LOADS = 10;
 
 // Build the most locally-specific label the free OSM data actually has —
 // road + suburb + city — instead of Nominatim's default display_name, which
@@ -56,6 +61,7 @@ export default function CreateRequest() {
     scheduled_date: "",
     budget: "",
   });
+  const [loads, setLoads] = useState(1);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pickupCoords, setPickupCoords] = useState(null);
@@ -114,7 +120,7 @@ export default function CreateRequest() {
           }
         }
       }
-      const payload = {
+      const basePayload = {
         customer_id: user.id,
         customer_name: user.full_name || user.email,
         pickup_location: form.pickup_location,
@@ -129,23 +135,46 @@ export default function CreateRequest() {
         photos,
         timing: form.timing,
         scheduled_date: form.timing === "scheduled" ? new Date(form.scheduled_date).toISOString() : null,
+        // Budget entered is per load — each row in the batch posts at the
+        // same price, not the price divided or multiplied.
         budget: Number(form.budget) || 0,
         status: "open",
       };
+
+      // More than one load posts N independent, separately-biddable rows
+      // (a different driver can take each one) rather than a single job
+      // asking for N loads at once — batch_id just lets the customer's own
+      // job list group them as "Load 1 of 2" etc.
+      const batchId = loads > 1 ? crypto.randomUUID() : null;
+      const rows = Array.from({ length: loads }, (_, i) => ({
+        ...basePayload,
+        batch_id: batchId,
+        batch_index: loads > 1 ? i + 1 : null,
+        batch_total: loads > 1 ? loads : null,
+      }));
+
       const { data, error } = await supabase
         .from("transport_requests")
-        .insert(payload)
-        .select()
-        .single();
+        .insert(rows)
+        .select();
 
       if (error) throw error;
 
-      try { await notifyMatchingDriversForRequest(data); } catch (e) { console.error("Failed to notify drivers:", e); }
-      try { await notifyMatchingReturnLoadDriversForRequest(data); } catch (e) { console.error("Failed to notify return-load drivers:", e); }
-      try { await supabase.functions.invoke("notify-drivers-push", { body: { requestId: data.id } }); } catch (e) { console.error("Failed to send push alerts:", e); }
+      await Promise.all(
+        data.map(async (row) => {
+          try { await notifyMatchingDriversForRequest(row); } catch (e) { console.error("Failed to notify drivers:", e); }
+          try { await notifyMatchingReturnLoadDriversForRequest(row); } catch (e) { console.error("Failed to notify return-load drivers:", e); }
+          try { await supabase.functions.invoke("notify-drivers-push", { body: { requestId: row.id } }); } catch (e) { console.error("Failed to send push alerts:", e); }
+        })
+      );
 
-      toast({ title: "Request posted", description: "Drivers nearby will see your request." });
-      navigate(`/customer/request/${data.id}`);
+      if (loads > 1) {
+        toast({ title: `${loads} loads posted`, description: "Drivers nearby will see each one and can bid separately." });
+        navigate("/customer");
+      } else {
+        toast({ title: "Request posted", description: "Drivers nearby will see your request." });
+        navigate(`/customer/request/${data[0].id}`);
+      }
     } catch (err) {
       toast({ title: "Could not post request", description: err.message, variant: "destructive" });
     } finally {
@@ -266,12 +295,43 @@ export default function CreateRequest() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="budget">Your suggested budget (USD)</Label>
+            <Label className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5" /> Number of loads</Label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLoads((n) => Math.max(1, n - 1))}
+                className="w-10 h-10 rounded-xl border-2 border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 disabled:opacity-40"
+                disabled={loads <= 1}
+                aria-label="Fewer loads"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="text-lg font-bold w-8 text-center">{loads}</span>
+              <button
+                type="button"
+                onClick={() => setLoads((n) => Math.min(MAX_LOADS, n + 1))}
+                className="w-10 h-10 rounded-xl border-2 border-border flex items-center justify-center text-muted-foreground hover:border-primary/40 disabled:opacity-40"
+                disabled={loads >= MAX_LOADS}
+                aria-label="More loads"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <span className="text-xs text-muted-foreground">e.g. 2 truckloads of the same cargo</span>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="budget">{loads > 1 ? "Budget per load (USD)" : "Your suggested budget (USD)"}</Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input id="budget" type="number" min="0" step="1" placeholder="e.g. 50" value={form.budget} onChange={(e) => set("budget", e.target.value)} className="pl-10" required />
             </div>
-            <p className="text-xs text-muted-foreground">Drivers will quote around your budget — you pick the best offer.</p>
+            {loads > 1 ? (
+              <p className="text-xs text-accent font-medium">
+                This posts {loads} separate requests, each bid on individually by drivers. Total across all loads: ${((Number(form.budget) || 0) * loads).toFixed(2)} (${form.budget || 0} × {loads}).
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Drivers will quote around your budget — you pick the best offer.</p>
+            )}
           </div>
         </div>
 

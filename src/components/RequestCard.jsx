@@ -21,7 +21,14 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
             )}
           </div>
         </div>
-        <StatusBadge status={request.status} />
+        <div className="flex items-center gap-1.5 shrink-0">
+          {request.batch_total > 1 && (
+            <span className="text-[11px] font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full whitespace-nowrap">
+              Load {request.batch_index} of {request.batch_total}
+            </span>
+          )}
+          <StatusBadge status={request.status} />
+        </div>
       </div>
 
       <div className="space-y-1.5 mb-3">

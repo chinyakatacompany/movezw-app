@@ -178,7 +178,14 @@ export default function RequestDetail() {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-xl font-bold">{request.cargo_type}</h1>
-          <StatusBadge status={request.status} />
+          <div className="flex items-center gap-1.5">
+            {request.batch_total > 1 && (
+              <span className="text-[11px] font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full whitespace-nowrap">
+                Load {request.batch_index} of {request.batch_total}
+              </span>
+            )}
+            <StatusBadge status={request.status} />
+          </div>
         </div>
         <p className="text-xs text-muted-foreground">Posted {timeAgo(request.created_at)}</p>
       </div>
