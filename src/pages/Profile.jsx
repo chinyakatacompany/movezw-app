@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon, Lock } from "lucide-react";
+import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon, Lock, AlertTriangle, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { THEMES, setUserThemeOverride } from "@/lib/theme";
 import { cn, getErrorMessage } from "@/lib/utils";
+import { deleteAccount } from "@/lib/account";
 
 export default function Profile({ role }) {
   const { user, logout, checkUserAuth } = useAuth();
@@ -107,6 +108,29 @@ export default function Profile({ role }) {
   }, [role, user?.id]);
 
   const handleLogout = () => { logout(false); navigate("/login"); };
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteOpen(false);
+    setDeleteConfirmText("");
+  };
+
+  const confirmDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      toast({ title: "Account deleted", description: "Your account has been permanently deleted." });
+      await logout(false);
+      navigate("/login");
+    } catch (e) {
+      toast({ title: "Could not delete account", description: getErrorMessage(e), variant: "destructive" });
+      setDeleting(false);
+    }
+  };
 
   const status = profile?.verification_status || "pending";
   const statusMap = {
@@ -291,6 +315,67 @@ export default function Profile({ role }) {
       <Button onClick={handleLogout} variant="outline" className="w-full h-12 text-destructive border-destructive/30 hover:bg-destructive/5">
         <LogOut className="w-5 h-5 mr-2" /> Sign out
       </Button>
+
+      <div className="pt-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 px-1">Danger zone</p>
+        <button
+          type="button"
+          onClick={() => setDeleteOpen(true)}
+          className="w-full flex items-center gap-3 bg-destructive/5 rounded-2xl border border-destructive/20 p-4 text-left"
+        >
+          <Trash2 className="w-5 h-5 text-destructive shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-destructive">Delete account</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Permanently delete your account and personal data. This cannot be undone.</p>
+          </div>
+        </button>
+      </div>
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteDialog} />
+          <div className="relative bg-card border border-border rounded-2xl card-shadow-lg p-5 w-full max-w-sm" role="alertdialog" aria-modal="true">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-foreground">Delete your account?</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This permanently deletes your profile, phone number, and login access. It cannot be undone.
+                  {role === "driver" && " If you have any wallet balance or a delivery in progress, you'll need to resolve that first."}
+                </p>
+              </div>
+              <button type="button" onClick={closeDeleteDialog} className="text-muted-foreground hover:text-foreground p-1 shrink-0" aria-label="Close">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="delete-confirm" className="text-xs">Type DELETE to confirm</Label>
+              <Input
+                id="delete-confirm"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="h-11 mt-1.5"
+                autoFocus
+                disabled={deleting}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-5">
+              <Button variant="ghost" size="sm" onClick={closeDeleteDialog} disabled={deleting}>Cancel</Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={confirmDeleteAccount}
+                disabled={deleteConfirmText.trim() !== "DELETE" || deleting}
+              >
+                {deleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting...</> : "Delete my account"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

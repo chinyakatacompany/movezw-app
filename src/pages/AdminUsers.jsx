@@ -138,7 +138,11 @@ export default function AdminUsers() {
                         "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0",
                         u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
                       )}>{u.role || "customer"}</span>
-                      {u.is_suspended && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">Suspended</span>}
+                      {u.deleted_at ? (
+                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 shrink-0">Deleted</span>
+                      ) : u.is_suspended && (
+                        <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700 shrink-0">Suspended</span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{u.phone || "No phone on file"}</p>
                   </div>
@@ -154,6 +158,8 @@ export default function AdminUsers() {
                       <X className="w-4 h-4" />
                     </Button>
                   </>
+                ) : u.deleted_at ? (
+                  <p className="text-xs text-muted-foreground italic">Account deleted by user</p>
                 ) : (
                   <>
                     <Button size="sm" variant="outline" onClick={() => messageUser(u)} disabled={messaging === u.id} title="Message this user">

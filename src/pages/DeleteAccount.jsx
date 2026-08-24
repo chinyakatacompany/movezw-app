@@ -19,7 +19,15 @@ export default function DeleteAccount() {
       </p>
 
       <div className="bg-card rounded-2xl border border-border p-5 space-y-4 mb-6">
-        <h2 className="text-sm font-semibold">How to request deletion</h2>
+        <h2 className="text-sm font-semibold">Fastest way: delete it in the app</h2>
+        <p className="text-sm text-muted-foreground">
+          If you can sign in, go to <span className="font-medium text-foreground">Profile → Danger zone → Delete account</span> for
+          instant, self-service deletion — no waiting required.
+        </p>
+      </div>
+
+      <div className="bg-card rounded-2xl border border-border p-5 space-y-4 mb-6">
+        <h2 className="text-sm font-semibold">Can't sign in? Request it by email or phone</h2>
         <p className="text-sm text-muted-foreground">
           Email us from the address (or with the phone number) registered on your account, with the subject
           line "Delete my account". We'll confirm and process your request within 7 business days.
