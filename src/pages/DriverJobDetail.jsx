@@ -22,7 +22,11 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // matches fn_get_trip_contact_phone's "en route or later" gate, so location
 // only becomes visible once contact details do too.
 const LIVE_TRACKING_STATUSES = ["en_route_pickup", "collected", "in_transit"];
-const LOCATION_REPORT_INTERVAL_MS = 5 * 60 * 1000;
+// Under a minute so the customer's tracking map reads as actually moving,
+// not a pin that jumps every few minutes — 30s is frequent enough to feel
+// live without meaningfully worse battery/data use than the old 5-minute
+// interval for a trip that's usually well under an hour.
+const LOCATION_REPORT_INTERVAL_MS = 30 * 1000;
 
 function formatDistanceLabel(km) {
   if (km == null) return "Distance unavailable";
@@ -187,7 +191,11 @@ export default function DriverJobDetail() {
             .then(({ error }) => { if (error) console.error("Failed to report location:", error); });
         },
         () => { /* best-effort — skip this cycle if location isn't available */ },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        // maximumAge shorter than the report interval — otherwise the
+        // browser would keep handing back the same cached fix from before
+        // the interval dropped to 30s, and the "live" pin would stop
+        // actually moving between real GPS reads.
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 20000 }
       );
     };
     reportLocation();
