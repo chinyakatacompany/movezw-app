@@ -7,7 +7,10 @@ self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim(
 
 const VIBRATION_PATTERNS = {
   default: [200, 100, 200],
-  long: [500],
+  // A single 500ms buzz reads as barely different from the short pattern on
+  // most phones — a real double-buzz is what actually feels "long" and
+  // grabs attention for a job alert.
+  long: [600, 200, 600],
   double: [150, 80, 150, 80, 150],
   off: [],
 };

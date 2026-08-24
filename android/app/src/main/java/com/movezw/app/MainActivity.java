@@ -15,7 +15,13 @@ public class MainActivity extends BridgeActivity {
     // (only the user can, via system settings), unlike the web push path
     // where the vibration pattern is chosen per-message from the user's
     // notification_vibration profile setting.
-    public static final String JOB_ALERTS_CHANNEL_ID = "job_alerts";
+    //
+    // _v2: a channel's settings are immutable once created on a device, so
+    // bumping the vibration pattern here would silently do nothing for
+    // anyone who already has the app installed — the OS just keeps using
+    // whatever channel already exists under that id. A new id forces a
+    // fresh channel with the new pattern instead of a no-op update.
+    public static final String JOB_ALERTS_CHANNEL_ID = "job_alerts_v2";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -32,7 +38,9 @@ public class MainActivity extends BridgeActivity {
         );
         channel.setDescription("New transport job requests and offers");
         channel.enableVibration(true);
-        channel.setVibrationPattern(new long[]{0, 500});
+        // A single 500ms buzz read as barely different from a normal
+        // notification — a real double-buzz is what actually feels "long".
+        channel.setVibrationPattern(new long[]{0, 600, 200, 600});
         channel.enableLights(true);
         channel.setLightColor(Color.parseColor("#ea580c"));
         NotificationManager manager = getSystemService(NotificationManager.class);
