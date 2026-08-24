@@ -6,7 +6,7 @@ import PageHeader from "@/components/shared/PageHeader";
 import DataTable from "@/components/shared/DataTable";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
 import { EmptyState, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDate, createNotification } from "@/lib/movezw";
-import { notifyMatchingCustomersForReturnLoad } from "@/lib/matching";
+import { createReturnLoad } from "@/lib/matching";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,7 +88,7 @@ export default function DriverReturnLoads() {
     if (!form.origin || !form.destination || !form.departure_date || !form.available_capacity_kg || !form.price) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("return_loads").insert({
+      await createReturnLoad({
         driver_id: user.id,
         driver_profile_id: profile?.id || undefined,
         driver_name: profile?.full_name || user.full_name || "Driver",
@@ -103,22 +103,6 @@ export default function DriverReturnLoads() {
         cargo_notes: form.cargo_notes || undefined,
         status: "open",
       });
-      if (error) throw error;
-      try {
-        await notifyMatchingCustomersForReturnLoad({ origin: form.origin, destination: form.destination, price: Number(form.price) });
-      } catch (e) {
-        console.error("Failed to notify matching customers:", e);
-      }
-      // The in-app notification above only surfaces via the realtime chime
-      // while a customer already has the app open — this reaches everyone
-      // else too, including a fully closed native app (FCM).
-      try {
-        await supabase.functions.invoke("notify-return-load-push", {
-          body: { origin: form.origin, destination: form.destination, price: Number(form.price) },
-        });
-      } catch (e) {
-        console.error("Failed to send return-load push alerts:", e);
-      }
       setShowCreate(false);
       setForm({ origin: "", destination: "", departure_date: "", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
       await loadAll();

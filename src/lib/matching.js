@@ -192,6 +192,28 @@ export async function notifyMatchingCustomersForReturnLoad(load) {
   return { matched: matchedByCustomer.size, total: (allCustomers || []).length };
 }
 
+// Inserts a return_loads row and fires both notification paths (in-app +
+// push) — shared by DriverReturnLoads.jsx's "New listing" form and
+// ReturnLoadPrompt.jsx (the post-delivery nudge), so both ways of creating
+// a listing behave identically instead of drifting apart.
+export async function createReturnLoad(fields) {
+  const { data, error } = await supabase.from("return_loads").insert(fields).select().single();
+  if (error) throw error;
+  try {
+    await notifyMatchingCustomersForReturnLoad({ origin: fields.origin, destination: fields.destination, price: fields.price });
+  } catch (e) {
+    console.error("Failed to notify matching customers:", e);
+  }
+  try {
+    await supabase.functions.invoke("notify-return-load-push", {
+      body: { origin: fields.origin, destination: fields.destination, price: fields.price },
+    });
+  } catch (e) {
+    console.error("Failed to send return-load push alerts:", e);
+  }
+  return data;
+}
+
 // When a customer posts a new request, notify drivers who already listed
 // empty return-trip space heading the same way.
 export async function notifyMatchingReturnLoadDriversForRequest(request) {

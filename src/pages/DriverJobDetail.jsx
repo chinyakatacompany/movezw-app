@@ -14,6 +14,7 @@ import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/p
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason, geocodeAddress } from "@/lib/geo";
+import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -52,6 +53,7 @@ export default function DriverJobDetail() {
   const [roadDistanceRetryTick, setRoadDistanceRetryTick] = useState(0);
   const [resolved, setResolved] = useState({ pickup: null, destination: null });
   const [showRouteMap, setShowRouteMap] = useState(false);
+  const [showReturnPrompt, setShowReturnPrompt] = useState(false);
 
   // pickup_lat/lng and destination_lat/lng are only ever set when the
   // customer picked a suggestion (or used pin-drop / "use my location") in
@@ -377,6 +379,10 @@ export default function DriverJobDetail() {
       }
       await notifyJobStatusChange(request, newStatus, user.id);
       toast({ title: `Marked as ${STATUS_LABELS[newStatus].toLowerCase()}` });
+      // Right when they've just arrived is when a driver actually knows
+      // their return route — catch that intent here instead of relying on
+      // them to remember to go post one later from the Return Loads tab.
+      if (newStatus === "delivered") setShowReturnPrompt(true);
       load();
     } catch (e) {
       toast({ title: "Update failed", description: e.message, variant: "destructive" });
@@ -803,6 +809,15 @@ export default function DriverJobDetail() {
         <div className="bg-card rounded-2xl border border-border">
           <EmptyState icon={Package} title="This job is no longer available" subtitle="The customer has selected a driver." />
         </div>
+      )}
+
+      {showReturnPrompt && (
+        <ReturnLoadPrompt
+          job={request}
+          profile={profile}
+          driverId={user.id}
+          onClose={() => setShowReturnPrompt(false)}
+        />
       )}
     </div>
   );
