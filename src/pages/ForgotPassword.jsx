@@ -17,7 +17,10 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        // Hardcoded, not window.location.origin — see Register.jsx's
+        // emailRedirectTo for why (native app's WebView origin is
+        // https://localhost, not the real site).
+        redirectTo: "https://www.movezw.co.zw/reset-password",
       });
     } catch {
       // Always show success regardless

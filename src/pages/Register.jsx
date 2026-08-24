@@ -107,7 +107,11 @@ export default function Register() {
       // different tab/app.
       options: {
         data: { full_name: fullName, phone, role: "driver" },
-        emailRedirectTo: `${window.location.origin}/login`,
+        // Hardcoded, not window.location.origin — inside the native
+        // Android app that's https://localhost (Capacitor's WebView
+        // origin), not the real site, which would send a confirmation
+        // link nobody could open.
+        emailRedirectTo: "https://www.movezw.co.zw/login",
       },
     });
     setLoading(false);

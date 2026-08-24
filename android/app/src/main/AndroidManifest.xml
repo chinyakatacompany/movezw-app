@@ -18,6 +18,21 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- App Links: without this, a movezw.co.zw link tapped from
+                 Gmail (e.g. the signup confirmation email) always opens
+                 Chrome instead of this app, no matter what the email's
+                 redirect URL is — android:autoVerify requires Android to
+                 successfully fetch and check
+                 https://www.movezw.co.zw/.well-known/assetlinks.json
+                 against this app's signing certificate before it'll route
+                 links here instead of the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.movezw.co.zw" />
+            </intent-filter>
         </activity>
 
         <provider

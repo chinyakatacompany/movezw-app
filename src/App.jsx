@@ -51,6 +51,7 @@ import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
+import NativeAppBridge from '@/components/NativeAppBridge';
 import ThemeLoader from '@/components/ThemeLoader';
 import LoadingScreen from '@/components/LoadingScreen';
 
@@ -207,6 +208,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
           <ScrollToTop />
+          <NativeAppBridge />
           <AuthenticatedApp />
         </Router>
         <Toaster />
