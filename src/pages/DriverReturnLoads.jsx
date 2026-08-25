@@ -213,15 +213,34 @@ export default function DriverReturnLoads() {
 
   const bookingColumns = [
     {
-      key: "route", header: "Load",
+      key: "route", header: "Pickup",
+      // pickup_location/destination/pickup_time only exist on bookings made
+      // after this was added — fall back to the listing's own route/date
+      // for anything older.
       render: (b) => {
         const l = loads.find((x) => x.id === b.return_load_id);
-        return <div className="min-w-0"><p className="text-sm font-medium truncate">{l ? `${l.origin} → ${l.destination}` : "—"}</p><p className="text-xs text-muted-foreground">{b.customer_name}</p></div>;
+        const pickup = b.pickup_location || l?.origin || "—";
+        const dropoff = b.destination || l?.destination || "—";
+        return (
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{pickup} → {dropoff}</p>
+            <p className="text-xs text-muted-foreground">{b.customer_name}{b.pickup_time ? ` · ${formatDateTime(b.pickup_time)}` : ""}</p>
+          </div>
+        );
       },
     },
-    { key: "requested_capacity_kg", header: "Requested", sortable: true, render: (b) => `${b.requested_capacity_kg} kg` },
+    { key: "requested_capacity_kg", header: "Weight", sortable: true, render: (b) => `${b.requested_capacity_kg} kg` },
     { key: "offered_price", header: "Offer", sortable: true, render: (b) => <span className="font-semibold text-primary">{formatMoney(b.offered_price)}</span> },
-    { key: "cargo_description", header: "Cargo", render: (b) => b.cargo_description || "—" },
+    {
+      key: "cargo_description", header: "Load",
+      render: (b) => (
+        <div className="min-w-0">
+          {b.cargo_type && <p className="text-xs font-medium">{b.cargo_type}</p>}
+          {b.cargo_description && <p className="text-xs text-muted-foreground truncate">{b.cargo_description}</p>}
+          {!b.cargo_type && !b.cargo_description && "—"}
+        </div>
+      ),
+    },
     {
       key: "actions", header: "",
       render: (b) => b.status === "pending" ? (

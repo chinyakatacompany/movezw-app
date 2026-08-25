@@ -2,10 +2,10 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Loader2, Package } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Loader2, Package, Check } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
-import { EmptyState, StarRating, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
+import { EmptyState, StarRating, VEHICLE_TYPES, VEHICLE_ICONS, CARGO_TYPES, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,26 @@ function Modal({ open, onClose, title, children }) {
   );
 }
 
+function emptyBookingForm() {
+  return {
+    pickup_location: "", destination: "", pickup_date: "", pickup_time: "",
+    cargo_type: CARGO_TYPES[0], requested_capacity_kg: "", offered_price: "",
+    cargo_description: "", message: "",
+  };
+}
+
+// Splits a timestamp into separate <input type="date">/<input type="time">
+// values in local time, so the booking form can default the customer's
+// requested pickup to the driver's own departure — usually exactly when
+// cargo needs to be ready — while staying editable if their actual pickup
+// point or timing differs.
+function splitDateTime(iso) {
+  if (!iso) return { date: "", time: "" };
+  const d = new Date(iso);
+  const local = new Date(d - d.getTimezoneOffset() * 60000).toISOString();
+  return { date: local.slice(0, 10), time: local.slice(11, 16) };
+}
+
 export default function ReturnMarketplace() {
   const { user } = useAuth();
   const [loads, setLoads] = useState([]);
@@ -37,8 +57,9 @@ export default function ReturnMarketplace() {
   const [filters, setFilters] = useState({ origin: "", destination: "", date: "", vehicleType: "", minCapacity: "", maxPrice: "" });
   const [sort, setSort] = useState("departure_date");
   const [showFilters, setShowFilters] = useState(false);
+  const [confirming, setConfirming] = useState(null);
   const [booking, setBooking] = useState(null);
-  const [bForm, setBForm] = useState({ requested_capacity_kg: "", offered_price: "", cargo_description: "", message: "" });
+  const [bForm, setBForm] = useState(emptyBookingForm());
   const [submitting, setSubmitting] = useState(false);
 
   // Only trust the hint if it's tagged for this exact account — see
@@ -92,14 +113,23 @@ export default function ReturnMarketplace() {
     return arr;
   }, [loads, filters, sort]);
 
-  const openBooking = (load) => {
+  // "Book space" asks first, rather than dropping the customer straight into
+  // a multi-field form — only on "Yes" do we ask for the actual pickup
+  // details, pre-filled from the driver's own route/departure/price so it's
+  // still just a few edits, not a blank form.
+  const openBooking = (load) => setConfirming(load);
+
+  const confirmInterested = () => {
+    const load = confirming;
+    setConfirming(null);
+    const { date, time } = splitDateTime(load.departure_date);
     setBooking(load);
-    setBForm({ requested_capacity_kg: "", offered_price: String(load.price || ""), cargo_description: "", message: "" });
+    setBForm({ ...emptyBookingForm(), pickup_location: load.origin, destination: load.destination, pickup_date: date, pickup_time: time, offered_price: String(load.price || "") });
   };
 
   const submitBooking = async (e) => {
     e.preventDefault();
-    if (!bForm.requested_capacity_kg || !bForm.offered_price) return;
+    if (!bForm.pickup_location || !bForm.destination || !bForm.pickup_date || !bForm.pickup_time || !bForm.cargo_type || !bForm.requested_capacity_kg || !bForm.offered_price) return;
     if (Number(bForm.requested_capacity_kg) > booking.available_capacity_kg) {
       toast({ title: "Requested capacity exceeds available space", variant: "destructive" });
       return;
@@ -111,6 +141,10 @@ export default function ReturnMarketplace() {
         driver_id: booking.driver_id,
         customer_id: user.id,
         customer_name: user.full_name || user.email,
+        pickup_location: bForm.pickup_location,
+        destination: bForm.destination,
+        pickup_time: new Date(`${bForm.pickup_date}T${bForm.pickup_time}`).toISOString(),
+        cargo_type: bForm.cargo_type,
         requested_capacity_kg: Number(bForm.requested_capacity_kg),
         offered_price: Number(bForm.offered_price),
         cargo_description: bForm.cargo_description || undefined,
@@ -287,16 +321,78 @@ export default function ReturnMarketplace() {
         </div>
       )}
 
-      {/* Booking modal */}
+      {/* Step 1: quick yes/no before asking for pickup details */}
+      <Modal open={!!confirming} onClose={() => setConfirming(null)} title="Book this return trip?">
+        {confirming && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-accent flex-shrink-0" />
+              <span className="font-medium">{confirming.origin}</span>
+              <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="font-medium">{confirming.destination}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {confirming.driver_name} is heading out {formatDateTime(confirming.departure_date)} with {confirming.available_capacity_kg} kg of space, for {formatMoney(confirming.price)}.
+              If you're interested we'll ask for your pickup details next.
+            </p>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirming(null)}>
+                <X className="w-4 h-4 mr-1.5" /> No
+              </Button>
+              <Button type="button" className="flex-1" onClick={confirmInterested}>
+                <Check className="w-4 h-4 mr-1.5" /> Yes, I'm interested
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Step 2: pickup details, only reached after "Yes" above */}
       <Modal open={!!booking} onClose={() => setBooking(null)} title="Request to book space">
         {booking && (
           <form onSubmit={submitBooking} className="space-y-3">
             <div className="text-sm text-muted-foreground -mt-1 mb-1">
-              {booking.origin} → {booking.destination} · {formatDateTime(booking.departure_date)}
+              Driver's route: {booking.origin} → {booking.destination} · {formatDateTime(booking.departure_date)}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Capacity needed (kg)</Label>
+                <Label>Pickup point</Label>
+                <Input required value={bForm.pickup_location} onChange={(e) => setBForm((f) => ({ ...f, pickup_location: e.target.value }))} placeholder={booking.origin} />
+              </div>
+              <div className="space-y-2">
+                <Label>Destination</Label>
+                <Input required value={bForm.destination} onChange={(e) => setBForm((f) => ({ ...f, destination: e.target.value }))} placeholder={booking.destination} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Pickup date</Label>
+                <Input type="date" required value={bForm.pickup_date} onChange={(e) => setBForm((f) => ({ ...f, pickup_date: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Pickup time</Label>
+                <Input type="time" required value={bForm.pickup_time} onChange={(e) => setBForm((f) => ({ ...f, pickup_time: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Load type</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {CARGO_TYPES.map((t) => (
+                  <button
+                    key={t} type="button" onClick={() => setBForm((f) => ({ ...f, cargo_type: t }))}
+                    className={cn(
+                      "rounded-xl border-2 px-2 py-2 text-xs font-medium text-center transition-all",
+                      bForm.cargo_type === t ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Weight / space needed (kg)</Label>
                 <Input type="number" required value={bForm.requested_capacity_kg} onChange={(e) => setBForm((f) => ({ ...f, requested_capacity_kg: e.target.value }))} placeholder={`${booking.available_capacity_kg} max`} />
               </div>
               <div className="space-y-2">
@@ -305,7 +401,7 @@ export default function ReturnMarketplace() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Cargo description</Label>
+              <Label>Cargo description (optional)</Label>
               <Input value={bForm.cargo_description} onChange={(e) => setBForm((f) => ({ ...f, cargo_description: e.target.value }))} placeholder="e.g. 5 boxes of groceries" />
             </div>
             <div className="space-y-2">
