@@ -16,23 +16,24 @@ function todayLocalDate() {
 // Shown right after a driver marks a job "Delivered" — that's the exact
 // moment they know their return route, instead of relying on them to
 // remember to go post one later from the Return Loads tab. origin defaults
-// to the job's destination (where they physically are right now); everything
-// else pre-fills from their driver profile so this is a couple of taps, not
-// a full form.
+// to the job's destination (where they physically are right now) but stays
+// editable, since the actual return leg doesn't always start exactly there;
+// everything else pre-fills from their driver profile so this is still just
+// a few taps, not a full form.
 export default function ReturnLoadPrompt({ job, profile, driverId, onClose }) {
+  const [origin, setOrigin] = useState(job.destination || "");
   const [destination, setDestination] = useState("");
   const [availableCapacityKg, setAvailableCapacityKg] = useState("");
   const [price, setPrice] = useState("");
   const [departureDate, setDepartureDate] = useState(todayLocalDate());
+  const [departureTime, setDepartureTime] = useState("08:00");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const origin = job.destination;
-
   const handlePost = async (e) => {
     e.preventDefault();
-    if (!destination || !availableCapacityKg || !price || !departureDate) {
-      setError("Please fill in where you're heading, your available space, and a price.");
+    if (!origin || !destination || !availableCapacityKg || !price || !departureDate || !departureTime) {
+      setError("Please fill in where you're coming from, where you're heading, your available space, and a price.");
       return;
     }
     setSubmitting(true);
@@ -47,7 +48,7 @@ export default function ReturnLoadPrompt({ job, profile, driverId, onClose }) {
         vehicle_type: profile?.vehicle_type || VEHICLE_TYPES[0],
         origin,
         destination,
-        departure_date: new Date(departureDate).toISOString(),
+        departure_date: new Date(`${departureDate}T${departureTime}`).toISOString(),
         available_capacity_kg: Number(availableCapacityKg),
         price: Number(price),
         status: "open",
@@ -77,9 +78,15 @@ export default function ReturnLoadPrompt({ job, profile, driverId, onClose }) {
         <p className="text-sm text-muted-foreground mb-4">List your return trip and earn extra on the way back — takes 20 seconds.</p>
 
         <form onSubmit={handlePost} className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="rl-destination">Where are you heading?</Label>
-            <Input id="rl-destination" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={origin} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="rl-origin">Coming from</Label>
+              <Input id="rl-origin" required value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder={job.destination} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rl-destination">Heading to</Label>
+              <Input id="rl-destination" required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="e.g. Harare" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -87,13 +94,19 @@ export default function ReturnLoadPrompt({ job, profile, driverId, onClose }) {
               <Input id="rl-date" type="date" required value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="rl-time">Departure time</Label>
+              <Input id="rl-time" type="time" required value={departureTime} onChange={(e) => setDepartureTime(e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
               <Label htmlFor="rl-capacity">Space (kg)</Label>
               <Input id="rl-capacity" type="number" min="0" required value={availableCapacityKg} onChange={(e) => setAvailableCapacityKg(e.target.value)} placeholder="500" />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="rl-price">Price (USD)</Label>
-            <Input id="rl-price" type="number" min="0" required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15" />
+            <div className="space-y-2">
+              <Label htmlFor="rl-price">Price (USD)</Label>
+              <Input id="rl-price" type="number" min="0" required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="15" />
+            </div>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -5,7 +5,7 @@ import { Plus, Calendar, Truck, X, Loader2, Package, Check, Repeat, ArrowRight }
 import PageHeader from "@/components/shared/PageHeader";
 import DataTable from "@/components/shared/DataTable";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
-import { EmptyState, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDate, createNotification } from "@/lib/movezw";
+import { EmptyState, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
 import { createReturnLoad } from "@/lib/matching";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,7 @@ export default function DriverReturnLoads() {
   const [error, setError] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ origin: "", destination: "", departure_date: "", vehicle_type: "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
+  const [form, setForm] = useState({ origin: "", destination: "", departure_date: "", departure_time: "08:00", vehicle_type: "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
 
   const loadAll = async () => {
     const [{ data: myLoads }, { data: myBookings }] = await Promise.all([
@@ -85,7 +85,7 @@ export default function DriverReturnLoads() {
 
   const createLoad = async (e) => {
     e.preventDefault();
-    if (!form.origin || !form.destination || !form.departure_date || !form.available_capacity_kg || !form.price) return;
+    if (!form.origin || !form.destination || !form.departure_date || !form.departure_time || !form.available_capacity_kg || !form.price) return;
     setSaving(true);
     try {
       await createReturnLoad({
@@ -97,14 +97,14 @@ export default function DriverReturnLoads() {
         vehicle_type: form.vehicle_type,
         origin: form.origin,
         destination: form.destination,
-        departure_date: new Date(form.departure_date).toISOString(),
+        departure_date: new Date(`${form.departure_date}T${form.departure_time || "00:00"}`).toISOString(),
         available_capacity_kg: Number(form.available_capacity_kg),
         price: Number(form.price),
         cargo_notes: form.cargo_notes || undefined,
         status: "open",
       });
       setShowCreate(false);
-      setForm({ origin: "", destination: "", departure_date: "", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
+      setForm({ origin: "", destination: "", departure_date: "", departure_time: "08:00", vehicle_type: profile?.vehicle_type || "Pickup", available_capacity_kg: "", price: "", cargo_notes: "" });
       await loadAll();
       toast({ title: "Return load listed", description: "Customers can now book your space." });
     } catch (err) {
@@ -195,7 +195,7 @@ export default function DriverReturnLoads() {
       render: (l) => (
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-sm font-medium"><span className="truncate">{l.origin}</span><ArrowRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" /><span className="truncate">{l.destination}</span></div>
-          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Calendar className="w-3 h-3" />{formatDate(l.departure_date)}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Calendar className="w-3 h-3" />{formatDateTime(l.departure_date)}</div>
         </div>
       ),
     },
@@ -275,11 +275,12 @@ export default function DriverReturnLoads() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2"><Label>Departure date</Label><Input type="date" required value={form.departure_date} onChange={(e) => setForm((f) => ({ ...f, departure_date: e.target.value }))} /></div>
-            <div className="space-y-2"><Label>Vehicle type</Label>
-              <select value={form.vehicle_type} onChange={(e) => setForm((f) => ({ ...f, vehicle_type: e.target.value }))} className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm">
-                {VEHICLE_TYPES.map((t) => <option key={t}>{t}</option>)}
-              </select>
-            </div>
+            <div className="space-y-2"><Label>Departure time</Label><Input type="time" required value={form.departure_time} onChange={(e) => setForm((f) => ({ ...f, departure_time: e.target.value }))} /></div>
+          </div>
+          <div className="space-y-2"><Label>Vehicle type</Label>
+            <select value={form.vehicle_type} onChange={(e) => setForm((f) => ({ ...f, vehicle_type: e.target.value }))} className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm">
+              {VEHICLE_TYPES.map((t) => <option key={t}>{t}</option>)}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2"><Label>Available space (kg)</Label><Input type="number" required value={form.available_capacity_kg} onChange={(e) => setForm((f) => ({ ...f, available_capacity_kg: e.target.value }))} placeholder="1500" /></div>

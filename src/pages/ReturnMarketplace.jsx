@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Loader2, Package } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
-import { EmptyState, StarRating, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDate, createNotification } from "@/lib/movezw";
+import { EmptyState, StarRating, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -269,7 +269,7 @@ export default function ReturnMarketplace() {
                 </div>
 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDate(load.departure_date)}</span>
+                  <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {formatDateTime(load.departure_date)}</span>
                   <span className="inline-flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> {load.available_capacity_kg} kg available</span>
                   {load.cargo_notes && <span className="truncate">· {load.cargo_notes}</span>}
                 </div>
@@ -292,7 +292,7 @@ export default function ReturnMarketplace() {
         {booking && (
           <form onSubmit={submitBooking} className="space-y-3">
             <div className="text-sm text-muted-foreground -mt-1 mb-1">
-              {booking.origin} → {booking.destination} · {formatDate(booking.departure_date)}
+              {booking.origin} → {booking.destination} · {formatDateTime(booking.departure_date)}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

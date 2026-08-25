@@ -158,6 +158,17 @@ export function formatDate(dateStr) {
   });
 }
 
+export function formatDateTime(dateStr) {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export const COMMISSION_RATE = 0.1; // 10% platform commission
 
 // `available` reflects what's actually wired up today, not the eventual
