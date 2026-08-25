@@ -48,6 +48,7 @@ import Chat from '@/pages/Chat';
 import Wallet from '@/pages/Wallet';
 import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
+import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
@@ -155,6 +156,7 @@ const AuthenticatedApp = () => {
           <Route path="/messages" element={<Messages />} />
           <Route path="/wallet" element={<Wallet />} />
           <Route path="/return-loads" element={<ReturnMarketplace />} />
+          <Route path="/return-loads/:id/book" element={<BookReturnLoad />} />
           <Route path="/return-loads/manage" element={<DriverReturnLoads />} />
         </Route>
       </Route>

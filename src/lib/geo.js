@@ -9,6 +9,24 @@ export function geolocationUnavailableReason() {
   return null;
 }
 
+// Build the most locally-specific label the free OSM data actually has —
+// road + suburb + city — instead of Nominatim's default display_name, which
+// tails off into province/country and can bury (or in sparser areas, lose)
+// the specific area. Note: OSM only indexes suburb-level areas in Zimbabwe
+// (e.g. "Budiriro"), not numbered sections within them (e.g. "Budiriro 5
+// West") — that finer detail isn't in the free dataset, so this is the most
+// precise text this data source can produce.
+export function formatReverseAddress(data) {
+  const a = data?.address;
+  if (!a) return data?.display_name || null;
+  const parts = [];
+  if (a.road) parts.push(a.road);
+  const area = a.suburb || a.neighbourhood || a.quarter || a.village || a.town;
+  if (area) parts.push(area);
+  if (a.city || a.county) parts.push(a.city || a.county);
+  return parts.length > 0 ? parts.join(", ") : data.display_name || null;
+}
+
 // One-off forward geocode for a raw address string that was saved without
 // exact coordinates — e.g. a customer typed a pickup/destination without
 // picking a suggestion from AddressSearchInput.jsx, which is the only place

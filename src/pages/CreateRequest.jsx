@@ -13,7 +13,7 @@ import { CARGO_TYPES } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm, distanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
-import { geolocationUnavailableReason } from "@/lib/geo";
+import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -29,24 +29,6 @@ const MIN_RATE_PER_KM = 0.9;
 // large number would flood the open-jobs feed for every nearby driver with
 // near-duplicate postings.
 const MAX_LOADS = 10;
-
-// Build the most locally-specific label the free OSM data actually has —
-// road + suburb + city — instead of Nominatim's default display_name, which
-// tails off into province/country and can bury (or in sparser areas, lose)
-// the specific area. Note: OSM only indexes suburb-level areas in Zimbabwe
-// (e.g. "Budiriro"), not numbered sections within them (e.g. "Budiriro 5
-// West") — that finer detail isn't in the free dataset, so this is the most
-// precise text this data source can produce.
-function formatReverseAddress(data) {
-  const a = data?.address;
-  if (!a) return data?.display_name || null;
-  const parts = [];
-  if (a.road) parts.push(a.road);
-  const area = a.suburb || a.neighbourhood || a.quarter || a.village || a.town;
-  if (area) parts.push(area);
-  if (a.city || a.county) parts.push(a.city || a.county);
-  return parts.length > 0 ? parts.join(", ") : data.display_name || null;
-}
 
 export default function CreateRequest() {
   const navigate = useNavigate();
