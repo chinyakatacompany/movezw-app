@@ -10,7 +10,7 @@ import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Pa
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm, distanceKm } from "@/lib/matching";
+import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
@@ -22,17 +22,22 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // near-duplicate postings.
 const MAX_LOADS = 10;
 
+// Motorcycles can't take on van/truck-scale cargo, so they're left out of
+// this vehicle-needed picker entirely (a driver on a motorcycle can still
+// see and quote on any open job either way — vehicle_type here only feeds
+// the price recommendation below, it never filters who a request reaches).
+const REQUEST_VEHICLE_TYPES = VEHICLE_TYPES.filter((t) => t !== "Motorcycle");
+
 // Recommended $/km by vehicle size, shown to the customer as a starting
 // point for their budget — bigger trucks cost more to run, so a flat rate
 // across all vehicle types either overpays for a van or underpays for an
 // articulated truck.
 const RATE_PER_KM = {
-  Motorcycle: 1.5,
-  Pickup: 1.5,
-  "Cargo Van": 1.5,
-  "1 Ton Truck": 1.5,
-  "3 Ton Truck": 1.5,
-  "5 Ton Truck": 1.5,
+  Pickup: 1.2,
+  "Cargo Van": 1.2,
+  "1 Ton Truck": 1.25,
+  "3 Ton Truck": 1.25,
+  "5 Ton Truck": 1.25,
   "10 Ton Truck": 2,
   "Articulated Truck": 3,
 };
@@ -59,27 +64,41 @@ export default function CreateRequest() {
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [locating, setLocating] = useState(false);
   const [tripKm, setTripKm] = useState(null);
+  const [distanceLoading, setDistanceLoading] = useState(false);
+  const [distanceFailed, setDistanceFailed] = useState(false);
+  const [distanceRetryToken, setDistanceRetryToken] = useState(0);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   // Recomputes the moment both ends are pinned to real coordinates — a
   // typed address with no selected suggestion has nothing to measure, so
-  // the recommendation just doesn't show rather than guessing.
+  // the recommendation just doesn't show rather than guessing. Only ever
+  // uses the real road distance (fetchRoadDistanceKm already retries a
+  // couple of times internally) — a straight-line distance under-counts
+  // actual driving distance, often significantly on Zimbabwe's road
+  // network, so a recommendation built on it would be wrong in a way
+  // that's hard for a customer to notice. On failure this shows a
+  // retry affordance rather than silently falling back to a worse number.
   useEffect(() => {
     if (!pickupCoords || !destinationCoords) {
       setTripKm(null);
+      setDistanceFailed(false);
       return;
     }
     let active = true;
+    setDistanceLoading(true);
+    setDistanceFailed(false);
     (async () => {
       const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords);
-      const km = roadKm ?? distanceKm(pickupCoords.lat, pickupCoords.lng, destinationCoords.lat, destinationCoords.lng);
-      if (active) setTripKm(km ?? null);
+      if (!active) return;
+      setDistanceLoading(false);
+      if (roadKm != null) setTripKm(roadKm);
+      else setDistanceFailed(true);
     })();
     return () => { active = false; };
-  }, [pickupCoords, destinationCoords]);
+  }, [pickupCoords, destinationCoords, distanceRetryToken]);
 
-  const recommendedRate = RATE_PER_KM[form.vehicle_type] ?? 1.5;
+  const recommendedRate = RATE_PER_KM[form.vehicle_type] ?? 1.2;
   const recommendedPrice = tripKm != null ? Math.round(recommendedRate * tripKm) : null;
 
   const useMyLocation = () => {
@@ -276,7 +295,7 @@ export default function CreateRequest() {
                 onChange={(e) => set("vehicle_type", e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
               >
-                {VEHICLE_TYPES.map((t) => (
+                {REQUEST_VEHICLE_TYPES.map((t) => (
                   <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
                 ))}
               </select>
@@ -350,10 +369,23 @@ export default function CreateRequest() {
               <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/5 border border-primary/20 px-3.5 py-2.5">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-primary">Recommended: {formatMoney(recommendedPrice)}</p>
-                  <p className="text-[11px] text-muted-foreground">~{tripKm.toFixed(1)} km × ${recommendedRate.toFixed(2)}/km for a {form.vehicle_type}</p>
+                  <p className="text-[11px] text-muted-foreground">{tripKm.toFixed(1)} km road distance × ${recommendedRate.toFixed(2)}/km for a {form.vehicle_type}</p>
                 </div>
                 <button type="button" onClick={() => set("budget", String(recommendedPrice))} className="text-xs font-semibold text-primary underline shrink-0">
                   Use this
+                </button>
+              </div>
+            )}
+            {distanceLoading && (
+              <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground">
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> Calculating a recommended price for this route...
+              </div>
+            )}
+            {distanceFailed && (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 px-3.5 py-2.5">
+                <p className="text-xs text-muted-foreground">Couldn't calculate a route-based recommendation right now.</p>
+                <button type="button" onClick={() => setDistanceRetryToken((n) => n + 1)} className="text-xs font-semibold text-primary underline shrink-0">
+                  Retry
                 </button>
               </div>
             )}
