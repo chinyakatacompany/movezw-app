@@ -22,17 +22,14 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // near-duplicate postings.
 const MAX_LOADS = 10;
 
-// Motorcycles can't take on van/truck-scale cargo, so they're left out of
-// this vehicle-needed picker entirely (a driver on a motorcycle can still
-// see and quote on any open job either way — vehicle_type here only feeds
-// the price recommendation below, it never filters who a request reaches).
-const REQUEST_VEHICLE_TYPES = VEHICLE_TYPES.filter((t) => t !== "Motorcycle");
-
 // Recommended $/km by vehicle size, shown to the customer as a starting
 // point for their budget — bigger trucks cost more to run, so a flat rate
 // across all vehicle types either overpays for a van or underpays for an
-// articulated truck.
+// articulated truck. vehicle_type here only feeds this recommendation, it
+// never filters who a request reaches — any driver can see and quote on
+// any open job regardless of what's selected here.
 const RATE_PER_KM = {
+  "Small Delivery Vehicle": 1,
   Pickup: 1.2,
   "Cargo Van": 1.2,
   "1 Ton Truck": 1.25,
@@ -295,7 +292,7 @@ export default function CreateRequest() {
                 onChange={(e) => set("vehicle_type", e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
               >
-                {REQUEST_VEHICLE_TYPES.map((t) => (
+                {VEHICLE_TYPES.map((t) => (
                   <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
                 ))}
               </select>

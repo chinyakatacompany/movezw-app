@@ -110,7 +110,7 @@ export default function CustomerDashboard() {
             <Plus className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Request a Truck</p>
+            <p className="font-semibold text-sm">Request a Truck (van)</p>
             <p className="text-xs text-primary-foreground/80">Get quotes from nearby drivers</p>
           </div>
           <ChevronRight className="w-5 h-5 shrink-0" />
