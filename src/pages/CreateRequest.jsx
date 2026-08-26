@@ -36,8 +36,8 @@ const RATE_PER_KM = {
   Pickup: 1.2,
   "Cargo Van": 1.2,
   "1 Ton Truck": 1.25,
-  "3 Ton Truck": 1.25,
-  "5 Ton Truck": 1.25,
+  "3 Ton Truck": 1.5,
+  "5 Ton Truck": 1.5,
   "10 Ton Truck": 2,
   "Articulated Truck": 3,
 };
