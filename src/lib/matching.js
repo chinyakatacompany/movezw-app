@@ -125,14 +125,13 @@ export async function notifyMatchingDriversForRequest(request, limit = 10) {
     .limit(200);
   if (error) console.error("Failed to load drivers for matching:", error);
   const matched = findMatchingDrivers(request, drivers || []).slice(0, limit);
-  const budgetLabel = request.budget ? `$${request.budget}` : "flexible budget";
   await Promise.all(
     matched.map((d) =>
       createNotification(
         d.user_id,
         "job_assigned",
         "New job match nearby",
-        `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
+        `${request.cargo_type} · ${request.pickup_location} → ${request.destination} — be the first to quote`,
         `/driver/job/${request.id}`
       )
     )

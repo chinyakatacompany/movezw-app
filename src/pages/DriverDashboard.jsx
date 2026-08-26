@@ -4,7 +4,7 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
-import { EmptyState, formatMoney } from "@/lib/movezw";
+import { EmptyState } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
 import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
@@ -306,7 +306,6 @@ export default function DriverDashboard() {
                 showCustomer
                 distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
                 tripDistanceKm={distanceKm(r.pickup_lat, r.pickup_lng, r.destination_lat, r.destination_lng)}
-                rightSlot={<span className="text-sm font-bold text-primary">{formatMoney(r.budget)}</span>}
               />
             ))}
           </div>

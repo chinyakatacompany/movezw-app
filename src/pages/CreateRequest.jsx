@@ -6,24 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm, distanceKm } from "@/lib/matching";
+import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
-
-// Floor on what a customer can offer, so a driver's trip is never priced
-// below what fuel/time on the road is actually worth. Only enforceable when
-// both ends are pinned to real coordinates — an address typed without
-// picking a suggestion has no distance to check the budget against, so
-// submission isn't blocked in that case (best-effort, matches how distance
-// is treated elsewhere in this app rather than forcing exact pins).
-const MIN_RATE_PER_KM = 0.9;
 
 // Sensible ceiling on how many loads one submit can post — a fat-fingered
 // large number would flood the open-jobs feed for every nearby driver with
@@ -41,7 +33,6 @@ export default function CreateRequest() {
     cargo_description: "",
     timing: "now",
     scheduled_date: "",
-    budget: "",
   });
   const [loads, setLoads] = useState(1);
   const [showRouteMap, setShowRouteMap] = useState(false);
@@ -87,22 +78,6 @@ export default function CreateRequest() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (pickupCoords && destinationCoords) {
-        const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords);
-        const tripKm = roadKm ?? distanceKm(pickupCoords.lat, pickupCoords.lng, destinationCoords.lat, destinationCoords.lng);
-        if (tripKm) {
-          const minBudget = tripKm * MIN_RATE_PER_KM;
-          if ((Number(form.budget) || 0) < minBudget) {
-            toast({
-              title: "Budget too low for this distance",
-              description: `This trip is about ${tripKm.toFixed(1)} km — the minimum budget is $${minBudget.toFixed(2)} (${MIN_RATE_PER_KM.toFixed(2)}/km) so drivers can actually afford to take it.`,
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-        }
-      }
       const basePayload = {
         customer_id: user.id,
         customer_name: user.full_name || user.email,
@@ -118,9 +93,9 @@ export default function CreateRequest() {
         photos,
         timing: form.timing,
         scheduled_date: form.timing === "scheduled" ? new Date(form.scheduled_date).toISOString() : null,
-        // Budget entered is per load — each row in the batch posts at the
-        // same price, not the price divided or multiplied.
-        budget: Number(form.budget) || 0,
+        // No customer-set price — drivers propose the first price via their
+        // own offers, with nothing to anchor against.
+        budget: null,
         status: "open",
       };
 
@@ -267,7 +242,7 @@ export default function CreateRequest() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing & budget</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing</h2>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => set("timing", "now")}
               className={cn("rounded-xl border-2 p-3 text-left transition-all", form.timing === "now" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40")}>
@@ -312,19 +287,12 @@ export default function CreateRequest() {
               </button>
               <span className="text-xs text-muted-foreground">e.g. 2 truckloads of the same cargo</span>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="budget">{loads > 1 ? "Budget per load (USD)" : "Your suggested budget (USD)"}</Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="budget" type="number" min="0" step="1" placeholder="e.g. 50" value={form.budget} onChange={(e) => set("budget", e.target.value)} className="pl-10" required />
-            </div>
             {loads > 1 ? (
               <p className="text-xs text-accent font-medium">
-                This posts {loads} separate requests, each bid on individually by drivers. Total across all loads: ${((Number(form.budget) || 0) * loads).toFixed(2)} (${form.budget || 0} × {loads}).
+                This posts {loads} separate requests, each bid on individually by drivers.
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">Drivers will quote around your budget — you pick the best offer.</p>
+              <p className="text-xs text-muted-foreground">Nearby drivers will send you their best price — you pick the offer you like.</p>
             )}
           </div>
         </div>

@@ -248,7 +248,6 @@ export default function RequestDetail() {
         <h2 className="text-sm font-semibold">Cargo details</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div><p className="text-xs text-muted-foreground">Weight</p><p className="font-medium">{request.cargo_weight || "—"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Budget</p><p className="font-medium">{formatMoney(request.budget)}</p></div>
           <div><p className="text-xs text-muted-foreground">Timing</p><p className="font-medium capitalize">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p></div>
           <div><p className="text-xs text-muted-foreground">Agreed price</p><p className="font-medium">{formatMoney(request.accepted_price)}</p></div>
         </div>

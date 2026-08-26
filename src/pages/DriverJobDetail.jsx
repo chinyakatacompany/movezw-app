@@ -601,20 +601,13 @@ export default function DriverJobDetail() {
 
       {/* Cargo */}
       <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
               <Weight className="w-3.5 h-3.5 shrink-0" />
               <p className="text-[11px]">Weight</p>
             </div>
             <p className="text-sm font-bold truncate">{request.cargo_weight || "—"}</p>
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-              <DollarSign className="w-3.5 h-3.5 shrink-0" />
-              <p className="text-[11px]">Customer budget</p>
-            </div>
-            <p className="text-sm font-bold text-primary truncate">{formatMoney(request.budget)}</p>
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -656,7 +649,7 @@ export default function DriverJobDetail() {
             <Label htmlFor="price">Your price (USD)</Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="price" type="number" min="0" placeholder={request.budget || "0"} value={price} onChange={(e) => setPrice(e.target.value)} className="pl-10" />
+              <Input id="price" type="number" min="0" placeholder="e.g. 50" value={price} onChange={(e) => setPrice(e.target.value)} className="pl-10" />
             </div>
           </div>
           <div className="space-y-2">
