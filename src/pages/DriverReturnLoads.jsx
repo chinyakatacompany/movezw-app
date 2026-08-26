@@ -230,7 +230,7 @@ export default function DriverReturnLoads() {
       },
     },
     { key: "requested_capacity_kg", header: "Weight", sortable: true, render: (b) => `${b.requested_capacity_kg} kg` },
-    { key: "offered_price", header: "Offer", sortable: true, render: (b) => <span className="font-semibold text-primary">{formatMoney(b.offered_price)}</span> },
+    { key: "offered_price", header: "Price", sortable: true, render: (b) => <span className="font-semibold text-primary">{formatMoney(b.offered_price)}</span> },
     {
       key: "cargo_description", header: "Load",
       render: (b) => (

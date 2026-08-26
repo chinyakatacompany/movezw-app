@@ -51,7 +51,6 @@ export default function BookReturnLoad() {
     cargo_description: "",
     pickup_date: "",
     pickup_time: "",
-    offered_price: "",
     message: "",
   });
 
@@ -69,7 +68,7 @@ export default function BookReturnLoad() {
       }
       setLoad(data);
       const { date, time } = splitDateTime(data.departure_date);
-      setForm((f) => ({ ...f, pickup_location: data.origin, destination: data.destination, pickup_date: date, pickup_time: time, offered_price: String(data.price || "") }));
+      setForm((f) => ({ ...f, pickup_location: data.origin, destination: data.destination, pickup_date: date, pickup_time: time }));
       setLoading(false);
     })();
     return () => { active = false; };
@@ -127,7 +126,9 @@ export default function BookReturnLoad() {
         pickup_time: new Date(`${form.pickup_date}T${form.pickup_time}`).toISOString(),
         cargo_type: form.cargo_type,
         requested_capacity_kg: Number(form.requested_capacity_kg),
-        offered_price: Number(form.offered_price),
+        // Fixed to the driver's own listed price -- customers no longer
+        // counter-offer/bid on return-load space, they just accept it.
+        offered_price: load.price,
         cargo_description: form.cargo_description || undefined,
         message: form.message || undefined,
         status: "pending",
@@ -281,7 +282,7 @@ export default function BookReturnLoad() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing & offer</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing</h2>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="pdate">Pickup date</Label>
@@ -292,13 +293,12 @@ export default function BookReturnLoad() {
               <Input id="ptime" type="time" required value={form.pickup_time} onChange={(e) => set("pickup_time", e.target.value)} />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="offer">Your offer (USD)</Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input id="offer" type="number" min="0" step="1" value={form.offered_price} onChange={(e) => set("offered_price", e.target.value)} className="pl-10" required />
+          <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3.5 py-3">
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <span>Price for this space</span>
             </div>
-            <p className="text-xs text-muted-foreground">The driver listed this space at {formatMoney(load.price)} — you can offer the same or negotiate.</p>
+            <span className="text-base font-bold text-primary">{formatMoney(load.price)}</span>
           </div>
           <div className="space-y-2">
             <Label htmlFor="msg">Message to driver (optional)</Label>
