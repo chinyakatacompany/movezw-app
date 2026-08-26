@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
-import { CARGO_TYPES } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest } from "@/lib/matching";
+import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney } from "@/lib/movezw";
+import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm, distanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
@@ -22,6 +22,21 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // near-duplicate postings.
 const MAX_LOADS = 10;
 
+// Recommended $/km by vehicle size, shown to the customer as a starting
+// point for their budget — bigger trucks cost more to run, so a flat rate
+// across all vehicle types either overpays for a van or underpays for an
+// articulated truck.
+const RATE_PER_KM = {
+  Motorcycle: 1.5,
+  Pickup: 1.5,
+  "Cargo Van": 1.5,
+  "1 Ton Truck": 1.5,
+  "3 Ton Truck": 1.5,
+  "5 Ton Truck": 1.5,
+  "10 Ton Truck": 2,
+  "Articulated Truck": 3,
+};
+
 export default function CreateRequest() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,8 +46,10 @@ export default function CreateRequest() {
     cargo_type: "Furniture",
     cargo_weight: "",
     cargo_description: "",
+    vehicle_type: "Cargo Van",
     timing: "now",
     scheduled_date: "",
+    budget: "",
   });
   const [loads, setLoads] = useState(1);
   const [showRouteMap, setShowRouteMap] = useState(false);
@@ -41,8 +58,29 @@ export default function CreateRequest() {
   const [pickupCoords, setPickupCoords] = useState(null);
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [locating, setLocating] = useState(false);
+  const [tripKm, setTripKm] = useState(null);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Recomputes the moment both ends are pinned to real coordinates — a
+  // typed address with no selected suggestion has nothing to measure, so
+  // the recommendation just doesn't show rather than guessing.
+  useEffect(() => {
+    if (!pickupCoords || !destinationCoords) {
+      setTripKm(null);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords);
+      const km = roadKm ?? distanceKm(pickupCoords.lat, pickupCoords.lng, destinationCoords.lat, destinationCoords.lng);
+      if (active) setTripKm(km ?? null);
+    })();
+    return () => { active = false; };
+  }, [pickupCoords, destinationCoords]);
+
+  const recommendedRate = RATE_PER_KM[form.vehicle_type] ?? 1.5;
+  const recommendedPrice = tripKm != null ? Math.round(recommendedRate * tripKm) : null;
 
   const useMyLocation = () => {
     const reason = geolocationUnavailableReason();
@@ -93,9 +131,9 @@ export default function CreateRequest() {
         photos,
         timing: form.timing,
         scheduled_date: form.timing === "scheduled" ? new Date(form.scheduled_date).toISOString() : null,
-        // No customer-set price — drivers propose the first price via their
-        // own offers, with nothing to anchor against.
-        budget: null,
+        // Budget entered is per load — each row in the batch posts at the
+        // same price, not the price divided or multiplied.
+        budget: Number(form.budget) || 0,
         status: "open",
       };
 
@@ -230,6 +268,19 @@ export default function CreateRequest() {
               <Label htmlFor="weight">Weight (optional)</Label>
               <Input id="weight" placeholder="e.g. 500kg" value={form.cargo_weight} onChange={(e) => set("cargo_weight", e.target.value)} />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="vehicle">Vehicle type needed</Label>
+              <select
+                id="vehicle"
+                value={form.vehicle_type}
+                onChange={(e) => set("vehicle_type", e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
+              >
+                {VEHICLE_TYPES.map((t) => (
+                  <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="desc">Describe your cargo</Label>
@@ -242,7 +293,7 @@ export default function CreateRequest() {
         </div>
 
         <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Timing & budget</h2>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => set("timing", "now")}
               className={cn("rounded-xl border-2 p-3 text-left transition-all", form.timing === "now" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40")}>
@@ -287,12 +338,37 @@ export default function CreateRequest() {
               </button>
               <span className="text-xs text-muted-foreground">e.g. 2 truckloads of the same cargo</span>
             </div>
-            {loads > 1 ? (
+            {loads > 1 && (
               <p className="text-xs text-accent font-medium">
                 This posts {loads} separate requests, each bid on individually by drivers.
               </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="budget">{loads > 1 ? "Budget per load (USD)" : "Your suggested budget (USD)"}</Label>
+            {recommendedPrice != null && (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/5 border border-primary/20 px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-primary">Recommended: {formatMoney(recommendedPrice)}</p>
+                  <p className="text-[11px] text-muted-foreground">~{tripKm.toFixed(1)} km × ${recommendedRate.toFixed(2)}/km for a {form.vehicle_type}</p>
+                </div>
+                <button type="button" onClick={() => set("budget", String(recommendedPrice))} className="text-xs font-semibold text-primary underline shrink-0">
+                  Use this
+                </button>
+              </div>
+            )}
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="budget" type="number" min="0" step="1"
+                placeholder={recommendedPrice != null ? String(recommendedPrice) : "e.g. 50"}
+                value={form.budget} onChange={(e) => set("budget", e.target.value)} className="pl-10" required
+              />
+            </div>
+            {recommendedPrice != null && Number(form.budget) > 0 && Number(form.budget) < recommendedPrice ? (
+              <p className="text-xs text-amber-600 font-medium">Below our recommended price — drivers may be less likely to accept.</p>
             ) : (
-              <p className="text-xs text-muted-foreground">Nearby drivers will send you their best price — you pick the offer you like.</p>
+              <p className="text-xs text-muted-foreground">Drivers will quote around your budget — you pick the best offer.</p>
             )}
           </div>
         </div>
