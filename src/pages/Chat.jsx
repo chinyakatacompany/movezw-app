@@ -6,6 +6,7 @@ import { ArrowLeft, Send, Image as ImageIcon, Loader2, CheckCheck, Check } from 
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
+import ImageLightbox from "@/components/ImageLightbox";
 
 function formatTime(d) {
   if (!d) return "";
@@ -25,6 +26,7 @@ export default function Chat() {
   const [typing, setTyping] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
   const scrollRef = useRef(null);
   const typingTimer = useRef(null);
 
@@ -161,6 +163,10 @@ export default function Chat() {
   if (!conversation) return <div className="p-8 text-center text-muted-foreground">Conversation not found.</div>;
 
   const otherName = conversation.driver_id === user.id ? conversation.customer_name : conversation.driver_name;
+  // Every photo in the thread, in order — lets the lightbox opened from any
+  // one message flip through the whole conversation's photos, not just that
+  // single attachment.
+  const chatImages = messages.filter((m) => m.image_url).map((m) => m.image_url);
 
   return (
     <div className="flex flex-col h-screen">
@@ -200,9 +206,9 @@ export default function Chat() {
                 <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 ${mine ? "bg-primary text-primary-foreground rounded-br-md" : "bg-card border border-border rounded-bl-md"}`}>
                     {m.image_url && (
-                      <a href={m.image_url} target="_blank" rel="noreferrer" className="block mb-1">
+                      <button type="button" onClick={() => setLightboxIndex(chatImages.indexOf(m.image_url))} className="block mb-1">
                         <img src={m.image_url} alt="" className="rounded-lg max-h-56 w-full object-cover" />
-                      </a>
+                      </button>
                     )}
                     {m.text && <p className="text-sm whitespace-pre-wrap break-words">{m.text}</p>}
                     <div className={`flex items-center justify-end gap-1 mt-0.5 ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
@@ -246,6 +252,8 @@ export default function Chat() {
           </Button>
         </div>
       </form>
+
+      <ImageLightbox images={chatImages} index={lightboxIndex} onClose={() => setLightboxIndex(null)} onIndexChange={setLightboxIndex} />
     </div>
   );
 }

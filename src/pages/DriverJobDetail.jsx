@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason, geocodeAddress } from "@/lib/geo";
 import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
+import ImageLightbox from "@/components/ImageLightbox";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -50,6 +51,7 @@ export default function DriverJobDetail() {
   const [driverPos, setDriverPos] = useState(null);
   const [locatingRoute, setLocatingRoute] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [findingSpace, setFindingSpace] = useState(false);
   const [editingOffer, setEditingOffer] = useState(false);
   const [roadDistanceKm, setRoadDistanceKm] = useState(null);
@@ -632,9 +634,9 @@ export default function DriverJobDetail() {
         {request.photos?.length > 0 && (
           <div className="grid grid-cols-4 gap-2 pt-1">
             {request.photos.map((p, i) => (
-              <a key={i} href={p} target="_blank" rel="noreferrer" className="aspect-square rounded-lg overflow-hidden border border-border">
+              <button key={i} type="button" onClick={() => setLightboxIndex(i)} className="aspect-square rounded-lg overflow-hidden border border-border">
                 <img src={p} alt="" className="w-full h-full object-cover" />
-              </a>
+              </button>
             ))}
           </div>
         )}
@@ -851,6 +853,8 @@ export default function DriverJobDetail() {
           onClose={() => setShowReturnPrompt(false)}
         />
       )}
+
+      <ImageLightbox images={request.photos || []} index={lightboxIndex} onClose={() => setLightboxIndex(null)} onIndexChange={setLightboxIndex} />
     </div>
   );
 }
