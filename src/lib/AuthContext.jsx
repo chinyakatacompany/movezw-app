@@ -7,9 +7,11 @@ const AuthContext = createContext();
 
 // Notification types that need the customer/driver's attention on a
 // specific page right now — e.g. a quote just came in and needs an
-// accept/reject decision — so we jump them there automatically instead of
-// requiring a tap through the notification panel first.
-const AUTO_NAVIGATE_TYPES = new Set(['new_offer']);
+// accept/reject decision, or a driver's offer just won and they should
+// land straight on the job's status stepper — so we jump them there
+// automatically instead of requiring a tap through the notification panel
+// first.
+const AUTO_NAVIGATE_TYPES = new Set(['new_offer', 'offer_accepted']);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
