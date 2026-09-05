@@ -13,6 +13,7 @@ export default function Messages() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [unread, setUnread] = useState({});
+  const [requestCustomers, setRequestCustomers] = useState({});
 
   const load = async () => {
     if (!user?.id) return;
@@ -25,7 +26,19 @@ export default function Messages() {
       // dedupe
       const seen = new Map();
       merged.forEach((c) => seen.set(c.id, c));
-      setConversations([...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at)));
+      const sorted = [...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
+      setConversations(sorted);
+
+      const requestIds = [...new Set(sorted.map((c) => c.request_id).filter(Boolean))];
+      if (requestIds.length) {
+        const { data: requests } = await supabase
+          .from("transport_requests")
+          .select("id, accepted_driver_id, customer_name")
+          .in("id", requestIds);
+        setRequestCustomers(Object.fromEntries((requests || []).map((r) => [r.id, r])));
+      } else {
+        setRequestCustomers({});
+      }
     } catch (e) {
       console.error("Failed to load conversations:", e);
     }
@@ -40,6 +53,7 @@ export default function Messages() {
       .channel(`messages-list-${user.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, load)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "transport_requests" }, load)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
      
@@ -70,10 +84,16 @@ export default function Messages() {
     if (!query) return conversations;
     const q = query.toLowerCase();
     return conversations.filter((c) => {
-      const other = c.driver_id === user.id ? c.customer_name : c.driver_name;
+      const linkedRequest = requestCustomers[c.request_id];
+      const customerIsAnonymous = c.driver_id === user.id
+        && c.request_id
+        && linkedRequest?.accepted_driver_id !== user.id;
+      const other = c.driver_id === user.id
+        ? (customerIsAnonymous ? "Customer" : (linkedRequest?.customer_name || c.customer_name))
+        : c.driver_name;
       return (other || "").toLowerCase().includes(q) || (c.request_label || "").toLowerCase().includes(q);
     });
-  }, [conversations, query, user?.id]);
+  }, [conversations, query, user?.id, requestCustomers]);
 
   return (
     <div className="p-4 pb-8">
@@ -94,7 +114,13 @@ export default function Messages() {
       ) : (
         <div className="space-y-2">
           {filtered.map((c) => {
-            const otherName = c.driver_id === user.id ? c.customer_name : c.driver_name;
+            const linkedRequest = requestCustomers[c.request_id];
+            const customerIsAnonymous = c.driver_id === user.id
+              && c.request_id
+              && linkedRequest?.accepted_driver_id !== user.id;
+            const otherName = c.driver_id === user.id
+              ? (customerIsAnonymous ? "Customer" : (linkedRequest?.customer_name || c.customer_name))
+              : c.driver_name;
             const count = unread[c.id] || 0;
             return (
               <Link
