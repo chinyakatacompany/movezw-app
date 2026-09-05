@@ -56,6 +56,18 @@ export default function AppLayout() {
     return () => { active = false; supabase.removeChannel(channel); };
   }, [user?.id]);
 
+  // Keep the installed PWA's launcher badge in sync with the same unread
+  // count shown on the in-app bell. Supporting launchers render this as a
+  // red dot or number; unsupported browsers simply ignore it.
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    if (unread > 0 && "setAppBadge" in navigator) {
+      navigator.setAppBadge(unread).catch(() => {});
+    } else if (unread === 0 && "clearAppBadge" in navigator) {
+      navigator.clearAppBadge().catch(() => {});
+    }
+  }, [unread]);
+
   // Marks read any of this user's unread notifications whose link points to
   // wherever they've just navigated — this is what "viewing" a notification
   // means in practice: tapping a push notification, clicking a toast's
