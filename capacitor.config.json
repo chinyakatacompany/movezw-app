@@ -2,5 +2,10 @@
   "appId": "com.movezw.app",
   "appName": "MoveZW",
   "webDir": "dist",
-  "backgroundColor": "#1e2f5e"
+  "backgroundColor": "#1e2f5e",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["alert", "sound"]
+    }
+  }
 }

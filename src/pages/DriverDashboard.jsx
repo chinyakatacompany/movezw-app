@@ -303,7 +303,6 @@ export default function DriverDashboard() {
                 key={r.id}
                 request={r}
                 to={`/driver/job/${r.id}`}
-                showCustomer
                 distanceKm={driverPos ? distanceKm(driverPos.lat, driverPos.lng, r.pickup_lat, r.pickup_lng) : null}
                 tripDistanceKm={distanceKm(r.pickup_lat, r.pickup_lng, r.destination_lat, r.destination_lng)}
                 rightSlot={<span className="text-sm font-bold text-primary">{formatMoney(r.budget)}</span>}

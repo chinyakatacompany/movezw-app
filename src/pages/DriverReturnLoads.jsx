@@ -224,7 +224,7 @@ export default function DriverReturnLoads() {
         return (
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">{pickup} → {dropoff}</p>
-            <p className="text-xs text-muted-foreground">{b.customer_name}{b.pickup_time ? ` · ${formatDateTime(b.pickup_time)}` : ""}</p>
+            <p className="text-xs text-muted-foreground">{b.status === "accepted" ? (b.customer_name || "Customer") : "Customer"}{b.pickup_time ? ` · ${formatDateTime(b.pickup_time)}` : ""}</p>
           </div>
         );
       },
@@ -268,7 +268,7 @@ export default function DriverReturnLoads() {
             <EmptyState icon={Package} title="No pending requests" subtitle="Booking requests for your return loads will appear here." />
           </div>
         ) : (
-          <DataTable columns={bookingColumns} data={pendingBookings} searchKeys={["customer_name", "cargo_description"]} pageSize={6} emptyTitle="No pending requests" emptyIcon={Package} />
+          <DataTable columns={bookingColumns} data={pendingBookings} searchKeys={["cargo_description", "pickup_location", "destination"]} pageSize={6} emptyTitle="No pending requests" emptyIcon={Package} />
         )}
       </div>
 

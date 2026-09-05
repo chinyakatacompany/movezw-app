@@ -48,6 +48,13 @@ export async function getOrCreateConversation({ request, driverId, driverName, c
     .limit(1);
   if (existing?.[0]) return existing[0];
   const label = `${request.cargo_type || "Delivery"}: ${request.pickup_location} → ${request.destination}`;
+  // A driver's quote is not an introduction to the customer. Keep the
+  // customer's identity anonymous in newly-created pre-acceptance chats;
+  // Chat.jsx resolves the real name from the request after this driver is
+  // actually accepted.
+  const visibleCustomerName = request.accepted_driver_id === driverId
+    ? (customerName || request.customer_name || "Customer")
+    : "Customer";
   const { data: created, error } = await supabase
     .from("conversations")
     .insert({
@@ -56,7 +63,7 @@ export async function getOrCreateConversation({ request, driverId, driverName, c
       customer_id: request.customer_id,
       driver_id: driverId,
       driver_name: driverName || "Driver",
-      customer_name: customerName || request.customer_name || "Customer",
+      customer_name: visibleCustomerName,
       last_message: "",
       last_message_at: new Date().toISOString(),
     })

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Loader2, Package, Check } from "lucide-react";
+import { Search, SlidersHorizontal, MapPin, Calendar, Repeat, BadgeCheck, X, Truck, ArrowRight, Package, Check } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
 import { EmptyState, StarRating, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney, formatDateTime } from "@/lib/movezw";

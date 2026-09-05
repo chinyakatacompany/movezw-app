@@ -30,8 +30,7 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "New job request";
   const vibrate = VIBRATION_PATTERNS[payload.vibration] || VIBRATION_PATTERNS.long;
 
-  event.waitUntil(
-    self.registration.showNotification(title, {
+  const showNotification = self.registration.showNotification(title, {
       body: payload.body || "",
       icon: "/icon-512.png",
       badge: "/icon-192.png",
@@ -39,8 +38,14 @@ self.addEventListener("push", (event) => {
       data: { url: payload.url || "/driver" },
       tag: payload.tag || "movezw-job",
       renotify: true,
-    })
-  );
+    });
+  // The exact unread count is synced when the app next opens. While it is
+  // closed, set a generic launcher dot immediately so a new job/offer is
+  // still visible from the home screen.
+  const setBadge = self.navigator?.setAppBadge
+    ? self.navigator.setAppBadge().catch(() => {})
+    : Promise.resolve();
+  event.waitUntil(Promise.all([showNotification, setBadge]));
 });
 
 self.addEventListener("notificationclick", (event) => {

@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, initWebPush, getServiceRoleKey, sendPushToUsers } from "../_shared/push.ts";
+import { sendNativePushToUsers } from "../_shared/nativePush.ts";
 
 const { publicKey, privateKey } = initWebPush();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -13,9 +14,6 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   try {
-    if (!publicKey || !privateKey) {
-      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), { status: 500, headers: corsHeaders });
-    }
     if (!SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ error: "No service role / secret key available" }), { status: 500, headers: corsHeaders });
     }
@@ -41,17 +39,20 @@ Deno.serve(async (req) => {
       .single();
     if (reqErr || !request) throw reqErr ?? new Error("Request not found");
 
-    const sent = await sendPushToUsers(supabase, [request.customer_id], (_userId, vibration) =>
-      JSON.stringify({
-        title: "New quote received 💬",
-        body: `${offer.driver_name} quoted $${offer.price} for your ${request.cargo_type} request.`,
-        url: `/customer/request/${request.id}`,
-        vibration,
-        tag: `movezw-offer-${offer.id}`,
-      })
-    );
+    const buildPayload = () => ({
+      title: "New quote received 💬",
+      body: `${offer.driver_name} quoted $${offer.price} for your ${request.cargo_type} request.`,
+      url: `/customer/request/${request.id}`,
+      tag: `movezw-offer-${offer.id}`,
+    });
+    const [webSent, nativeSent] = await Promise.all([
+      publicKey && privateKey
+        ? sendPushToUsers(supabase, [request.customer_id], (_userId, vibration) => JSON.stringify({ ...buildPayload(), vibration }))
+        : 0,
+      sendNativePushToUsers(supabase, [request.customer_id], buildPayload),
+    ]);
 
-    return new Response(JSON.stringify({ sent }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ sent: webSent + nativeSent, webSent, nativeSent }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: corsHeaders });
   }

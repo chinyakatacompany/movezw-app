@@ -18,6 +18,10 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_VAPID_PUBLIC_KEY=your_web_push_vapid_public_key
 ```
 
+For native Android push, deploy the Supabase notification functions with a
+`FIREBASE_SERVICE_ACCOUNT_JSON` secret containing the Firebase service-account
+JSON for the project configured in `android/app/google-services.json`.
+
 ## Run Locally
 
 ```bash

@@ -18,6 +18,7 @@ export default function Chat() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [conversation, setConversation] = useState(null);
+  const [requestCustomer, setRequestCustomer] = useState(null);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
@@ -35,6 +36,16 @@ export default function Chat() {
       const { data: conv, error: convErr } = await supabase.from("conversations").select("*").eq("id", id).single();
       if (convErr) throw convErr;
       setConversation(conv);
+      if (conv.request_id) {
+        const { data: linkedRequest } = await supabase
+          .from("transport_requests")
+          .select("accepted_driver_id, customer_name")
+          .eq("id", conv.request_id)
+          .single();
+        setRequestCustomer(linkedRequest || null);
+      } else {
+        setRequestCustomer(null);
+      }
       const { data: msgs, error: msgErr } = await supabase
         .from("messages")
         .select("*")
@@ -116,7 +127,10 @@ export default function Chat() {
       setTyping(false);
       // notify the other party
       const recipient = conversation.driver_id === user.id ? conversation.customer_id : conversation.driver_id;
-      const me = user.full_name || "Someone";
+      const customerIsAnonymous = conversation.request_id
+        && conversation.customer_id === user.id
+        && requestCustomer?.accepted_driver_id !== conversation.driver_id;
+      const me = customerIsAnonymous ? "Customer" : (user.full_name || "Someone");
       try {
         await createNotification(recipient, "admin", `New message from ${me}`, body, `/chat/${id}`);
       } catch (_) {}
@@ -147,8 +161,12 @@ export default function Chat() {
         .eq("id", id);
       setMessages((prev) => [...prev, msg]);
       const recipient = conversation.driver_id === user.id ? conversation.customer_id : conversation.driver_id;
+      const customerIsAnonymous = conversation.request_id
+        && conversation.customer_id === user.id
+        && requestCustomer?.accepted_driver_id !== conversation.driver_id;
+      const senderName = customerIsAnonymous ? "Customer" : (user.full_name || "Someone");
       try {
-        await createNotification(recipient, "admin", `New photo from ${user.full_name || "Someone"}`, "📷 Photo", `/chat/${id}`);
+        await createNotification(recipient, "admin", `New photo from ${senderName}`, "📷 Photo", `/chat/${id}`);
       } catch (_) {}
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
@@ -162,7 +180,11 @@ export default function Chat() {
   }
   if (!conversation) return <div className="p-8 text-center text-muted-foreground">Conversation not found.</div>;
 
-  const otherName = conversation.driver_id === user.id ? conversation.customer_name : conversation.driver_name;
+  const driverCanSeeCustomer = !conversation.request_id
+    || requestCustomer?.accepted_driver_id === conversation.driver_id;
+  const otherName = conversation.driver_id === user.id
+    ? (driverCanSeeCustomer ? (requestCustomer?.customer_name || conversation.customer_name) : "Customer")
+    : conversation.driver_name;
   // Every photo in the thread, in order — lets the lightbox opened from any
   // one message flip through the whole conversation's photos, not just that
   // single attachment.
