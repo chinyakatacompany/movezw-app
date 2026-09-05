@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Loader2, Package, LocateFixed, BadgeCheck, Truck, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Loader2, Package, LocateFixed, BadgeCheck, Map as MapIcon } from "lucide-react";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { LoadingScreen, ErrorState } from "@/components/shared/Loaders";
-import { CARGO_TYPES, VEHICLE_ICONS, StarRating, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
+import { CARGO_TYPES, VEHICLE_ICONS, formatMoney, formatDateTime, createNotification } from "@/lib/movezw";
 import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -137,7 +137,7 @@ export default function BookReturnLoad() {
       await createNotification(
         load.driver_id, "new_offer",
         "New return load booking request",
-        `${user.full_name || "A customer"} requested space on your ${load.origin} → ${load.destination} return trip.`,
+        `A customer requested space on your ${load.origin} → ${load.destination} return trip.`,
         "/return-loads/manage"
       );
       toast({ title: "Booking request sent", description: "The driver will review your request." });

@@ -42,7 +42,11 @@ public class MainActivity extends BridgeActivity {
         // notification — a real double-buzz is what actually feels "long".
         channel.setVibrationPattern(new long[]{0, 600, 200, 600});
         channel.enableLights(true);
-        channel.setLightColor(Color.parseColor("#ea580c"));
+        channel.setLightColor(Color.parseColor("#dc2626"));
+        // Requests a launcher badge/dot for every job alert. Android's
+        // launcher decides whether that is rendered as a red dot or a
+        // numbered badge, but this channel must explicitly allow it.
+        channel.setShowBadge(true);
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.createNotificationChannel(channel);

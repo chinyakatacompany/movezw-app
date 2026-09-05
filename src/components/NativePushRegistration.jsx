@@ -28,6 +28,10 @@ export default function NativePushRegistration() {
     const errorListener = PushNotifications.addListener("registrationError", (err) => {
       console.error("FCM registration failed:", err);
     });
+    const actionListener = PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+      const url = action.notification?.data?.url;
+      if (url && url.startsWith("/")) window.location.assign(url);
+    });
 
     PushNotifications.checkPermissions().then(async (status) => {
       let granted = status.receive === "granted";
@@ -42,6 +46,7 @@ export default function NativePushRegistration() {
       cancelled = true;
       registrationListener.then((l) => l.remove());
       errorListener.then((l) => l.remove());
+      actionListener.then((l) => l.remove());
     };
   }, [user?.id]);
 

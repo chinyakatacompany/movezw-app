@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- MoveZW accent orange — used as the FCM default notification color -->
-    <color name="notification_accent">#EA580C</color>
+    <!-- Red alert accent used by job-offer notifications. -->
+    <color name="notification_accent">#DC2626</color>
 </resources>

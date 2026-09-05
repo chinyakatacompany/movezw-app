@@ -16,7 +16,7 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
           </span>
           <div>
             <p className="text-sm font-semibold leading-tight">{request.cargo_type}</p>
-            {showCustomer && (
+            {showCustomer && request.accepted_driver_id && (
               <p className="text-xs text-muted-foreground">{request.customer_name || "Customer"}</p>
             )}
           </div>
