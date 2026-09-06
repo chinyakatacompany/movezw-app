@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +39,8 @@ export default function DriverJobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [request, setRequest] = useState(null);
+  const [storedRequest, setRequest] = useState(null);
+  const request = useUnexpiredRequests(storedRequest ? [storedRequest] : [])[0] || null;
   const [profile, setProfile] = useState(null);
   const [myOffer, setMyOffer] = useState(null);
   const [customerPhone, setCustomerPhone] = useState(null);

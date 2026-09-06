@@ -1,4 +1,5 @@
 import { supabase } from "@/api/supabaseClient";
+import { isRequestExpired } from "./requestExpiry";
 import { createNotification, formatMoney } from "@/lib/movezw";
 
 export const AVAILABILITY = {
@@ -169,6 +170,7 @@ export async function notifyMatchingCustomersForReturnLoad(load) {
 
   const matchedByCustomer = new Map();
   for (const r of requests || []) {
+    if (isRequestExpired(r)) continue;
     if (routesMatch(load.origin, load.destination, r.pickup_location, r.destination)) {
       matchedByCustomer.set(r.customer_id, r);
     }
@@ -306,7 +308,7 @@ export async function notifyCustomersAlongRoute(driverRequest) {
     .limit(200);
   if (error) console.error("Failed to load open requests for space-along-route matching:", error);
 
-  const matched = findRequestsAlongRoute(driverRequest, candidates || [], routeCoordinates);
+  const matched = findRequestsAlongRoute(driverRequest, (candidates || []).filter((r) => !isRequestExpired(r)), routeCoordinates);
   await Promise.all(
     matched.map((r) =>
       createNotification(

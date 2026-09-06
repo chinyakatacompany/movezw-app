@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState, formatMoney } from "@/lib/movezw";
@@ -23,7 +24,8 @@ export default function DriverDashboard() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [openRequests, setOpenRequests] = useState(null);
+  const [allOpenRequests, setOpenRequests] = useState(null);
+  const openRequests = useUnexpiredRequests(allOpenRequests);
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
 
