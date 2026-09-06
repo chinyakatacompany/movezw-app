@@ -52,6 +52,7 @@ import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
+import CustomerOfferInbox from '@/components/CustomerOfferInbox';
 import NativeAppBridge from '@/components/NativeAppBridge';
 import ThemeLoader from '@/components/ThemeLoader';
 import LoadingScreen from '@/components/LoadingScreen';
@@ -60,9 +61,8 @@ const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
   const navigate = useNavigate();
 
-  // A notification that needs attention right now (e.g. a new quote to
-  // accept/reject) jumps the user straight to the relevant page instead of
-  // requiring a tap through the notification panel — see AuthContext.jsx.
+  // Follow urgent notifications from AuthContext. Customer bids use the
+  // persistent inbox and only navigate when the customer chooses View.
   useEffect(() => {
     if (!autoNavigateLink) return;
     navigate(autoNavigateLink);
@@ -90,6 +90,7 @@ const AuthenticatedApp = () => {
     <>
     <DriverLocationPing />
     <NativePushRegistration />
+    <CustomerOfferInbox />
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
