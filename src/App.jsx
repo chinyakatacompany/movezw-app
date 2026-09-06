@@ -52,6 +52,7 @@ import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
+import InstallHelp from '@/components/InstallHelp';
 import CustomerOfferInbox from '@/components/CustomerOfferInbox';
 import NativeAppBridge from '@/components/NativeAppBridge';
 import ThemeLoader from '@/components/ThemeLoader';
@@ -212,6 +213,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <NativeAppBridge />
+          <InstallHelp />
           <AuthenticatedApp />
         </Router>
         <Toaster />
