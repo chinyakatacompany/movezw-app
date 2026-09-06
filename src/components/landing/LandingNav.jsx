@@ -13,7 +13,7 @@ const NAV_LINKS = [
 export default function LandingNav() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const { canInstall, promptInstall } = useInstallPrompt();
+  const { showInstall, promptInstall } = useInstallPrompt();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -49,7 +49,7 @@ export default function LandingNav() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          {canInstall && (
+          {showInstall && (
             <button
               onClick={promptInstall}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors"
@@ -92,7 +92,7 @@ export default function LandingNav() {
                 {l.label}
               </a>
             ))}
-            {canInstall && (
+            {showInstall && (
               <button
                 onClick={() => { promptInstall(); setOpen(false); }}
                 className="w-full mt-1 mb-2 inline-flex items-center justify-center gap-2 h-11 rounded-xl bg-accent text-accent-foreground text-sm font-semibold shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors"

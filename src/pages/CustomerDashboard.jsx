@@ -6,7 +6,7 @@ import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download } from "lucide-react";
 import { STATUS_FLOW } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
-import { useInstallPrompt, isIosSafari } from "@/lib/useInstallPrompt";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
 
 const TRIP_STEPS = [
@@ -28,8 +28,7 @@ export default function CustomerDashboard() {
   // frictionless anonymous signup) without ever passing through Login.jsx /
   // AuthLayout, which is where the install prompt used to live for them —
   // so it needs its own spot here instead.
-  const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const showIosHint = !installed && !canInstall && isIosSafari();
+  const { showInstall, promptInstall } = useInstallPrompt();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -138,7 +137,7 @@ export default function CustomerDashboard() {
           <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
         </Link>
 
-        {canInstall && (
+        {showInstall && (
           <button
             type="button"
             onClick={promptInstall}
@@ -152,11 +151,6 @@ export default function CustomerDashboard() {
               <p className="text-xs text-accent-foreground/80">Faster access, right from your home screen</p>
             </div>
           </button>
-        )}
-        {showIosHint && (
-          <p className="text-xs text-muted-foreground text-center -mt-2">
-            On iPhone: tap the Share icon, then "Add to Home Screen" to install MoveZW.
-          </p>
         )}
 
         {inTransit && (

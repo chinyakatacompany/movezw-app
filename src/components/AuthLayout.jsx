@@ -1,10 +1,9 @@
 import React from "react";
 import { Truck, Download } from "lucide-react";
-import { useInstallPrompt, isIosSafari } from "@/lib/useInstallPrompt";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, showInstall }) {
-  const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const showIosHint = showInstall && !installed && !canInstall && isIosSafari();
+  const { showInstall: showInstallOption, promptInstall } = useInstallPrompt();
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background px-4 py-10">
       <div className="w-full max-w-md">
@@ -15,7 +14,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
           <span className="font-bold text-2xl tracking-tight">MoveZW</span>
         </div>
 
-        {showInstall && canInstall && (
+        {showInstall && showInstallOption && (
           <div className="flex justify-center mb-6">
             <button
               onClick={promptInstall}
@@ -24,11 +23,6 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
               <Download className="w-4 h-4" /> Install MoveZW app
             </button>
           </div>
-        )}
-        {showIosHint && (
-          <p className="text-center text-xs text-muted-foreground mb-6">
-            On iPhone: tap the Share icon, then "Add to Home Screen" to install MoveZW.
-          </p>
         )}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">

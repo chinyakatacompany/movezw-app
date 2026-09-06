@@ -3,12 +3,11 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Truck, Star, ShieldCheck, Download } from "lucide-react";
 import { useSiteContent } from "@/lib/siteContent";
-import { useInstallPrompt, isIosSafari } from "@/lib/useInstallPrompt";
+import { useInstallPrompt } from "@/lib/useInstallPrompt";
 
 export default function Hero() {
   const { t } = useSiteContent();
-  const { canInstall, installed, promptInstall } = useInstallPrompt();
-  const showIosHint = !installed && !canInstall && isIosSafari();
+  const { showInstall, promptInstall } = useInstallPrompt();
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-primary/5 via-background to-background">
       <div className="absolute inset-0 pointer-events-none">
@@ -45,7 +44,7 @@ export default function Hero() {
             </Link>
           </div>
 
-          {canInstall && (
+          {showInstall && (
             <div className="mt-5 flex justify-center lg:justify-start">
               <button
                 onClick={promptInstall}
@@ -54,11 +53,6 @@ export default function Hero() {
                 <Download className="w-5 h-5" /> Install the MoveZW app
               </button>
             </div>
-          )}
-          {showIosHint && (
-            <p className="mt-4 text-xs text-muted-foreground text-center lg:text-left">
-              On iPhone: tap the Share icon, then "Add to Home Screen" to install MoveZW.
-            </p>
           )}
 
           <div className="mt-8 flex items-center gap-5 justify-center lg:justify-start text-sm text-muted-foreground">
