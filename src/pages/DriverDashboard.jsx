@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
+import DriverDeliveryPanel from "@/components/DriverDeliveryPanel";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
@@ -64,17 +65,51 @@ export default function DriverDashboard() {
         if (error) console.error("Failed to load open requests:", error);
         setOpenRequests(data || []);
       });
-    supabase
-      .from("transport_requests")
-      .select("*")
-      .eq("accepted_driver_id", user.id)
-      .in("status", ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"])
-      .order("created_at", { ascending: false })
-      .limit(20)
-      .then(({ data, error }) => {
-        if (error) console.error("Failed to load active jobs:", error);
-        setMyJobs(data || []);
-      });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    let running = false;
+    let rerun = false;
+    setMyJobs(null);
+    const refresh = async () => {
+      if (running) { rerun = true; return; }
+      running = true;
+      try {
+        const jobs = [];
+        for (let offset = 0; active; offset += 500) {
+          const { data, error } = await supabase.from('transport_requests').select('*')
+            .eq('accepted_driver_id', user.id)
+            .in('status', ['confirmed', 'en_route_pickup', 'collected', 'in_transit', 'delivered'])
+            .order('created_at').order('id').range(offset, offset + 499);
+          if (error) throw error;
+          jobs.push(...data);
+          if (data.length < 500) break;
+        }
+        if (active) setMyJobs(jobs);
+      } catch (error) {
+        console.error('Failed to load active jobs:', error);
+      } finally {
+        running = false;
+        if (active && rerun) { rerun = false; void refresh(); }
+      }
+    };
+    const channel = supabase.channel(`driver-current-deliveries-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transport_requests' }, refresh)
+      .subscribe((status) => { if (status === 'SUBSCRIBED') void refresh(); });
+    const resume = () => { if (document.visibilityState === 'visible') void refresh(); };
+    void refresh();
+    const timer = setInterval(resume, 15000);
+    window.addEventListener('focus', resume);
+    document.addEventListener('visibilitychange', resume);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener('focus', resume);
+      document.removeEventListener('visibilitychange', resume);
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   // Keep "Nearby open requests" live: the moment another driver accepts a
@@ -200,6 +235,8 @@ export default function DriverDashboard() {
           )}
         </div>
       </div>
+
+      <DriverDeliveryPanel key={user.id} jobs={myJobs || []} />
 
       <div className="grid grid-cols-2 gap-3">
         <a href="#availability-toggle" className="bg-card rounded-2xl border border-border p-4">

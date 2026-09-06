@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
@@ -17,6 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason, geocodeAddress } from "@/lib/geo";
 import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 import ImageLightbox from "@/components/ImageLightbox";
+import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -38,6 +39,8 @@ function formatDistanceLabel(km) {
 export default function DriverJobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [pendingStatus, setPendingStatus] = useState(null);
   const { user } = useAuth();
   const [storedRequest, setRequest] = useState(null);
   const request = useUnexpiredRequests(storedRequest ? [storedRequest] : [])[0] || null;
@@ -377,12 +380,20 @@ export default function DriverJobDetail() {
   };
 
   const updateStatus = async (newStatus) => {
+    if (updating || request.accepted_driver_id !== user.id) return;
+    if (STATUS_FLOW[STATUS_FLOW.indexOf(request.status) + 1] !== newStatus) return;
     setUpdating(true);
     try {
       // Commission is reserved at acceptance now (fn_accept_offer), not
       // collection — nothing to charge or gate here anymore.
-      const { error: statusErr } = await supabase.from("transport_requests").update({ status: newStatus }).eq("id", request.id);
+      const { data: changed, error: statusErr } = await supabase.from("transport_requests")
+        .update({ status: newStatus }).eq("id", request.id)
+        .eq('accepted_driver_id', user.id).eq('status', request.status).select('id').maybeSingle();
       if (statusErr) throw statusErr;
+      if (!changed) {
+        void load();
+        throw new Error('This delivery has changed. Review its latest progress before updating.');
+      }
       if (newStatus === "collected" && request.pickup_lat == null) {
         captureLearnedLocation("pickup", request.pickup_location);
       }
@@ -418,6 +429,17 @@ export default function DriverJobDetail() {
     } finally {
       setUpdating(false);
     }
+  };
+
+  useEffect(() => {
+    if (!loading && location.hash === '#delivery-progress') {
+      document.getElementById('delivery-progress')?.scrollIntoView({ block: 'start' });
+    }
+  }, [loading, location.hash, id]);
+
+  const requestStatusUpdate = (status) => {
+    if (status === 'collected' || status === 'completed') setPendingStatus({ status, from: request.status });
+    else void updateStatus(status);
   };
 
   if (loading) {
@@ -790,7 +812,7 @@ export default function DriverJobDetail() {
             </div>
           )}
 
-          <div className="bg-card rounded-2xl border border-border p-4">
+          <div id="delivery-progress" className="bg-card rounded-2xl border border-border p-4 scroll-mt-24">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold">Delivery progress</h2>
               <span className="text-xs text-muted-foreground">{Math.min(activeStep + 1, STATUS_FLOW.length)} of {STATUS_FLOW.length} completed</span>
@@ -823,12 +845,12 @@ export default function DriverJobDetail() {
           </div>
 
           {request.status !== "completed" && request.status !== "delivered" && nextStep && (
-            <Button onClick={() => updateStatus(nextStep)} disabled={updating} className="w-full h-12 font-semibold">
+            <Button onClick={() => requestStatusUpdate(nextStep)} disabled={updating} className="w-full h-12 font-semibold">
               {updating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating...</> : `Mark as ${STATUS_LABELS[nextStep]}`}
             </Button>
           )}
           {request.status === "delivered" && (
-            <Button onClick={() => updateStatus("completed")} disabled={updating} className="w-full h-12 font-semibold">
+            <Button onClick={() => requestStatusUpdate("completed")} disabled={updating} className="w-full h-12 font-semibold">
               {updating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Completing...</> : "Complete job"}
             </Button>
           )}
@@ -840,6 +862,25 @@ export default function DriverJobDetail() {
           )}
         </div>
       )}
+
+      <AlertDialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
+        <AlertDialogContent>
+          <AlertDialogTitle>{pendingStatus?.status === 'collected' ? 'Confirm cargo collected?' : 'Complete this delivery?'}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingStatus?.status === 'collected'
+              ? 'Confirm that the cargo has been loaded into your vehicle. The customer will be notified.'
+              : 'Confirm that the cargo has been handed over and this delivery is finished.'}
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go back</AlertDialogCancel>
+            <AlertDialogAction disabled={updating} onClick={() => {
+              if (pendingStatus?.from === request.status) void updateStatus(pendingStatus.status);
+              else toast({ title: 'Delivery progress changed. Please review the current step.' });
+              setPendingStatus(null);
+            }}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {!isMyJob && !isOpen && myOffer?.status !== "pending" && (
         <div className="bg-card rounded-2xl border border-border">
