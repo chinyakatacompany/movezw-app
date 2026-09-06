@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download } from "lucide-react";
 import { STATUS_FLOW } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,8 @@ const TRIP_STEPS = [
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState(null);
+  const [allRequests, setRequests] = useState(null);
+  const requests = useUnexpiredRequests(allRequests);
   const [onlineDrivers, setOnlineDrivers] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripDriver, setTripDriver] = useState(null);

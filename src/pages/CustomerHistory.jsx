@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Package } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import { EmptyState } from "@/lib/movezw";
 
 export default function CustomerHistory() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState(null);
+  const [allRequests, setRequests] = useState(null);
+  const requests = useUnexpiredRequests(allRequests);
 
   useEffect(() => {
     if (!user?.id) return;

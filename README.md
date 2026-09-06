@@ -41,6 +41,25 @@ npm run build
 - **Web:** hosted on Vercel (`vercel.json` configures SPA rewrites). Pushing to the deployed branch triggers a new deployment.
 - **Android:** packaged via Capacitor (`capacitor.config.json`). Run `npm run build` then sync/build through Capacitor's Android tooling.
 
+## Unaccepted request expiry
+
+Open requests disappear from customer/driver pages ten hours after
+`scheduled_date` for scheduled pickups, or `created_at` for Now requests.
+Accepted jobs are exempt. Records remain in the database for audit purposes.
+
+Before releasing this change, run the complete SQL file
+`supabase/migrations/20260906000100_expire_open_requests.sql` in the linked
+project's Supabase SQL Editor. It adds an expiry marker, blocks late bids and
+acceptance, and installs a once-per-minute cleanup using pg_cron. Existing
+overdue open requests are expired immediately. The UI hides requests at their
+deadline independently of the cleanup interval. The SQL is transactional and
+can be rerun. Confirm the cron job's successful runs in Supabase Cron History.
+This migration has not been tested against the hosted database's existing
+triggers; if it fails, retain the error output and investigate before release.
+
+Run `node --test src/lib/requestExpiry.test.js` to check expiry boundaries,
+scheduled pickup timezones, and accepted-job exemptions.
+
 ## Checks
 
 Run before finishing changes:

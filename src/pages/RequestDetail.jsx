@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, User as UserIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +22,8 @@ export default function RequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [request, setRequest] = useState(null);
+  const [storedRequest, setRequest] = useState(null);
+  const request = useUnexpiredRequests(storedRequest ? [storedRequest] : [])[0] || null;
   const [offers, setOffers] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(null);
