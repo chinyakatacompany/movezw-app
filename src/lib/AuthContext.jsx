@@ -5,12 +5,8 @@ import { playNotificationChime, unlockAudioOnFirstGesture } from '@/lib/sound';
 
 const AuthContext = createContext();
 
-// Notification types that need the customer/driver's attention on a
-// specific page right now — e.g. a quote just came in and needs an
-// accept/reject decision, or a driver's offer just won and they should
-// land straight on the job's status stepper — so we jump them there
-// automatically instead of requiring a tap through the notification panel
-// first.
+// Retain navigation for urgent driver notifications. Customer new-offer
+// notifications are handled separately by CustomerOfferInbox below.
 const AUTO_NAVIGATE_TYPES = new Set(['new_offer', 'offer_accepted']);
 
 export const AuthProvider = ({ children }) => {
@@ -170,6 +166,9 @@ export const AuthProvider = ({ children }) => {
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
           const n = payload.new;
+          // Customer bids have a persistent queue above the router. Do not
+          // replace them with transient toasts or navigate away from forms.
+          if (user.role === 'customer' && n.type === 'new_offer') return;
           playNotificationChime();
           sonnerToast(n.title, {
             id: 'notification-popup',
@@ -186,7 +185,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, user?.role]);
 
   const logout = async () => {
     await supabase.auth.signOut();
