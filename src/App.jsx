@@ -52,6 +52,8 @@ import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
+import ReturnDeliveryNavigation from '@/components/ReturnDeliveryNavigation';
+import ReturnDeliveryProgress from '@/pages/ReturnDeliveryProgress';
 import CustomerOfferInbox from '@/components/CustomerOfferInbox';
 import NativeAppBridge from '@/components/NativeAppBridge';
 import ThemeLoader from '@/components/ThemeLoader';
@@ -90,6 +92,7 @@ const AuthenticatedApp = () => {
     <>
     <DriverLocationPing />
     <NativePushRegistration />
+    <ReturnDeliveryNavigation />
     <CustomerOfferInbox />
     <Routes>
       <Route path="/landing" element={<Landing />} />
@@ -159,6 +162,7 @@ const AuthenticatedApp = () => {
           <Route path="/return-loads" element={<ReturnMarketplace />} />
           <Route path="/return-loads/:id/book" element={<BookReturnLoad />} />
           <Route path="/return-loads/manage" element={<DriverReturnLoads />} />
+          <Route path="/return-loads/delivery/:id" element={<ReturnDeliveryProgress />} />
         </Route>
       </Route>
 

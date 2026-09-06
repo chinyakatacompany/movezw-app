@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Plus, Calendar, Truck, X, Loader2, Package, Check, Repeat, ArrowRight } from "lucide-react";
@@ -41,6 +42,8 @@ function LoadBadge({ status }) {
 
 export default function DriverReturnLoads() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [accepting, setAccepting] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loads, setLoads] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -115,34 +118,15 @@ export default function DriverReturnLoads() {
   };
 
   const acceptBooking = async (booking) => {
-    const load = loads.find((l) => l.id === booking.return_load_id);
-    if (!load) return;
+    if (accepting) return;
+    setAccepting(true);
     try {
-      const others = bookings.filter((b) => b.return_load_id === load.id && b.status === "pending" && b.id !== booking.id);
-      const { error: bookErr } = await supabase.from("return_load_bookings").update({ status: "accepted" }).eq("id", booking.id);
-      if (bookErr) throw bookErr;
-      const { error: loadErr } = await supabase
-        .from("return_loads")
-        .update({
-          status: "booked",
-          accepted_booking_id: booking.id,
-          accepted_customer_id: booking.customer_id,
-          accepted_customer_name: booking.customer_name,
-        })
-        .eq("id", load.id);
-      if (loadErr) throw loadErr;
-      if (others.length) {
-        await supabase.from("return_load_bookings").update({ status: "rejected" }).eq("return_load_id", load.id).eq("status", "pending");
-        others.forEach((b) =>
-          createNotification(b.customer_id, "offer_rejected", "Return load booking declined", `Your booking for ${load.origin} → ${load.destination} was declined.`, "/return-loads")
-        );
-      }
-      await createNotification(booking.customer_id, "offer_accepted", "Return load booking accepted", `Your booking for ${load.origin} → ${load.destination} was accepted by the driver.`, "/return-loads");
-      await loadAll();
-      toast({ title: "Booking accepted", description: "Other pending requests were declined." });
+      const { data, error: err } = await supabase.rpc('accept_return_load_delivery', { p_booking_id: booking.id });
+      if (err) throw err;
+      navigate(`/return-loads/delivery/${data}`);
     } catch (err) {
       toast({ title: "Could not accept booking", description: err.message, variant: "destructive" });
-    }
+    } finally { setAccepting(false); }
   };
 
   const rejectBooking = async (booking) => {
@@ -245,10 +229,10 @@ export default function DriverReturnLoads() {
       key: "actions", header: "",
       render: (b) => b.status === "pending" ? (
         <div className="flex items-center gap-1">
-          <button onClick={() => acceptBooking(b)} className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center" aria-label="Accept"><Check className="w-4 h-4" /></button>
+          <button disabled={accepting} onClick={() => acceptBooking(b)} className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center disabled:opacity-50" aria-label="Accept"><Check className="w-4 h-4" /></button>
           <button onClick={() => rejectBooking(b)} className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 flex items-center justify-center" aria-label="Reject"><X className="w-4 h-4" /></button>
         </div>
-      ) : <span className="text-xs text-muted-foreground capitalize">{b.status}</span>,
+      ) : b.status === 'accepted' ? <Link className="text-sm font-semibold text-primary" to={`/return-loads/delivery/${b.id}`}>Open delivery</Link> : <span className="text-xs text-muted-foreground capitalize">{b.status}</span>,
     },
   ];
 
