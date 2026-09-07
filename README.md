@@ -69,3 +69,23 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+## Scheduled pickup alerts
+
+Accepted scheduled jobs and accepted return-load bookings notify both the
+customer and driver when the pickup time arrives. Before releasing this
+feature:
+
+1. Deploy the function with gateway JWT verification disabled. The function
+   performs its own exact server-key check:
+   `npx supabase functions deploy notify-scheduled-pickups --no-verify-jwt`
+2. In the Supabase SQL Editor, store the project URL and server secret key in
+   Vault (replace both example values):
+   `select vault.create_secret('https://YOUR-PROJECT.supabase.co', 'movezw_project_url');`
+   `select vault.create_secret('YOUR_SERVER_SECRET_KEY', 'movezw_server_secret_key');`
+3. Run `supabase/migrations/20260907000100_scheduled_pickup_alerts.sql` in the
+   SQL Editor. Its cron job calls the function once per minute.
+
+Keep the server secret key private. Verify the cron in Supabase Cron History by
+creating an accepted test job scheduled a few minutes ahead. Each participant
+must receive only one in-app alert and, when enabled, one device push.
