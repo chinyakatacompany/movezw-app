@@ -89,3 +89,15 @@ feature:
 Keep the server secret key private. Verify the cron in Supabase Cron History by
 creating an accepted test job scheduled a few minutes ahead. Each participant
 must receive only one in-app alert and, when enabled, one device push.
+
+## Admin account deletion
+
+Administrators can delete customer and driver accounts from **Admin → User
+Management**. The `delete-account` Edge Function verifies the caller's admin
+role on the server, blocks deletion of admin accounts and accounts with active
+deliveries, wallet funds, or an owned business fleet, and retains anonymized
+operational history when required. Deploy changes to this flow with:
+
+```bash
+npx supabase functions deploy delete-account
+```

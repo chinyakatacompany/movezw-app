@@ -35,21 +35,49 @@ const ACTIVE_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transi
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
   try {
-    // Identify the caller from their own verified JWT, never from a
-    // client-supplied id in the body -- this endpoint deletes an account,
-    // so it must be structurally impossible to pass someone else's id.
+    // Identify the caller from their verified JWT. A target id is accepted
+    // only after the caller has been independently confirmed as an admin.
     const authHeader = req.headers.get("Authorization") ?? "";
     const callerClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
     const { data: { user: caller }, error: authErr } = await callerClient.auth.getUser();
     if (authErr || !caller) return json({ error: "Not authenticated." }, 401);
-    const uid = caller.id;
 
-    const db = createClient(SUPABASE_URL, getServiceRoleKey());
+    const serviceRoleKey = getServiceRoleKey();
+    if (!serviceRoleKey) return json({ error: "Account deletion is not configured." }, 500);
+    const db = createClient(SUPABASE_URL, serviceRoleKey);
+
+    const { data: callerProfile, error: callerProfileErr } = await db
+      .from("profiles")
+      .select("id, role, full_name")
+      .eq("id", caller.id)
+      .single();
+    if (callerProfileErr || !callerProfile) return json({ error: "Caller profile not found." }, 404);
+
+    let body: { targetUserId?: string } = {};
+    try { body = await req.json(); } catch { /* self-service calls have no body */ }
+    const uid = body.targetUserId?.trim() || caller.id;
+    const isAdminAction = uid !== caller.id;
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uid)) {
+      return json({ error: "Invalid account id." }, 400);
+    }
+
+    if (isAdminAction && callerProfile.role !== "admin") {
+      return json({ error: "Only an administrator can delete another account." }, 403);
+    }
 
     const { data: profile, error: profileErr } = await db.from("profiles").select("*").eq("id", uid).single();
     if (profileErr || !profile) return json({ error: "Profile not found." }, 404);
     if (profile.deleted_at) return json({ error: "This account has already been deleted." }, 400);
+    if (isAdminAction && profile.role === "admin") {
+      return json({ error: "Administrator accounts cannot be deleted from User Management." }, 400);
+    }
+
+    const { data: targetAuthResult, error: targetAuthErr } = await db.auth.admin.getUserById(uid);
+    if (targetAuthErr || !targetAuthResult.user) return json({ error: "Authentication account not found." }, 404);
+    const targetAuthUser = targetAuthResult.user;
 
     // --- Block conditions: never silently strand a delivery or forfeit real money ---
     const { count: activeAsCustomer } = await db
@@ -135,7 +163,17 @@ Deno.serve(async (req) => {
 
       const { error: delErr } = await db.auth.admin.deleteUser(uid);
       if (delErr) throw delErr;
-      return json({ ok: true, mode: "deleted" });
+      if (isAdminAction) {
+        await db.from("audit_logs").insert({
+          actor_id: caller.id,
+          actor_name: callerProfile.full_name || "MoveZW Admin",
+          action: "admin_account_deleted",
+          entity_type: "profile",
+          entity_id: uid,
+          details: `Admin permanently deleted a ${profile.role} account with no retained history.`,
+        });
+      }
+      return json({ ok: true, mode: "deleted", adminAction: isAdminAction });
     }
 
     // Fully private data with no counterparty stake -- safe to remove outright.
@@ -149,12 +187,16 @@ Deno.serve(async (req) => {
     await db.from("transport_requests").update({ status: "cancelled" }).eq("customer_id", uid).eq("status", "open");
 
     await db.from("audit_logs").insert({
-      actor_id: uid,
-      actor_name: profile.full_name || null,
-      action: "account_deleted",
+      actor_id: isAdminAction ? caller.id : uid,
+      actor_name: isAdminAction
+        ? (callerProfile.full_name || "MoveZW Admin")
+        : (profile.full_name || null),
+      action: isAdminAction ? "admin_account_deleted" : "account_deleted",
       entity_type: "profile",
       entity_id: uid,
-      details: `User self-deleted their account (role: ${profile.role}).`,
+      details: isAdminAction
+        ? `Admin deleted this account (role: ${profile.role}); identifying data was removed and operational history retained.`
+        : `User self-deleted their account (role: ${profile.role}).`,
     });
 
     // Scrub the identifying fields in place -- the row itself can't be
@@ -179,14 +221,14 @@ Deno.serve(async (req) => {
       password: crypto.randomUUID() + crypto.randomUUID(),
       user_metadata: {},
     };
-    if (profile.role === "driver" && caller.email) {
+    if (profile.role === "driver" && targetAuthUser.email) {
       revoke.email = `deleted-${uid}@movezw.deleted.internal`;
       revoke.email_confirm = true;
     }
     const { error: revokeErr } = await db.auth.admin.updateUserById(uid, revoke);
     if (revokeErr) throw revokeErr;
 
-    return json({ ok: true, mode: "scrubbed" });
+    return json({ ok: true, mode: "scrubbed", adminAction: isAdminAction });
   } catch (e) {
     return json({ error: (e as Error).message }, 500);
   }
