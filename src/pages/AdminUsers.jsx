@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X, MessageCircle } from "lucide-react";
+import { Users, Loader2, Search, Ban, CheckCircle2, Pencil, Check, X, MessageCircle, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { getOrCreateAdminConversation } from "@/lib/messaging";
+import { deleteAccount } from "@/lib/account";
 
 export default function AdminUsers() {
   const { user: admin } = useAuth();
@@ -18,6 +19,9 @@ export default function AdminUsers() {
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [messaging, setMessaging] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const load = () => {
     supabase
@@ -78,6 +82,33 @@ export default function AdminUsers() {
       toast({ title: "Could not update user", description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteConfirmText("");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteConfirmText !== "DELETE") return;
+    setDeleting(true);
+    try {
+      const result = await deleteAccount(deleteTarget.id);
+      toast({
+        title: "Account deleted",
+        description: result?.mode === "scrubbed"
+          ? "Login access and personal information were removed; required job history was retained."
+          : "The account was permanently removed.",
+      });
+      setDeleteTarget(null);
+      setDeleteConfirmText("");
+      load();
+    } catch (e) {
+      toast({ title: "Could not delete account", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -176,11 +207,59 @@ export default function AdminUsers() {
                     >
                       {u.is_suspended ? <><CheckCircle2 className="w-4 h-4 mr-1" />Reactivate</> : <><Ban className="w-4 h-4 mr-1" />Suspend</>}
                     </Button>
+                    {u.id !== admin?.id && u.role !== "admin" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setDeleteTarget(u)}
+                        className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                        title="Delete this account"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />Delete
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteDialog} />
+          <div className="relative bg-card border border-border rounded-2xl card-shadow-lg p-5 w-full max-w-md" role="alertdialog" aria-modal="true" aria-labelledby="admin-delete-title">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 id="admin-delete-title" className="font-semibold">Delete {deleteTarget.full_name || "this user"}?</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  This permanently revokes login and removes personal information. Accounts with active deliveries, wallet funds, or a business fleet cannot be deleted.
+                </p>
+              </div>
+            </div>
+            <label className="block text-sm font-medium mt-5" htmlFor="admin-delete-confirm">
+              Type <span className="font-bold">DELETE</span> to confirm
+            </label>
+            <input
+              id="admin-delete-confirm"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              disabled={deleting}
+              autoFocus
+              className="w-full h-10 mt-2 px-3 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-destructive/20"
+            />
+            <div className="flex justify-end gap-2 mt-5">
+              <Button variant="ghost" size="sm" onClick={closeDeleteDialog} disabled={deleting}>Cancel</Button>
+              <Button variant="destructive" size="sm" onClick={confirmDelete} disabled={deleting || deleteConfirmText !== "DELETE"}>
+                {deleting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+                Delete account
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

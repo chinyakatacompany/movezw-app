@@ -1,15 +1,14 @@
 import { supabase } from "@/api/supabaseClient";
 
-// Self-service account deletion. The edge function derives the caller's
-// identity from their own session token (never a client-supplied id), then
-// either fully deletes the account or scrubs its personal identifiers in
-// place, depending on whether the account has any transaction/message
-// history that Postgres won't let a hard delete cascade through -- see
-// supabase/functions/delete-account/index.ts. Throws with the server's
-// message on any block (active delivery, wallet balance, etc.) so callers
-// can show it directly to the user.
-export async function deleteAccount() {
-  const { data, error } = await supabase.functions.invoke("delete-account");
+// Account deletion. With no target id this is self-service. A target id is
+// accepted by the Edge Function only after the signed-in caller is verified
+// as an admin. The server either fully deletes the account or scrubs its
+// personal identifiers in place when operational history must be retained.
+// Throws with the server's message on any block (active delivery, wallet
+// balance, business ownership, etc.) so callers can show it directly.
+export async function deleteAccount(targetUserId) {
+  const options = targetUserId ? { body: { targetUserId } } : undefined;
+  const { data, error } = await supabase.functions.invoke("delete-account", options);
   if (error) {
     let message = error.message;
     try {
