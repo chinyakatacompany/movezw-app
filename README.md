@@ -101,3 +101,18 @@ operational history when required. Deploy changes to this flow with:
 ```bash
 npx supabase functions deploy delete-account
 ```
+
+## Admin driver unverification
+
+Administrators can remove an approved driver's verification from **Admin →
+Driver verification → Approved**. The action takes the driver offline,
+withdraws pending bids, and blocks new or revised bids at the database level.
+Accepted deliveries remain accessible so they can be completed safely.
+
+Before releasing this feature, apply
+`supabase/migrations/20260910000100_admin_unverify_driver.sql` to the linked
+Supabase project:
+
+```bash
+npx supabase db push
+```

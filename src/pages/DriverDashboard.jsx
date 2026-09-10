@@ -190,20 +190,23 @@ export default function DriverDashboard() {
 
   if (!verified) {
     const isRejected = profile.verification_status === "rejected";
+    const hasActiveJobs = (myJobs?.length || 0) > 0;
     return (
       <div className="p-4 space-y-4">
         <div className="pt-2">
           <h1 className="text-2xl font-bold tracking-tight">{user?.full_name?.split(" ")[0] || "Driver"} 👋</h1>
           <p className="text-sm text-muted-foreground">{profile.vehicle_type} · {profile.location_area || "Zimbabwe"}</p>
         </div>
+        {hasActiveJobs && <DriverDeliveryPanel key={user.id} jobs={myJobs} />}
         <div className={`border rounded-2xl p-5 text-center ${isRejected ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
           <Shield className={`w-8 h-8 mx-auto mb-3 ${isRejected ? "text-red-500" : "text-amber-500"}`} />
           <h2 className="text-base font-semibold">{isRejected ? "Verification rejected" : "Verification in progress"}</h2>
           <p className="text-sm text-muted-foreground mt-1 mb-4">
             {isRejected
               ? profile.verification_note || "Please review and re-upload your documents."
-              : "Our admin team is reviewing your documents. You'll be able to receive jobs once approved."}
+              : "Our admin team is reviewing your documents. You'll be able to receive new jobs once approved."}
           </p>
+          {hasActiveJobs && <p className="text-xs text-muted-foreground mb-4">You can still open and complete the delivery already in progress.</p>}
           <Link to="/driver/onboarding" className="inline-flex items-center justify-center h-11 px-5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm">
             {isRejected ? "Update documents" : "View profile"}
           </Link>
