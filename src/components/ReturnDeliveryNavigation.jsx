@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/api/supabaseClient';
+import { formatDateTime } from '@/lib/movezw';
 
 export default function ReturnDeliveryNavigation() {
   const { user } = useAuth();
@@ -29,11 +30,20 @@ function Navigation({ user }) {
           .neq('status', 'completed').order('created_at', { ascending: false });
         if (!active) return;
         if (error) { console.error('Could not load return deliveries:', error); return; }
-        setJobs(data);
+        const ids = data.map((job) => job.id);
+        let pickupTimes = {};
+        if (ids.length) {
+          const { data: bookings, error: bookingError } = await supabase.from('return_load_bookings')
+            .select('id,pickup_time').in('id', ids);
+          if (bookingError) console.error('Could not load return delivery schedules:', bookingError);
+          pickupTimes = Object.fromEntries((bookings || []).map((booking) => [booking.id, booking.pickup_time]));
+        }
+        const scheduledJobs = data.map((job) => ({ ...job, pickup_time: pickupTimes[job.id] || null }));
+        setJobs(scheduledJobs);
         // While viewing one delivery, leave other jobs available through the banner.
         const viewing = path.current.startsWith('/return-loads/delivery/');
         if (viewing) opened.add(path.current.split('/').pop());
-        const unseen = data.find((job) => !opened.has(job.id));
+        const unseen = scheduledJobs.find((job) => !opened.has(job.id));
         if (!viewing && unseen) {
           opened.add(unseen.id);
           navigate(`/return-loads/delivery/${unseen.id}`);
@@ -54,6 +64,9 @@ function Navigation({ user }) {
   }, [user.id, user.role, navigate]);
   if (!['/driver', '/customer', '/return-loads', '/return-loads/manage'].includes(location.pathname) || !jobs.length) return null;
   return <aside className="fixed bottom-24 right-4 z-40 max-w-[90vw] max-h-48 overflow-auto rounded-xl bg-primary text-primary-foreground p-3 shadow-lg">
-    {jobs.map((job) => <Link key={job.id} to={`/return-loads/delivery/${job.id}`} className="block p-2 text-sm font-semibold">Open return delivery: {job.destination}</Link>)}
+    {jobs.map((job) => <Link key={job.id} to={`/return-loads/delivery/${job.id}`} className="block p-2 text-sm font-semibold">
+      <span className="block">Open return delivery: {job.destination}</span>
+      {job.pickup_time && <span className="block text-xs font-normal text-primary-foreground/80">Scheduled pickup: {formatDateTime(job.pickup_time)}</span>}
+    </Link>)}
   </aside>;
 }
