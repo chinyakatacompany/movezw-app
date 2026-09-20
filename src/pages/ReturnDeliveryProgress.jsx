@@ -70,7 +70,7 @@ function Progress({ id }) {
       </ol>
       {delivery.status === 'completed' ? <p className="font-semibold">Delivery completed</p>
         : delivery.driver_id === user.id ? <button disabled={busy} onClick={() => {
-          if (next === 'collected' || next === 'completed') setConfirm(delivery.status);
+          if (next === 'completed') setConfirm(delivery.status);
           else void advance(delivery.status);
         }} className="w-full rounded-xl bg-primary text-primary-foreground p-4 font-semibold disabled:opacity-50">
           {busy ? 'Updating…' : `Mark as ${STATUS_LABELS[next]}`}
@@ -78,7 +78,7 @@ function Progress({ id }) {
     </>}
     <Dialog open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
       <DialogContent>
-        <DialogTitle>{confirm === 'en_route_pickup' ? 'Confirm cargo collected?' : 'Complete this delivery?'}</DialogTitle>
+        <DialogTitle>Complete this delivery?</DialogTitle>
         <DialogDescription>Confirm only when this step has been finished. The customer will see the updated progress.</DialogDescription>
         <button disabled={busy} onClick={() => void advance(confirm)} className="rounded-xl bg-primary text-primary-foreground p-3">Confirm</button>
         <button onClick={() => setConfirm(null)} className="rounded-xl border p-3">Go back</button>
