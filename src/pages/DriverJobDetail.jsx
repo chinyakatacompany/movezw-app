@@ -438,7 +438,7 @@ export default function DriverJobDetail() {
   }, [loading, location.hash, id]);
 
   const requestStatusUpdate = (status) => {
-    if (status === 'collected' || status === 'completed') setPendingStatus({ status, from: request.status });
+    if (status === 'completed') setPendingStatus({ status, from: request.status });
     else void updateStatus(status);
   };
 
@@ -865,11 +865,9 @@ export default function DriverJobDetail() {
 
       <AlertDialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
         <AlertDialogContent>
-          <AlertDialogTitle>{pendingStatus?.status === 'collected' ? 'Confirm cargo collected?' : 'Complete this delivery?'}</AlertDialogTitle>
+          <AlertDialogTitle>Complete this delivery?</AlertDialogTitle>
           <AlertDialogDescription>
-            {pendingStatus?.status === 'collected'
-              ? 'Confirm that the cargo has been loaded into your vehicle. The customer will be notified.'
-              : 'Confirm that the cargo has been handed over and this delivery is finished.'}
+            Confirm that the cargo has been handed over and this delivery is finished.
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel>Go back</AlertDialogCancel>
