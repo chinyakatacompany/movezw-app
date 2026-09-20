@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
-import { Users, BadgeCheck, Package, CheckCircle2, Clock, ArrowRight, TrendingUp, Wallet } from "lucide-react";
+import { Users, BadgeCheck, Package, CheckCircle2, Clock, ArrowRight, TrendingUp, Wallet, Truck } from "lucide-react";
 import { formatMoney, formatDate, StatusBadge } from "@/lib/movezw";
 import { ADMIN_ACTIVE_STATUSES, advanceAdminJob } from "@/lib/adminJobs";
 import { useAuth } from "@/lib/AuthContext";
@@ -14,7 +14,7 @@ import AdminJobTracker from "@/components/admin/AdminJobTracker";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({ users: 0, pendingDrivers: 0, pendingTopups: 0, activeJobs: 0, completed: 0 });
+  const [stats, setStats] = useState({ users: 0, pendingDrivers: 0, pendingTopups: 0, activeJobs: 0, inTransit: 0, completed: 0 });
   const [activeJobRows, setActiveJobRows] = useState(null);
   const [trackedJobId, setTrackedJobId] = useState(null);
   const [recentJobs, setRecentJobs] = useState(null);
@@ -27,13 +27,17 @@ export default function AdminDashboard() {
 
   const load = useCallback(async () => {
     try {
-      const [{ count: userCount }, pendTop, pendAll, recent, activeJobs, done, pendTopups, pendTopupsAll] = await Promise.all([
+      const [{ count: userCount }, pendTop, pendAll, recent, activeJobs, inTransitJobs, returnActive, returnInTransit, done, returnDone, pendTopups, pendTopupsAll] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("driver_profiles").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(5),
         supabase.from("driver_profiles").select("id", { count: "exact", head: true }).eq("verification_status", "pending"),
         supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(8),
         supabase.from("transport_requests").select("*", { count: "exact" }).in("status", ADMIN_ACTIVE_STATUSES).order("created_at", { ascending: false }).limit(5),
+        supabase.from("transport_requests").select("id", { count: "exact", head: true }).eq("status", "in_transit"),
+        supabase.from("return_load_deliveries").select("id", { count: "exact", head: true }).in("status", ADMIN_ACTIVE_STATUSES),
+        supabase.from("return_load_deliveries").select("id", { count: "exact", head: true }).eq("status", "in_transit"),
         supabase.from("transport_requests").select("id", { count: "exact", head: true }).eq("status", "completed"),
+        supabase.from("return_load_deliveries").select("id", { count: "exact", head: true }).eq("status", "completed"),
         supabase.from("transactions").select("*").eq("type", "topup").eq("status", "pending").order("created_at", { ascending: false }).limit(5),
         supabase.from("transactions").select("id", { count: "exact", head: true }).eq("type", "topup").eq("status", "pending"),
       ]);
@@ -41,8 +45,9 @@ export default function AdminDashboard() {
         users: userCount || 0,
         pendingDrivers: pendAll.count || 0,
         pendingTopups: pendTopupsAll.count || 0,
-        activeJobs: activeJobs.count || 0,
-        completed: done.count || 0,
+        activeJobs: (activeJobs.count || 0) + (returnActive.count || 0),
+        inTransit: (inTransitJobs.count || 0) + (returnInTransit.count || 0),
+        completed: (done.count || 0) + (returnDone.count || 0),
       });
       const liveJobs = activeJobs.data || [];
       setActiveJobRows(liveJobs);
@@ -74,6 +79,7 @@ export default function AdminDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "driver_profiles" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "transport_requests" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "return_load_deliveries" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, load)
       .subscribe();
     const refreshVisible = () => { if (document.visibilityState === "visible") void load(); };
@@ -107,11 +113,12 @@ export default function AdminDashboard() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
       <PageHeader title="Dashboard" subtitle="MoveZW marketplace overview" icon={TrendingUp} />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
         <StatCard icon={Users} label="Registered users" value={stats.users} tone="primary" loading={loading} />
         <StatCard icon={BadgeCheck} label="Pending verifications" value={stats.pendingDrivers} tone="amber" loading={loading} />
         <StatCard icon={Wallet} label="Pending top-ups" value={stats.pendingTopups} tone="amber" loading={loading} />
         <StatCard icon={Package} label="Active jobs" value={stats.activeJobs} tone="accent" loading={loading} />
+        <StatCard icon={Truck} label="In transit" value={stats.inTransit} tone="amber" loading={loading} />
         <StatCard icon={CheckCircle2} label="Completed deliveries" value={stats.completed} tone="emerald" loading={loading} />
       </div>
 

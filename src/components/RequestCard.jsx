@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { MapPin, Navigation, Clock, DollarSign, Package } from "lucide-react";
-import { StatusBadge, formatMoney, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
+import { MapPin, Navigation, Clock, DollarSign, Package, CalendarClock } from "lucide-react";
+import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
 
 export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm, tripDistanceKm }) {
   return (
@@ -32,6 +32,12 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
       </div>
 
       <div className="space-y-1.5 mb-3">
+        {request.timing === "scheduled" && request.scheduled_date && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800">
+            <CalendarClock className="w-4 h-4 shrink-0" />
+            <span className="text-xs font-semibold">Scheduled pickup: {formatDateTime(request.scheduled_date)}</span>
+          </div>
+        )}
         <div className="flex items-start gap-2 text-sm">
           <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
           <span className="text-foreground truncate">{request.pickup_location}</span>
@@ -49,7 +55,7 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
+          <span className="inline-flex items-center gap-1" title="Request posted">
             <DollarSign className="w-3.5 h-3.5" />
             {formatMoney(request.accepted_price ?? request.budget)}
           </span>

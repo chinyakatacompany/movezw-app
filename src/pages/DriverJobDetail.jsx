@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
@@ -647,7 +647,7 @@ export default function DriverJobDetail() {
               <Clock className="w-3.5 h-3.5 shrink-0" />
               <p className="text-[11px]">Timing</p>
             </div>
-            <p className="text-sm font-bold truncate">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p>
+            <p className="text-sm font-bold">{request.timing === "scheduled" ? formatDateTime(request.scheduled_date) : "Now"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 pt-2 border-t border-border">
