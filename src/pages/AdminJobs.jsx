@@ -1,16 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp, Radio } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, formatDate, timeAgo, notifyJobStatusChange } from "@/lib/movezw";
+import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp } from "lucide-react";
+import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange } from "@/lib/movezw";
 import { cancelTransportRequest, processJobCompletion } from "@/lib/payments";
+import { ADMIN_ACTIVE_STATUSES, advanceAdminJob } from "@/lib/adminJobs";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import AdminJobTracker from "@/components/admin/AdminJobTracker";
 
-const RouteMap = React.lazy(() => import("@/components/RouteMap"));
-const ACTIVE_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"];
-const FILTERS = ["all", "active", "open", ...ACTIVE_STATUSES, "completed", "cancelled"];
+const FILTERS = ["all", "active", "open", ...ADMIN_ACTIVE_STATUSES, "completed", "cancelled"];
 
 export default function AdminJobs() {
   const { user } = useAuth();
@@ -25,7 +25,7 @@ export default function AdminJobs() {
 
   const load = useCallback(() => {
     let query = supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(100);
-    if (filter === "active") query = query.in("status", ACTIVE_STATUSES);
+    if (filter === "active") query = query.in("status", ADMIN_ACTIVE_STATUSES);
     else if (filter !== "all") query = query.eq("status", filter);
     query.then(({ data, error }) => {
       if (error) console.error("Failed to load jobs:", error);
@@ -64,26 +64,10 @@ export default function AdminJobs() {
   const clearSelection = () => setSelected(new Set());
 
   const advanceJob = async (job, nextStatus) => {
-    if (busy || STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1] !== nextStatus) return;
+    if (busy) return;
     setBusy(true);
     try {
-      const { data: changed, error } = await supabase
-        .from("transport_requests")
-        .update({ status: nextStatus })
-        .eq("id", job.id)
-        .eq("status", job.status)
-        .select("id")
-        .maybeSingle();
-      if (error) throw error;
-      if (!changed) throw new Error("This job changed before the update. Review its current status and try again.");
-      if (nextStatus === "completed" && job.accepted_driver_id) {
-        try {
-          await processJobCompletion({ driverId: job.accepted_driver_id, request: job, acceptedPrice: job.accepted_price, actorId: user.id });
-        } catch (paymentError) {
-          console.warn("Admin completion payment processing failed", paymentError);
-        }
-      }
-      try { await notifyJobStatusChange(job, nextStatus, user.id); } catch { /* best-effort */ }
+      await advanceAdminJob(job, nextStatus, user.id);
       toast({ title: `Job marked as ${STATUS_LABELS[nextStatus].toLowerCase()}` });
       setStatusConfirm(null);
       load();
@@ -177,17 +161,8 @@ export default function AdminJobs() {
           </div>
           {filtered.map((j) => {
             const checked = selected.has(j.id);
-            const isActive = ACTIVE_STATUSES.includes(j.status);
+            const isActive = ADMIN_ACTIVE_STATUSES.includes(j.status);
             const trackingOpen = trackingJobId === j.id;
-            const trackingTarget = j.status === "en_route_pickup"
-              ? { lat: j.pickup_lat, lng: j.pickup_lng, label: "Pickup" }
-              : { lat: j.destination_lat, lng: j.destination_lng, label: "Destination" };
-            const hasDriverLocation = j.driver_lat != null && j.driver_lng != null;
-            const hasTrackingTarget = trackingTarget.lat != null && trackingTarget.lng != null;
-            const hasFullRoute = j.pickup_lat != null && j.pickup_lng != null && j.destination_lat != null && j.destination_lng != null;
-            const showLiveMap = hasDriverLocation && hasTrackingTarget && !["confirmed", "delivered"].includes(j.status);
-            const showPlannedMap = !showLiveMap && hasFullRoute;
-            const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(j.status) + 1];
             return (
               <div key={j.id} className={cn("transition-colors", checked && "bg-primary/5")}>
                 <div className="p-4 flex items-center gap-3">
@@ -220,82 +195,14 @@ export default function AdminJobs() {
                 </div>
                 {trackingOpen && isActive && (
                   <div className="px-4 pb-4 sm:pl-[5.75rem]">
-                    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold flex items-center gap-2">
-                          <Radio className="w-4 h-4 text-primary" /> Live delivery tracking
-                        </p>
-                        <span className="text-xs text-muted-foreground">
-                          {j.driver_location_updated_at ? `Location updated ${timeAgo(j.driver_location_updated_at)}` : "Waiting for driver location"}
-                        </span>
-                      </div>
-                      {showLiveMap ? (
-                        <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
-                          <RouteMap
-                            from={{ lat: j.driver_lat, lng: j.driver_lng }}
-                            to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
-                            fromLabel="Driver"
-                            toLabel={trackingTarget.label}
-                            fromColor="#ea580c"
-                            height={280}
-                          />
-                        </React.Suspense>
-                      ) : showPlannedMap ? (
-                        <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
-                          <RouteMap
-                            from={{ lat: j.pickup_lat, lng: j.pickup_lng }}
-                            to={{ lat: j.destination_lat, lng: j.destination_lng }}
-                            fromLabel="Pickup"
-                            toLabel="Destination"
-                            height={280}
-                          />
-                        </React.Suspense>
-                      ) : hasDriverLocation ? (
-                        <a
-                          href={`https://www.openstreetmap.org/?mlat=${j.driver_lat}&mlon=${j.driver_lng}#map=17/${j.driver_lat}/${j.driver_lng}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
-                        >
-                          <Navigation className="w-4 h-4" /> View current driver position
-                        </a>
-                      ) : (
-                        <p className="rounded-xl bg-card border border-border p-3 text-sm text-muted-foreground">
-                          {j.status === "confirmed"
-                            ? "The driver has not started travelling to the pickup point yet. Live GPS will appear here once the trip begins."
-                            : j.status === "delivered"
-                              ? "The delivery has arrived and is waiting to be completed."
-                              : "No recent GPS position is available. Ask the driver to open the active job and enable location access."}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {showLiveMap
-                          ? `Showing the driver's current position and remaining road route to ${trackingTarget.label.toLowerCase()}.`
-                          : showPlannedMap
-                            ? "Showing the planned pickup-to-destination route. The moving driver position appears once GPS sharing starts."
-                            : "Route mapping needs coordinates from the booking or the driver's current GPS position."}
-                      </p>
-                      {nextStatus && (
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-primary/15 pt-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Current progress</p>
-                            <p className="text-sm font-semibold">{STATUS_LABELS[j.status]}</p>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => {
-                              if (nextStatus === "completed") setStatusConfirm({ job: j, nextStatus });
-                              else void advanceJob(j, nextStatus);
-                            }}
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-                          >
-                            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                            Mark as {STATUS_LABELS[nextStatus]}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <AdminJobTracker
+                      job={j}
+                      busy={busy}
+                      onAdvance={(job, nextStatus) => {
+                        if (nextStatus === "completed") setStatusConfirm({ job, nextStatus });
+                        else void advanceJob(job, nextStatus);
+                      }}
+                    />
                   </div>
                 )}
               </div>
