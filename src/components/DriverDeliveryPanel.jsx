@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { STATUS_FLOW, STATUS_LABELS } from '@/lib/movezw';
+import { CalendarClock } from 'lucide-react';
+import { STATUS_FLOW, STATUS_LABELS, formatDateTime } from '@/lib/movezw';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function DriverDeliveryPanel({ jobs }) {
@@ -25,6 +26,9 @@ export default function DriverDeliveryPanel({ jobs }) {
       return <div key={job.id} className="rounded-2xl border-2 border-primary bg-card p-4 space-y-4 shadow-md">
         <p className="font-semibold break-words">{job.pickup_location} → {job.destination}</p>
         <p className="text-sm text-muted-foreground">{job.cargo_type} · {STATUS_LABELS[job.status]}</p>
+        {job.timing === 'scheduled' && job.scheduled_date && <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+          <CalendarClock className="h-4 w-4 shrink-0" /> Scheduled pickup: {formatDateTime(job.scheduled_date)}
+        </p>}
         <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Delivery progress">
           {STATUS_FLOW.map((step, index) => <li key={step} aria-current={index === current ? 'step' : undefined}
             className={`rounded-xl p-3 text-xs font-semibold ${index <= current ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'} ${index === current ? 'ring-2 ring-offset-2 ring-primary' : ''}`}>
@@ -44,6 +48,7 @@ export default function DriverDeliveryPanel({ jobs }) {
         {unseen.map((job) => <div key={job.id} className="space-y-2 border-b pb-4">
           <p className="font-semibold break-words">{job.pickup_location} → {job.destination}</p>
           <p className="text-sm text-muted-foreground">{STATUS_LABELS[job.status]}</p>
+          {job.timing === 'scheduled' && job.scheduled_date && <p className="text-sm font-semibold text-amber-700">Scheduled pickup: {formatDateTime(job.scheduled_date)}</p>}
           <Link onClick={close} to={`/driver/job/${job.id}#delivery-progress`} className="block text-center rounded-xl bg-primary text-primary-foreground p-3 font-semibold">Open delivery</Link>
         </div>)}
         <button onClick={close} className="rounded-xl border py-3 text-sm font-medium">Stay on main screen</button>
