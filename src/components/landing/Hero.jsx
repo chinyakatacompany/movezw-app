@@ -3,11 +3,10 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Truck, Star, ShieldCheck, Download } from "lucide-react";
 import { useSiteContent } from "@/lib/siteContent";
-import { useInstallPrompt } from "@/lib/useInstallPrompt";
+import { PLAY_STORE_URL } from "@/lib/appLinks";
 
 export default function Hero() {
   const { t } = useSiteContent();
-  const { showInstall, promptInstall } = useInstallPrompt();
   return (
     <section className="relative overflow-hidden pt-28 pb-16 sm:pt-36 sm:pb-24 bg-gradient-to-b from-primary/5 via-background to-background">
       <div className="absolute inset-0 pointer-events-none">
@@ -44,16 +43,16 @@ export default function Hero() {
             </Link>
           </div>
 
-          {showInstall && (
-            <div className="mt-5 flex justify-center lg:justify-start">
-              <button
-                onClick={promptInstall}
-                className="inline-flex items-center gap-2.5 h-12 px-7 rounded-xl bg-accent text-accent-foreground text-base font-semibold shadow-lg shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle"
-              >
-                <Download className="w-5 h-5" /> Install the MoveZW app
-              </button>
-            </div>
-          )}
+          <div className="mt-5 flex justify-center lg:justify-start">
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 h-12 px-7 rounded-xl bg-accent text-accent-foreground text-base font-semibold shadow-lg shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle"
+            >
+              <Download className="w-5 h-5" /> Get MoveZW on Google Play
+            </a>
+          </div>
 
           <div className="mt-8 flex items-center gap-5 justify-center lg:justify-start text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
