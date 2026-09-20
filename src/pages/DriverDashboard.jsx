@@ -3,14 +3,14 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
-import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2 } from "lucide-react";
+import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2, MapPin, CheckCircle2 } from "lucide-react";
 import RequestCard from "@/components/RequestCard";
 import DriverDeliveryPanel from "@/components/DriverDeliveryPanel";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
 import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
-import { geolocationUnavailableReason } from "@/lib/geo";
+import { getLocationPermissionState, requestCurrentLocation } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -29,18 +29,54 @@ export default function DriverDashboard() {
   const openRequests = useUnexpiredRequests(allOpenRequests);
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
+  const [locationPermission, setLocationPermission] = useState("checking");
+  const [locationReason, setLocationReason] = useState(null);
+  const [requestingLocation, setRequestingLocation] = useState(false);
 
   // Best-effort — lets each request card show "X km away". No map, no
   // dedicated loading/error UI: if location isn't available, cards simply
   // show without a distance rather than taking up space explaining why.
   useEffect(() => {
-    if (geolocationUnavailableReason()) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
-    );
+    let active = true;
+    getLocationPermissionState().then(({ state, reason }) => {
+      if (!active) return;
+      setLocationPermission(state);
+      setLocationReason(reason);
+      if (state === "granted") {
+        requestCurrentLocation({ enableHighAccuracy: false, maximumAge: 300000 })
+          .then((pos) => { if (active) setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); })
+          .catch(() => {});
+      }
+    });
+    return () => { active = false; };
   }, []);
+
+  const enableLocation = async ({ quiet = false } = {}) => {
+    if (requestingLocation) return null;
+    setRequestingLocation(true);
+    try {
+      const pos = await requestCurrentLocation();
+      const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setDriverPos(coords);
+      setLocationPermission("granted");
+      setLocationReason(null);
+      if (profile?.id) {
+        const { error } = await supabase.from("driver_profiles")
+          .update({ latitude: coords.lat, longitude: coords.lng })
+          .eq("id", profile.id);
+        if (error) console.error("Failed to save driver location:", error);
+      }
+      if (!quiet) toast({ title: "Location enabled", description: "Live tracking is ready while an active delivery is open." });
+      return coords;
+    } catch (error) {
+      setLocationPermission("denied");
+      setLocationReason(error.message);
+      if (!quiet) toast({ title: "Location access needed", description: error.message, variant: "destructive" });
+      return null;
+    } finally {
+      setRequestingLocation(false);
+    }
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -141,6 +177,17 @@ export default function DriverDashboard() {
   const verified = profile?.verification_status === "approved";
 
   const updateAvailability = async (status) => {
+    if (status === "online" && locationPermission !== "granted") {
+      const coords = await enableLocation({ quiet: true });
+      if (!coords) {
+        toast({
+          title: "Enable location before going online",
+          description: locationReason || "MoveZW needs location to match nearby jobs and provide live delivery tracking.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     setToggling(true);
     try {
       const { data: updated, error } = await supabase
@@ -237,6 +284,33 @@ export default function DriverDashboard() {
       </div>
 
       <DriverDeliveryPanel key={user.id} jobs={myJobs || []} />
+
+      <div className={`rounded-2xl border p-4 ${locationPermission === "granted" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${locationPermission === "granted" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            {locationPermission === "granted" ? <CheckCircle2 className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Location access</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {locationPermission === "granted"
+                ? "Enabled — nearby matching and live tracking are ready. Keep MoveZW open during an active trip."
+                : locationReason || "Enable GPS so customers and admins can follow active deliveries."}
+            </p>
+          </div>
+          {locationPermission !== "granted" && (
+            <button
+              type="button"
+              disabled={requestingLocation || locationPermission === "checking"}
+              onClick={() => void enableLocation()}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {requestingLocation || locationPermission === "checking" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
+              Enable
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <a href="#availability-toggle" className="bg-card rounded-2xl border border-border p-4">

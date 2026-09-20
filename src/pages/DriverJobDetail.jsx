@@ -14,7 +14,7 @@ import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/li
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { geolocationUnavailableReason, geocodeAddress } from "@/lib/geo";
+import { geolocationUnavailableReason, geocodeAddress, locationErrorMessage } from "@/lib/geo";
 import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 import ImageLightbox from "@/components/ImageLightbox";
 import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
@@ -200,31 +200,32 @@ export default function DriverJobDetail() {
     return () => { supabase.removeChannel(channel); };
   }, [id, user?.id, request?.status, profile?.full_name]);
 
-  // Report this driver's position to the customer every 5 minutes while the
-  // job is actively moving (en route to pickup through in transit). Stops
-  // automatically once delivered/completed/cancelled, or if this isn't the
-  // accepted driver's own job.
+  // Watch this driver's position while the job is actively moving (en route
+  // to pickup through in transit). GPS callbacks may arrive rapidly, so
+  // Supabase writes are throttled to the same 30-second cadence used by the
+  // live map. Tracking stops automatically when this screen closes or the
+  // delivery reaches a non-moving state.
   useEffect(() => {
     if (request?.accepted_driver_id !== user?.id || !LIVE_TRACKING_STATUSES.includes(request?.status)) return;
-    const reportLocation = () => {
-      if (geolocationUnavailableReason()) return;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          supabase
-            .rpc("fn_update_driver_location", { p_request_id: request.id, p_lat: pos.coords.latitude, p_lng: pos.coords.longitude })
-            .then(({ error }) => { if (error) console.error("Failed to report location:", error); });
-        },
-        () => { /* best-effort — skip this cycle if location isn't available */ },
-        // maximumAge shorter than the report interval — otherwise the
-        // browser would keep handing back the same cached fix from before
-        // the interval dropped to 30s, and the "live" pin would stop
-        // actually moving between real GPS reads.
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 20000 }
-      );
-    };
-    reportLocation();
-    const intervalId = setInterval(reportLocation, LOCATION_REPORT_INTERVAL_MS);
-    return () => clearInterval(intervalId);
+    const reason = geolocationUnavailableReason();
+    if (reason) { setLocationError(reason); return; }
+    let lastReportedAt = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setDriverPos(coords);
+        setLocationError(null);
+        const now = Date.now();
+        if (now - lastReportedAt < LOCATION_REPORT_INTERVAL_MS) return;
+        lastReportedAt = now;
+        supabase
+          .rpc("fn_update_driver_location", { p_request_id: request.id, p_lat: coords.lat, p_lng: coords.lng })
+          .then(({ error }) => { if (error) console.error("Failed to report location:", error); });
+      },
+      (error) => setLocationError(locationErrorMessage(error)),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
   }, [request?.accepted_driver_id, request?.status, request?.id, user?.id]);
 
   const submitQuote = async () => {

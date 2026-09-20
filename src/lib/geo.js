@@ -9,6 +9,39 @@ export function geolocationUnavailableReason() {
   return null;
 }
 
+export function locationErrorMessage(error) {
+  if (error?.code === 1) return "Location access is blocked. Allow location for MoveZW in your phone or browser settings.";
+  if (error?.code === 2) return "Your location could not be determined. Turn on GPS and try again.";
+  if (error?.code === 3) return "Getting your location took too long. Check GPS or your connection and try again.";
+  return error?.message || "MoveZW could not access your location.";
+}
+
+export async function getLocationPermissionState() {
+  const reason = geolocationUnavailableReason();
+  if (reason) return { state: "unavailable", reason };
+  if (!navigator.permissions?.query) return { state: "prompt", reason: null };
+  try {
+    const permission = await navigator.permissions.query({ name: "geolocation" });
+    return { state: permission.state, reason: null };
+  } catch {
+    // Android WebView versions that do not expose the Permissions API still
+    // show the native runtime prompt when getCurrentPosition is called.
+    return { state: "prompt", reason: null };
+  }
+}
+
+export function requestCurrentLocation(options = {}) {
+  const reason = geolocationUnavailableReason();
+  if (reason) return Promise.reject(new Error(reason));
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      (error) => reject(new Error(locationErrorMessage(error))),
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0, ...options }
+    );
+  });
+}
+
 // Build the most locally-specific label the free OSM data actually has —
 // road + suburb + city — instead of Nominatim's default display_name, which
 // tails off into province/country and can bury (or in sparser areas, lose)
