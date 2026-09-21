@@ -194,11 +194,16 @@ export default function DriverJobDetail() {
     const channel = supabase.channel(`job-presence-${id}`, { config: { presence: { key: user.id } } });
     channel.subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
-        await channel.track({ driver_name: profile?.full_name || "A driver" });
+        await channel.track({
+          driver_id: user.id,
+          driver_name: profile?.full_name || "A driver",
+          vehicle_type: profile?.vehicle_type || null,
+          viewed_at: new Date().toISOString(),
+        });
       }
     });
     return () => { supabase.removeChannel(channel); };
-  }, [id, user?.id, request?.status, profile?.full_name]);
+  }, [id, user?.id, request?.status, profile?.full_name, profile?.vehicle_type]);
 
   // Watch this driver's position while the job is actively moving (en route
   // to pickup through in transit). GPS callbacks may arrive rapidly, so

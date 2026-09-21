@@ -1,4 +1,4 @@
-export const REQUEST_LIFETIME_MS = 10 * 60 * 60 * 1000;
+export const REQUEST_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 export function requestDeadline(request) {
   const start = request.timing === "scheduled"

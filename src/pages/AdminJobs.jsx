@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp } from "lucide-react";
+import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp, Eye, Users } from "lucide-react";
 import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange } from "@/lib/movezw";
 import { cancelTransportRequest, processJobCompletion } from "@/lib/payments";
 import { ADMIN_ACTIVE_STATUSES, advanceAdminJob } from "@/lib/adminJobs";
@@ -11,6 +11,80 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import AdminJobTracker from "@/components/admin/AdminJobTracker";
 
 const FILTERS = ["all", "active", "open", ...ADMIN_ACTIVE_STATUSES, "completed", "cancelled"];
+
+function AdminJobViewers({ jobId, adminId }) {
+  const [viewers, setViewers] = useState([]);
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    if (!jobId) return undefined;
+
+    const channel = supabase.channel(`job-presence-${jobId}`, {
+      config: { presence: { key: `admin-${adminId || "viewer"}` } },
+    });
+    const syncViewers = () => {
+      const unique = new Map();
+      Object.entries(channel.presenceState()).forEach(([presenceKey, presences]) => {
+        (presences || []).forEach((presence) => {
+          // Admins and customers join read-only and never publish driver data,
+          // so exclude any presence item that has no driver identity.
+          if (!presence.driver_id && !presence.driver_name) return;
+          const driverId = presence.driver_id || presenceKey;
+          unique.set(driverId, {
+            id: driverId,
+            name: presence.driver_name || "Driver",
+            vehicleType: presence.vehicle_type || null,
+          });
+        });
+      });
+      setViewers(Array.from(unique.values()));
+    };
+
+    channel
+      .on("presence", { event: "sync" }, syncViewers)
+      .on("presence", { event: "join" }, syncViewers)
+      .on("presence", { event: "leave" }, syncViewers)
+      .subscribe((status) => setConnected(status === "SUBSCRIBED"));
+
+    return () => {
+      setViewers([]);
+      setConnected(false);
+      supabase.removeChannel(channel);
+    };
+  }, [jobId, adminId]);
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-3" aria-live="polite">
+      <div className="flex items-center gap-2 mb-2">
+        <Users className="w-4 h-4 text-primary" />
+        <p className="text-xs font-semibold">Drivers viewing now</p>
+        <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">{viewers.length}</span>
+      </div>
+      {!connected ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting to live viewers…
+        </div>
+      ) : viewers.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No drivers are viewing this job right now.</p>
+      ) : (
+        <div className="space-y-2">
+          {viewers.map((driver) => (
+            <div key={driver.id} className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 border border-border/70">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold truncate">{driver.name}</p>
+                <p className="text-[11px] text-muted-foreground">{driver.vehicleType || "Vehicle not specified"} · viewing now</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminJobs() {
   const { user } = useAuth();
@@ -22,21 +96,29 @@ export default function AdminJobs() {
   const [confirm, setConfirm] = useState(null);
   const [statusConfirm, setStatusConfirm] = useState(null);
   const [trackingJobId, setTrackingJobId] = useState(null);
+  const [viewersJobId, setViewersJobId] = useState(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
+    // The database cron remains authoritative. Running the same protected
+    // cleanup here ensures an overdue request is persisted as cancelled before
+    // the admin list is read, even if a cron tick was delayed.
+    const { error: expiryError } = await supabase.rpc("fn_admin_expire_open_requests");
+    if (expiryError && expiryError.code !== "PGRST202") {
+      console.warn("Could not refresh expired requests:", expiryError.message);
+    }
     let query = supabase.from("transport_requests").select("*").order("created_at", { ascending: false }).limit(100);
     if (filter === "active") query = query.in("status", ADMIN_ACTIVE_STATUSES);
     else if (filter !== "all") query = query.eq("status", filter);
-    query.then(({ data, error }) => {
-      if (error) console.error("Failed to load jobs:", error);
-      setJobs(data || []);
-    });
+    const { data, error } = await query;
+    if (error) console.error("Failed to load jobs:", error);
+    setJobs(data || []);
   }, [filter]);
 
   useEffect(() => {
     load();
     setSelected(new Set());
     setTrackingJobId(null);
+    setViewersJobId(null);
     const channel = supabase
       .channel(`admin-jobs-live-${filter}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "transport_requests" }, load)
@@ -163,6 +245,7 @@ export default function AdminJobs() {
             const checked = selected.has(j.id);
             const isActive = ADMIN_ACTIVE_STATUSES.includes(j.status);
             const trackingOpen = trackingJobId === j.id;
+            const viewersOpen = viewersJobId === j.id;
             return (
               <div key={j.id} className={cn("transition-colors", checked && "bg-primary/5")}>
                 <div className="p-4 flex items-center gap-3">
@@ -175,6 +258,21 @@ export default function AdminJobs() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{j.cargo_type} · {j.pickup_location} → {j.destination}</p>
                     <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_at)}</p>
+                    {j.status === "cancelled" && j.expired_at && (
+                      <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 24 hours</p>
+                    )}
+                    {j.status === "open" && (
+                      <button
+                        type="button"
+                        onClick={() => setViewersJobId(viewersOpen ? null : j.id)}
+                        className="inline-flex items-center gap-1.5 mt-2 mr-4 text-xs font-semibold text-primary hover:underline"
+                        aria-expanded={viewersOpen}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        {viewersOpen ? "Hide live viewers" : "See drivers viewing"}
+                        {viewersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                     {isActive && (
                       <button
                         type="button"
@@ -203,6 +301,11 @@ export default function AdminJobs() {
                         else void advanceJob(job, nextStatus);
                       }}
                     />
+                  </div>
+                )}
+                {viewersOpen && j.status === "open" && (
+                  <div className="px-4 pb-4 sm:pl-[5.75rem]">
+                    <AdminJobViewers jobId={j.id} adminId={user?.id} />
                   </div>
                 )}
               </div>
