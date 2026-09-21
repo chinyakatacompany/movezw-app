@@ -1,9 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Clock, DollarSign, Package, CalendarClock } from "lucide-react";
-import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
+import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS, jobCapacityGroup } from "@/lib/movezw";
 
 export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm, tripDistanceKm }) {
+  const capacityGroup = jobCapacityGroup(request);
   return (
     <Link
       to={to}
@@ -25,6 +26,11 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
           {request.batch_total > 1 && (
             <span className="text-[11px] font-semibold text-accent bg-accent/10 px-2 py-1 rounded-full whitespace-nowrap">
               Load {request.batch_index} of {request.batch_total}
+            </span>
+          )}
+          {capacityGroup && (
+            <span className="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-1 rounded-full whitespace-nowrap">
+              {capacityGroup.label}
             </span>
           )}
           <StatusBadge status={request.status} />

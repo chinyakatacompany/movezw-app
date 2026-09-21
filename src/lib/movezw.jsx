@@ -1,6 +1,17 @@
 import React from "react";
 import { supabase } from "@/api/supabaseClient";
 import { cn } from "@/lib/utils";
+export {
+  JOB_CAPACITY_GROUPS,
+  VEHICLE_TYPES,
+  VEHICLE_ICONS,
+  VEHICLE_CAPACITY_TONS,
+  cargoWeightTons,
+  requiredCapacityTons,
+  capacityGroupForTons,
+  jobCapacityGroup,
+  vehicleFitsRequest,
+} from "@/lib/vehicleMatching";
 
 export const CARGO_TYPES = [
   "Furniture",
@@ -10,28 +21,6 @@ export const CARGO_TYPES = [
   "Parcels",
   "Other",
 ];
-
-export const VEHICLE_TYPES = [
-  "Small Delivery Vehicle",
-  "Pickup",
-  "Cargo Van",
-  "1 Ton Truck",
-  "3 Ton Truck",
-  "5 Ton Truck",
-  "10 Ton Truck",
-  "Articulated Truck",
-];
-
-export const VEHICLE_ICONS = {
-  "Small Delivery Vehicle": "🚗",
-  Pickup: "🛻",
-  "Cargo Van": "🚐",
-  "1 Ton Truck": "🚚",
-  "3 Ton Truck": "🚚",
-  "5 Ton Truck": "🚚",
-  "10 Ton Truck": "🚛",
-  "Articulated Truck": "🚛",
-};
 
 export const REQUEST_STATUSES = [
   "open",

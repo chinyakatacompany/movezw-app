@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, initWebPush, getServiceRoleKey, sendPushToUsers } from "../_shared/push.ts";
 import { sendNativePushToUsers } from "../_shared/nativePush.ts";
+import { driverVehicleFitsRequest } from "../_shared/jobCapacity.ts";
 
 const { publicKey, privateKey } = initWebPush();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -36,12 +37,14 @@ Deno.serve(async (req) => {
 
     const { data: drivers, error: drvErr } = await supabase
       .from("driver_profiles")
-      .select("user_id")
+      .select("user_id, vehicle_type")
       .eq("availability_status", "online")
       .eq("verification_status", "approved");
     if (drvErr) throw drvErr;
 
-    const driverIds = (drivers ?? []).map((d: { user_id: string }) => d.user_id);
+    const driverIds = (drivers ?? [])
+      .filter((driver: { vehicle_type?: string | null }) => driverVehicleFitsRequest(driver.vehicle_type, request))
+      .map((driver: { user_id: string }) => driver.user_id);
 
     const buildPayload = () => ({
       title: "New job request nearby",

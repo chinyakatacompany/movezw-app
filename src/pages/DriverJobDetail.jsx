@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
-import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
+import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm, vehicleFits } from "@/lib/matching";
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -235,6 +235,14 @@ export default function DriverJobDetail() {
     }
     if (profile?.availability_status === "offline") {
       toast({ title: "You're offline", description: "Go online from your dashboard to submit quotes.", variant: "destructive" });
+      return;
+    }
+    if (!vehicleFits(profile, request)) {
+      toast({
+        title: "Vehicle does not match this job",
+        description: `This request needs a different capacity category than your ${profile?.vehicle_type || "registered vehicle"}.`,
+        variant: "destructive",
+      });
       return;
     }
     setSubmitting(true);
