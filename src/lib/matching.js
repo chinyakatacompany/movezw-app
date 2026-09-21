@@ -70,8 +70,9 @@ export async function fetchRoadDistanceKm(from, to, retries = 2) {
   return null;
 }
 
-// Whether a driver's registered vehicle is in the request's capacity band and
-// has at least the requested tonnage.
+// Whether a driver's registered vehicle is in the request's capacity band.
+// Matching is deliberately category-wide: for example, every 16–40 ton
+// driver sees every job in that category.
 export function vehicleFits(driver, request) {
   return vehicleFitsRequest(driver?.vehicle_type, request);
 }
