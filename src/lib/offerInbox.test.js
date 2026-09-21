@@ -17,6 +17,6 @@ test('revised price reappears after the old offer was reviewed', () => {
 });
 test('closed, expired, rejected and unrelated bids are excluded', () => {
   assert.equal(pendingOfferQueue([first], [{ ...request, status: 'confirmed' }], {}, now).length, 0);
-  assert.equal(pendingOfferQueue([first], [request], {}, now + 25 * 3600000).length, 0);
+  assert.equal(pendingOfferQueue([first], [request], {}, now + 12 * 3600000).length, 0);
   assert.equal(pendingOfferQueue([{ ...first, status: 'rejected' }, { ...second, request_id: 'other' }], [request], {}, now).length, 0);
 });

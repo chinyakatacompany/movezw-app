@@ -259,7 +259,7 @@ export default function AdminJobs() {
                     <p className="text-sm font-semibold truncate">{j.cargo_type} · {j.pickup_location} → {j.destination}</p>
                     <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_at)}</p>
                     {j.status === "cancelled" && j.expired_at && (
-                      <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 24 hours</p>
+                      <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 10 hours</p>
                     )}
                     {j.status === "open" && (
                       <button
