@@ -40,5 +40,5 @@ export function driverVehicleFitsRequest(
   const requiredTons = vehicleTons == null ? weightTons : weightTons == null ? vehicleTons : Math.max(vehicleTons, weightTons);
   if (requiredTons == null) return Boolean(driverVehicleType);
   if (driverTons == null || requiredTons > 40) return false;
-  return groupForTons(driverTons) === groupForTons(requiredTons) && driverTons >= requiredTons;
+  return groupForTons(driverTons) === groupForTons(requiredTons);
 }

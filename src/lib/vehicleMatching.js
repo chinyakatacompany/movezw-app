@@ -101,5 +101,5 @@ export function vehicleFitsRequest(driverVehicleType, request) {
 
   const driverGroup = capacityGroupForTons(driverTons);
   const requestGroup = capacityGroupForTons(requiredTons);
-  return driverGroup?.id === requestGroup?.id && driverTons >= requiredTons;
+  return driverGroup?.id === requestGroup?.id;
 }
