@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
-import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney } from "@/lib/movezw";
+import { CARGO_TYPES, JOB_CAPACITY_GROUPS, VEHICLE_ICONS, VEHICLE_CAPACITY_TONS, jobCapacityGroup, requiredCapacityTons, formatMoney } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -25,9 +25,8 @@ const MAX_LOADS = 10;
 // Recommended $/km by vehicle size, shown to the customer as a starting
 // point for their budget — bigger trucks cost more to run, so a flat rate
 // across all vehicle types either overpays for a van or underpays for an
-// articulated truck. vehicle_type here only feeds this recommendation, it
-// never filters who a request reaches — any driver can see and quote on
-// any open job regardless of what's selected here.
+// articulated truck. The same vehicle choice now also sets the request's
+// capacity requirement, which is used by dashboard, bid, and push matching.
 const RATE_PER_KM = {
   "Small Delivery Vehicle": 1,
   Pickup: 1.2,
@@ -36,7 +35,12 @@ const RATE_PER_KM = {
   "3 Ton Truck": 1.5,
   "5 Ton Truck": 1.5,
   "10 Ton Truck": 2,
-  "Articulated Truck": 3,
+  "15 Ton Truck": 2.3,
+  "16 Ton Truck": 2.5,
+  "20 Ton Truck": 2.8,
+  "30 Ton Truck": 3.2,
+  "40 Ton Truck": 3.5,
+  "Articulated Truck": 3.5,
 };
 
 export default function CreateRequest() {
@@ -130,6 +134,20 @@ export default function CreateRequest() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const requiredTons = requiredCapacityTons(form);
+    const selectedVehicleTons = VEHICLE_CAPACITY_TONS[form.vehicle_type] ?? 0;
+    if (requiredTons != null && requiredTons > 40) {
+      toast({ title: "Load exceeds 40 tons", description: "Split the cargo into separate loads or contact MoveZW support.", variant: "destructive" });
+      return;
+    }
+    if (requiredTons != null && requiredTons > selectedVehicleTons) {
+      toast({
+        title: "Choose a larger vehicle",
+        description: `The entered weight needs at least ${Math.ceil(requiredTons)}-ton capacity.`,
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const basePayload = {
@@ -144,6 +162,7 @@ export default function CreateRequest() {
         cargo_type: form.cargo_type,
         cargo_weight: form.cargo_weight || null,
         cargo_description: form.cargo_description,
+        vehicle_type: form.vehicle_type,
         photos,
         timing: form.timing,
         scheduled_date: form.timing === "scheduled" ? new Date(form.scheduled_date).toISOString() : null,
@@ -281,8 +300,8 @@ export default function CreateRequest() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight (optional)</Label>
-              <Input id="weight" placeholder="e.g. 500kg" value={form.cargo_weight} onChange={(e) => set("cargo_weight", e.target.value)} />
+              <Label htmlFor="weight">Estimated weight in kg (optional)</Label>
+              <Input id="weight" type="number" min="1" max="40000" inputMode="numeric" placeholder="e.g. 500" value={form.cargo_weight} onChange={(e) => set("cargo_weight", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="vehicle">Vehicle type needed</Label>
@@ -292,12 +311,19 @@ export default function CreateRequest() {
                 onChange={(e) => set("vehicle_type", e.target.value)}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
               >
-                {VEHICLE_TYPES.map((t) => (
-                  <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
+                {JOB_CAPACITY_GROUPS.map((group) => (
+                  <optgroup key={group.id} label={group.label}>
+                    {group.vehicleTypes.map((t) => (
+                      <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
           </div>
+          <p className="rounded-xl bg-primary/5 border border-primary/15 px-3 py-2 text-xs text-primary font-semibold">
+            Job category: {jobCapacityGroup(form)?.label || "Select a vehicle or enter the weight"}
+          </p>
           <div className="space-y-2">
             <Label htmlFor="desc">Describe your cargo</Label>
             <Textarea id="desc" placeholder="e.g. Two-seater sofa, a coffee table and 4 boxes of clothes" value={form.cargo_description} onChange={(e) => set("cargo_description", e.target.value)} rows={3} required />
