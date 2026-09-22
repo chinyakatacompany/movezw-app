@@ -1,6 +1,6 @@
 import { supabase } from "@/api/supabaseClient";
 import { isRequestExpired } from "./requestExpiry";
-import { createNotification, formatMoney, vehicleFitsRequest } from "@/lib/movezw";
+import { createNotification, formatMoney } from "@/lib/movezw";
 
 export const AVAILABILITY = {
   online: "online",
@@ -14,7 +14,7 @@ export const AVAILABILITY_LABELS = {
   offline: "Offline",
 };
 
-// Vehicle capacity ordering retained for callers that need sortable sizes.
+// Vehicle capacity ordering — ready for future cargo-weight → vehicle matching
 export const VEHICLE_CAPACITY_RANK = {
   Motorcycle: 1,
   Pickup: 2,
@@ -23,12 +23,7 @@ export const VEHICLE_CAPACITY_RANK = {
   "3 Ton Truck": 5,
   "5 Ton Truck": 6,
   "10 Ton Truck": 7,
-  "15 Ton Truck": 8,
-  "16 Ton Truck": 9,
-  "20 Ton Truck": 10,
-  "30 Ton Truck": 11,
-  "40 Ton Truck": 12,
-  "Articulated Truck": 12,
+  "Articulated Truck": 8,
 };
 
 // Haversine distance in km — ready for future live GPS proximity matching
@@ -70,11 +65,11 @@ export async function fetchRoadDistanceKm(from, to, retries = 2) {
   return null;
 }
 
-// Whether a driver's registered vehicle is in the request's capacity band.
-// Matching is deliberately category-wide: for example, every 16–40 ton
-// driver sees every job in that category.
-export function vehicleFits(driver, request) {
-  return vehicleFitsRequest(driver?.vehicle_type, request);
+// Whether a driver's vehicle can service the request.
+// Today: any approved vehicle qualifies (request has no vehicle preference).
+// Future: map cargo_weight → required VEHICLE_CAPACITY_RANK and compare.
+export function vehicleFits(driver, _request) {
+  return Boolean(driver.vehicle_type);
 }
 
 // Score a driver for a request (higher = better match).

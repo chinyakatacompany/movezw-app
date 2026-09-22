@@ -9,7 +9,7 @@ import DriverDeliveryPanel from "@/components/DriverDeliveryPanel";
 import { EmptyState, formatMoney } from "@/lib/movezw";
 import AvailabilityToggle from "@/components/AvailabilityToggle";
 import NotificationSettings from "@/components/NotificationSettings";
-import { AVAILABILITY_LABELS, distanceKm, vehicleFits } from "@/lib/matching";
+import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
 import { getLocationPermissionState, requestCurrentLocation } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -175,7 +175,6 @@ export default function DriverDashboard() {
 
   const [toggling, setToggling] = useState(false);
   const verified = profile?.verification_status === "approved";
-  const matchingOpenRequests = openRequests?.filter((request) => vehicleFits(profile, request)) ?? openRequests;
 
   const updateAvailability = async (status) => {
     if (status === "online" && locationPermission !== "granted") {
@@ -355,7 +354,7 @@ export default function DriverDashboard() {
             <Target className="w-5 h-5 text-primary" />
           </div>
           <p className="text-sm font-semibold">Nearby Requests</p>
-          <p className="text-lg font-bold mt-0.5">{matchingOpenRequests?.length ?? "—"}</p>
+          <p className="text-lg font-bold mt-0.5">{openRequests?.length ?? "—"}</p>
           <p className="text-[11px] text-muted-foreground mb-2.5">Matching jobs near you</p>
           <span className="text-xs font-semibold text-primary">View all</span>
         </a>
@@ -402,17 +401,17 @@ export default function DriverDashboard() {
 
       <div id="nearby-requests">
         <h2 className="text-base font-semibold mb-3">Nearby open requests</h2>
-        {matchingOpenRequests === null ? (
+        {openRequests === null ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-2xl bg-muted animate-pulse" />)}
           </div>
-        ) : matchingOpenRequests.length === 0 ? (
+        ) : openRequests.length === 0 ? (
           <div className="bg-card rounded-2xl border border-border">
-            <EmptyState icon={Package} title="No matching requests" subtitle={`Jobs suitable for your ${profile.vehicle_type} will appear here.`} />
+            <EmptyState icon={Package} title="No open requests" subtitle="New transport requests from customers will appear here." />
           </div>
         ) : (
           <div className="space-y-3">
-            {matchingOpenRequests.map((r) => (
+            {openRequests.map((r) => (
               <RequestCard
                 key={r.id}
                 request={r}
