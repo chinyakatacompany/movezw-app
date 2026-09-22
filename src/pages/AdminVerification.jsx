@@ -2,12 +2,22 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, FileText, Car, UserPlus, ArrowRight } from "lucide-react";
+import { Check, X, Loader2, FileText, Car, UserPlus, ArrowRight, ShieldOff } from "lucide-react";
 import { StarRating } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
 import { getVerificationDocSignedUrl } from "@/lib/documents";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminVerification() {
   const [profiles, setProfiles] = useState(null);
@@ -16,6 +26,8 @@ export default function AdminVerification() {
   const [note, setNote] = useState("");
   const [acting, setActing] = useState(null);
   const [noProfileDrivers, setNoProfileDrivers] = useState(null);
+  const [unverifyTarget, setUnverifyTarget] = useState(null);
+  const [unverifyReason, setUnverifyReason] = useState("");
 
   const load = () => {
     let query = supabase.from("driver_profiles").select("*").order("created_at", { ascending: false }).limit(50);
@@ -63,6 +75,33 @@ export default function AdminVerification() {
       load();
     } catch (e) {
       toast({ title: "Action failed", description: e.message, variant: "destructive" });
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const unverify = async () => {
+    if (!unverifyTarget) return;
+    setActing(unverifyTarget.id);
+    try {
+      const { error } = await supabase.rpc("admin_unverify_driver", {
+        p_driver_profile_id: unverifyTarget.id,
+        p_reason: unverifyReason.trim() || null,
+      });
+      if (error) throw error;
+      await createNotification(
+        unverifyTarget.user_id,
+        "verification",
+        "Driver verification removed",
+        unverifyReason.trim() || "Your driver verification has been removed. Please review your profile or contact support before taking new jobs.",
+        "/driver"
+      );
+      toast({ title: "Driver unverified", description: "New jobs and pending bids are now blocked for this driver." });
+      setUnverifyTarget(null);
+      setUnverifyReason("");
+      load();
+    } catch (e) {
+      toast({ title: "Could not unverify driver", description: e.message, variant: "destructive" });
     } finally {
       setActing(null);
     }
@@ -177,6 +216,20 @@ export default function AdminVerification() {
                   </Button>
                 </div>
               )}
+              {p.verification_status === "approved" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setUnverifyTarget(p);
+                    setUnverifyReason("");
+                  }}
+                  disabled={acting === p.id}
+                  className="w-full mt-3 text-destructive border-destructive/30 hover:bg-destructive/5"
+                >
+                  <ShieldOff className="w-4 h-4 mr-1.5" /> Unverify driver
+                </Button>
+              )}
               {p.verification_note && p.verification_status !== "pending" && (
                 <p className="text-xs text-muted-foreground mt-2 bg-muted/60 rounded-lg px-3 py-2">{p.verification_note}</p>
               )}
@@ -184,6 +237,47 @@ export default function AdminVerification() {
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={!!unverifyTarget}
+        onOpenChange={(open) => {
+          if (!open && !acting) {
+            setUnverifyTarget(null);
+            setUnverifyReason("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle>Unverify {unverifyTarget?.full_name || "this driver"}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            They will be taken offline immediately, their pending bids will be withdrawn, and they cannot receive or bid on new jobs. Any delivery already in progress remains available to complete.
+          </AlertDialogDescription>
+          <div className="space-y-2">
+            <label htmlFor="unverify-reason" className="text-sm font-medium">Reason shown to the driver (optional)</label>
+            <Textarea
+              id="unverify-reason"
+              value={unverifyReason}
+              onChange={(event) => setUnverifyReason(event.target.value)}
+              placeholder="For example: Your licence has expired. Please upload a renewed copy."
+              rows={3}
+              disabled={!!acting}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={!!acting}>Keep verified</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!!acting}
+              onClick={(event) => {
+                event.preventDefault();
+                void unverify();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {acting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Unverifying...</> : "Unverify driver"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

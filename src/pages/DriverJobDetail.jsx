@@ -234,6 +234,10 @@ export default function DriverJobDetail() {
   }, [request?.accepted_driver_id, request?.status, request?.id, user?.id]);
 
   const submitQuote = async () => {
+    if (profile?.verification_status !== "approved") {
+      toast({ title: "Verification required", description: "Your driver account must be verified before you can submit a quote.", variant: "destructive" });
+      return;
+    }
     if (!price || Number(price) <= 0) {
       toast({ title: "Enter a valid price", variant: "destructive" });
       return;
@@ -300,6 +304,10 @@ export default function DriverJobDetail() {
   // this was previously just missing from the UI entirely, so a driver had
   // no way to send a counter-offer once their first quote was in.
   const updateQuote = async () => {
+    if (profile?.verification_status !== "approved") {
+      toast({ title: "Verification required", description: "Your driver account must be verified before you can revise a quote.", variant: "destructive" });
+      return;
+    }
     if (!price || Number(price) <= 0) {
       toast({ title: "Enter a valid price", variant: "destructive" });
       return;
@@ -673,7 +681,14 @@ export default function DriverJobDetail() {
       </div>
 
       {/* Offline — must go online before quoting */}
-      {isOpen && !myOffer && profile?.availability_status === "offline" && (
+      {isOpen && profile?.verification_status !== "approved" && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+          <p className="text-sm font-semibold text-red-900">Driver verification required</p>
+          <p className="text-sm text-red-700 mt-1">Your verification is not active, so you cannot bid on new jobs.</p>
+        </div>
+      )}
+
+      {isOpen && profile?.verification_status === "approved" && !myOffer && profile?.availability_status === "offline" && (
         <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <p className="text-sm font-semibold">You're offline</p>
           <p className="text-sm text-muted-foreground mt-1">Go online from your dashboard to submit a quote for this job.</p>
@@ -681,7 +696,7 @@ export default function DriverJobDetail() {
       )}
 
       {/* Submit quote (open) */}
-      {isOpen && !myOffer && profile?.availability_status !== "offline" && (
+      {isOpen && profile?.verification_status === "approved" && !myOffer && profile?.availability_status !== "offline" && (
         <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Submit your quote</h2>
           <div className="space-y-2">
@@ -710,7 +725,7 @@ export default function DriverJobDetail() {
 
       {/* Quote pending — can still be revised (a counter-offer) while the
           customer hasn't accepted or rejected it yet. */}
-      {myOffer && myOffer.status === "pending" && !editingOffer && (
+      {profile?.verification_status === "approved" && myOffer && myOffer.status === "pending" && !editingOffer && (
         <div className="bg-card rounded-2xl border border-border p-4 text-center">
           <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
             <Loader2 className="w-6 h-6 text-amber-500" />
@@ -732,7 +747,7 @@ export default function DriverJobDetail() {
         </div>
       )}
 
-      {myOffer && myOffer.status === "pending" && editingOffer && (
+      {profile?.verification_status === "approved" && myOffer && myOffer.status === "pending" && editingOffer && (
         <div className="bg-card rounded-2xl border border-border p-4 space-y-4">
           <h2 className="text-sm font-semibold">Revise your quote</h2>
           <div className="space-y-2">
