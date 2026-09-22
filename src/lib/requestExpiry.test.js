@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { isRequestExpired, requestDeadline } from './requestExpiry.js';
 
 const base = { status: 'open', timing: 'now', created_at: '2026-09-06T08:00:00Z' };
-test('Now jobs disappear exactly ten hours after posting', () => {
-  const deadline = Date.parse('2026-09-06T18:00:00Z');
+test('Now jobs disappear exactly twenty-four hours after posting', () => {
+  const deadline = Date.parse('2026-09-07T08:00:00Z');
   assert.equal(requestDeadline(base), deadline);
   assert.equal(isRequestExpired(base, deadline - 1), false);
   assert.equal(isRequestExpired(base, deadline), true);
 });
 test('scheduled jobs use pickup time with its timezone, not creation time', () => {
   const job = { ...base, timing: 'scheduled', scheduled_date: '2026-09-08T08:00:00+02:00' };
-  assert.equal(requestDeadline(job), Date.parse('2026-09-08T16:00:00Z'));
+  assert.equal(requestDeadline(job), Date.parse('2026-09-09T06:00:00Z'));
   assert.equal(isRequestExpired(job, Date.parse('2026-09-07T18:00:00Z')), false);
 });
 test('accepted and ongoing jobs never expire due to age', () => {
