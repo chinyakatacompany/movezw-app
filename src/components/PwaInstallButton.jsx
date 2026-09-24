@@ -4,9 +4,9 @@ import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { cn } from "@/lib/utils";
 
 export default function PwaInstallButton({ className, children = "Install MoveZW", onClick }) {
-  const { showInstall, promptInstall } = useInstallPrompt();
+  const { canInstall, promptInstall } = useInstallPrompt();
 
-  if (!showInstall) return null;
+  if (!canInstall) return null;
 
   const install = async (event) => {
     onClick?.(event);
