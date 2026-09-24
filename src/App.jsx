@@ -52,7 +52,6 @@ import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
-import InstallHelp from '@/components/InstallHelp';
 import ReturnDeliveryNavigation from '@/components/ReturnDeliveryNavigation';
 import ReturnDeliveryProgress from '@/pages/ReturnDeliveryProgress';
 import CustomerOfferInbox from '@/components/CustomerOfferInbox';
@@ -217,7 +216,6 @@ function App() {
         <Router>
           <ScrollToTop />
           <NativeAppBridge />
-          <InstallHelp />
           <AuthenticatedApp />
         </Router>
         <Toaster />

@@ -17,24 +17,24 @@ window.addEventListener('appinstalled', () => { accepted = true; deferredPrompt 
 standalone?.addEventListener?.('change', emit);
 const subscribe = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
 const snapshot = () => `${isInstalled()}:${!!deferredPrompt}:${prompting}`;
-const showHelp = () => window.dispatchEvent(new Event('movezw-install-help'));
 
 export function useInstallPrompt() {
   useSyncExternalStore(subscribe, snapshot);
   const installed = isInstalled();
   const promptInstall = async () => {
     if (installed || prompting) return null;
-    if (!deferredPrompt) { showHelp(); return null; }
+    if (!deferredPrompt) return null;
     const event = deferredPrompt;
     deferredPrompt = null; prompting = true; emit();
     try {
       await event.prompt();
       const choice = await event.userChoice;
       return choice.outcome;
-    } catch { showHelp(); return null; }
+    } catch { return null; }
     finally { prompting = false; emit(); }
   };
-  return { canInstall: !!deferredPrompt && !installed, showInstall: !installed, installed, promptInstall };
+  const canInstall = !!deferredPrompt && !installed;
+  return { canInstall, showInstall: canInstall, installed, promptInstall };
 }
 
 export function isIosSafari() {
