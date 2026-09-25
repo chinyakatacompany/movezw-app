@@ -181,10 +181,10 @@ export default function CreateRequest() {
       );
 
       if (loads > 1) {
-        toast({ title: `${loads} loads posted`, description: "Drivers nearby will see each one and can bid separately." });
-        navigate("/customer");
+        toast({ title: `${loads} loads posted`, description: "Stay here for live quotes. Your other loads are available from Home." });
+        navigate(`/customer/request/${data[0].id}`);
       } else {
-        toast({ title: "Request posted", description: "Drivers nearby will see your request." });
+        toast({ title: "Request posted", description: "Stay here and incoming driver quotes will appear automatically." });
         navigate(`/customer/request/${data[0].id}`);
       }
     } catch (err) {
