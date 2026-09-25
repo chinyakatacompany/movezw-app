@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
-import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download } from "lucide-react";
+import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download, MessageCircle } from "lucide-react";
 import { STATUS_FLOW } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
@@ -20,10 +20,13 @@ export default function CustomerDashboard() {
   const { user } = useAuth();
   const [allRequests, setRequests] = useState(null);
   const requests = useUnexpiredRequests(allRequests);
+  const openRequests = (requests || []).filter((request) => request.status === "open");
+  const openRequestKey = openRequests.map((request) => request.id).join(",");
   const [onlineDrivers, setOnlineDrivers] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripDriver, setTripDriver] = useState(null);
   const [tripPhone, setTripPhone] = useState(null);
+  const [offerCounts, setOfferCounts] = useState({});
   // Customers now sign up and land straight on this page (see Register.jsx's
   // frictionless anonymous signup) without ever passing through Login.jsx /
   // AuthLayout, which is where the install prompt used to live for them —
@@ -82,6 +85,34 @@ export default function CustomerDashboard() {
   const active = (requests || []).filter((x) => !["completed", "cancelled"].includes(x.status));
   const inTransit = active.find((x) => STATUS_FLOW.includes(x.status));
   const tripStepIndex = inTransit ? TRIP_STEPS.findIndex((s) => s.id === inTransit.status) : -1;
+
+  // Open jobs remain easy to return to after the customer leaves the live
+  // request page. Quote counts refresh in real time so "View quotes" does
+  // not depend on the customer noticing a notification first.
+  useEffect(() => {
+    if (!user?.id || !openRequestKey) { setOfferCounts({}); return; }
+    let mounted = true;
+    const requestIds = openRequestKey.split(",");
+    const refreshOfferCounts = async () => {
+      const { data, error } = await supabase
+        .from("offers")
+        .select("request_id")
+        .in("request_id", requestIds)
+        .eq("status", "pending");
+      if (error) { console.error("Failed to load quote counts:", error); return; }
+      if (!mounted) return;
+      setOfferCounts((data || []).reduce((counts, offer) => {
+        counts[offer.request_id] = (counts[offer.request_id] || 0) + 1;
+        return counts;
+      }, {}));
+    };
+    void refreshOfferCounts();
+    const channel = supabase
+      .channel(`customer-dashboard-offers-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "offers" }, refreshOfferCounts)
+      .subscribe();
+    return () => { mounted = false; supabase.removeChannel(channel); };
+  }, [user?.id, openRequestKey]);
 
   useEffect(() => {
     if (!inTransit?.accepted_offer_id) { setTripDriver(null); setTripPhone(null); return; }
@@ -151,6 +182,51 @@ export default function CustomerDashboard() {
               <p className="text-xs text-accent-foreground/80">Faster access, right from your home screen</p>
             </div>
           </button>
+        )}
+
+        {openRequests.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold">Open jobs</h2>
+              <Link to="/customer/history" className="text-xs font-medium text-primary">View all</Link>
+            </div>
+            <div className="space-y-3">
+              {openRequests.map((request) => {
+                const quoteCount = offerCounts[request.id] || 0;
+                return (
+                  <Link
+                    key={request.id}
+                    to={`/customer/request/${request.id}`}
+                    className="block bg-card rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold truncate">{request.cargo_type}</p>
+                          {request.batch_total > 1 && (
+                            <span className="text-[11px] font-semibold text-accent whitespace-nowrap">Load {request.batch_index} of {request.batch_total}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{request.pickup_location} → {request.destination}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", quoteCount > 0 ? "text-red-600" : "text-muted-foreground")}>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            {quoteCount > 0 ? `${quoteCount} quote${quoteCount === 1 ? "" : "s"} received` : "Waiting for quotes"}
+                          </span>
+                          <span className="text-xs text-primary font-semibold inline-flex items-center gap-1">
+                            {quoteCount > 0 ? "View quotes" : "View job"} <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {inTransit && (

@@ -190,8 +190,8 @@ export default function RequestDetail() {
 
   return (
     <div className="p-4 pb-8 space-y-5">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="w-4 h-4" /> Back
+      <button onClick={() => navigate("/customer")} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="w-4 h-4" /> Exit to home
       </button>
 
       <div>
@@ -275,7 +275,7 @@ export default function RequestDetail() {
           )}
           {pendingOffers.length === 0 ? (
             <div className="bg-card rounded-2xl border border-border">
-              <EmptyState icon={Truck} title="Waiting for offers" subtitle="Drivers nearby will send you quotes. Check back shortly." />
+              <EmptyState icon={Truck} title="Waiting for driver quotes" subtitle="Keep this screen open and new quotes will appear automatically. You can also exit and return from Open jobs on Home." />
             </div>
           ) : (
             <div className="space-y-3">
