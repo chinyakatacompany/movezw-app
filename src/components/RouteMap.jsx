@@ -8,6 +8,18 @@ import { cn } from "@/lib/utils";
 // Free, open vector tiles — no API key, no paid tier (see ShipmentMap.jsx
 // for why this replaced direct OSM raster tile fetches).
 const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const FALLBACK_MAP_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors",
+    },
+  },
+  layers: [{ id: "osm", type: "raster", source: "osm" }],
+};
 const ROUTE_COLOR = "#2563eb";
 // See HomeMap.jsx — OpenFreeMap's style/sprite/glyph fetches occasionally
 // stall, leaving MapLibre's "load" event never firing and the map blank
@@ -50,7 +62,7 @@ function summarizeSteps(steps) {
 
 // Route is fetched once from OSRM's free public routing server (no API key,
 // no paid tier) — not continuously re-fetched as the driver moves.
-export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669" }) {
+export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669", immersive = false }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const fromMarkerRef = useRef(null);
@@ -67,7 +79,10 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     setMapFailed(false);
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: MAP_STYLE,
+      // If the vector style is unreachable on a particular phone/network,
+      // the automatic retry uses plain OSM raster tiles instead of leaving
+      // the driver with a permanently blank tracking screen.
+      style: mapAttempt === 0 ? MAP_STYLE : FALLBACK_MAP_STYLE,
       center: [from.lng, from.lat],
       zoom: 13,
       scrollZoom: false,
@@ -83,10 +98,12 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       .setLngLat([from.lng, from.lat])
       .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel))
       .addTo(map);
-    toMarkerRef.current = new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
-      .setLngLat([to.lng, to.lat])
-      .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel))
-      .addTo(map);
+    if (to) {
+      toMarkerRef.current = new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
+        .setLngLat([to.lng, to.lat])
+        .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel))
+        .addTo(map);
+    }
 
     return () => {
       fromMarkerRef.current = null;
@@ -103,19 +120,36 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     fromMarkerRef.current
       ?.setLngLat([from.lng, from.lat])
       .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel));
-    toMarkerRef.current
-      ?.setLngLat([to.lng, to.lat])
-      .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel));
-  }, [from.lat, from.lng, fromLabel, to.lat, to.lng, toLabel]);
+    if (to && !toMarkerRef.current && mapRef.current) {
+      toMarkerRef.current = new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
+        .addTo(mapRef.current);
+    }
+    if (to) {
+      toMarkerRef.current
+        ?.setLngLat([to.lng, to.lat])
+        .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel));
+    } else if (toMarkerRef.current) {
+      toMarkerRef.current.remove();
+      toMarkerRef.current = null;
+    }
+  }, [from.lat, from.lng, fromLabel, to?.lat, to?.lng, toLabel, toColor]);
 
   useEffect(() => {
     if (mapLoaded) return;
-    const timeoutId = setTimeout(() => setMapFailed(true), LOAD_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => {
+      if (mapAttempt === 0) setMapAttempt(1);
+      else setMapFailed(true);
+    }, LOAD_TIMEOUT_MS);
     return () => clearTimeout(timeoutId);
   }, [mapLoaded, mapAttempt]);
 
   useEffect(() => {
     let cancelled = false;
+    if (!to) {
+      setRoute(null);
+      setStatus("location");
+      return () => { cancelled = true; };
+    }
     setStatus("loading");
     setRoute(null);
     fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`)
@@ -134,11 +168,18 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       })
       .catch(() => { if (!cancelled) setStatus("error"); });
     return () => { cancelled = true; };
-  }, [from.lat, from.lng, to.lat, to.lng]);
+  }, [from.lat, from.lng, to?.lat, to?.lng]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
+
+    if (!to) {
+      if (map.getLayer("route-line-casing")) map.setLayoutProperty("route-line-casing", "visibility", "none");
+      if (map.getLayer("route-line")) map.setLayoutProperty("route-line", "visibility", "none");
+      map.easeTo({ center: [from.lng, from.lat], zoom: 15 });
+      return;
+    }
 
     const coordinates = status === "ready" && route ? route.coordinates : [[from.lng, from.lat], [to.lng, to.lat]];
     const geojson = { type: "Feature", geometry: { type: "LineString", coordinates } };
@@ -169,10 +210,10 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
 
     const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
     map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
-  }, [mapLoaded, status, route, from.lat, from.lng, to.lat, to.lng]);
+  }, [mapLoaded, status, route, from.lat, from.lng, to?.lat, to?.lng]);
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border">
+    <div className={cn(immersive ? "h-full w-full overflow-hidden" : "rounded-xl overflow-hidden border border-border")}>
       <div className="relative" style={{ height }}>
         <div ref={containerRef} className="w-full h-full" />
         {mapFailed && !mapLoaded && (
@@ -204,6 +245,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
               <span className="text-xs font-semibold">Calculating route…</span>
             </>
           )}
+          {status === "location" && <span className="text-xs font-semibold">Live location active · Route is being resolved</span>}
           {status === "error" && <span className="text-xs font-semibold">Direct line — road route unavailable</span>}
           {status === "ready" && route && (
             <div className="leading-tight">
@@ -217,7 +259,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       {/* Every road along the route, in order — merged from OSRM's turn-by-turn
           steps so each road appears once with its total distance. Hidden
           until asked for, so the map stays the default view. */}
-      {status === "ready" && route?.steps?.length > 0 && (
+      {!immersive && status === "ready" && route?.steps?.length > 0 && (
         <>
           <button
             type="button"

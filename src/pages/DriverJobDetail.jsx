@@ -72,6 +72,7 @@ export default function DriverJobDetail() {
   const [resolved, setResolved] = useState({ pickup: null, destination: null });
   const [showRouteMap, setShowRouteMap] = useState(false);
   const [showReturnPrompt, setShowReturnPrompt] = useState(false);
+  const [showJobDetails, setShowJobDetails] = useState(false);
 
   // pickup_lat/lng and destination_lat/lng are only ever set when the
   // customer picked a suggestion (or used pin-drop / "use my location") in
@@ -149,13 +150,14 @@ export default function DriverJobDetail() {
     );
   };
 
-  // Auto-fetch the driver's location the moment there's a pickup point to
-  // route to — no manual "Get directions" tap needed.
+  // Auto-fetch as soon as this is the driver's accepted job. Do not wait
+  // for address geocoding: the full-screen map can obtain the live GPS pin
+  // while pickup/destination coordinates resolve independently.
   useEffect(() => {
-    if (effPickupLat == null || effPickupLng == null) return;
+    if (!request?.id || request.accepted_driver_id !== user?.id || !LIVE_TRACKING_STATUSES.includes(request.status)) return;
     fetchDriverLocation();
 
-  }, [effPickupLat, effPickupLng]);
+  }, [request?.id, request?.accepted_driver_id, request?.status, user?.id]);
 
   const load = async () => {
     const [{ data: req, error: reqErr }, { data: prof }, { data: offers }] = await Promise.all([
@@ -513,6 +515,144 @@ export default function DriverJobDetail() {
   const trackingTarget = !headedToDestination
     ? (effPickupLat != null && effPickupLng != null ? { lat: effPickupLat, lng: effPickupLng, label: "Pickup" } : null)
     : (effDestLat != null && effDestLng != null ? { lat: effDestLat, lng: effDestLng, label: "Destination" } : null);
+
+  // Once accepted, tracking is the job screen—not one card among many.
+  // Details remain one tap away through View offer, while the map and the
+  // next delivery action stay permanently visible.
+  if (isMyJob && !["completed", "cancelled"].includes(request.status)) {
+    return (
+      <div className="fixed inset-0 z-40 bg-muted overflow-hidden">
+        {trackingPosition ? (
+          <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
+            <RouteMap
+              from={trackingPosition}
+              to={trackingTarget}
+              fromLabel="Your live location"
+              toLabel={trackingTarget?.label || "Route target"}
+              fromColor="#ea580c"
+              height="100dvh"
+              immersive
+            />
+          </React.Suspense>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 bg-slate-100">
+            <MapPin className="w-12 h-12 text-primary mb-3" />
+            <p className="text-lg font-bold">Location is needed for tracking</p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">{locationError || "Turn on GPS and allow MoveZW to use your location. The map will open immediately."}</p>
+            <Button type="button" onClick={fetchDriverLocation} disabled={locatingRoute} className="mt-5 h-12 px-6">
+              {locatingRoute ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Finding location…</> : "Enable location and retry"}
+            </Button>
+          </div>
+        )}
+
+        <div className="absolute top-0 inset-x-0 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/65 to-transparent">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate("/driver")} aria-label="Exit tracking" className="w-11 h-11 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0 rounded-2xl bg-primary text-primary-foreground px-4 py-2.5 shadow-lg text-center">
+              <p className="text-[10px] font-semibold text-primary-foreground/75">DELIVERY TRACKING</p>
+              <p className="font-bold truncate">{STATUS_LABELS[request.status]}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute left-3 top-28 flex flex-col gap-3">
+          <button onClick={() => setShowJobDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
+            <Package className="w-5 h-5 text-primary" /> View offer
+          </button>
+          {customerPhone && (
+            <a href={`tel:${customerPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+              <Phone className="w-5 h-5 text-primary" /> Call
+            </a>
+          )}
+          <button onClick={openChat} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+            <MessageCircle className="w-5 h-5 text-primary" /> Message
+          </button>
+          <button
+            type="button"
+            onClick={findSpace}
+            disabled={findingSpace}
+            className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900 disabled:opacity-60"
+          >
+            {findingSpace ? <Loader2 className="w-5 h-5 text-primary animate-spin" /> : <Users className="w-5 h-5 text-primary" />}
+            More space
+          </button>
+        </div>
+
+        <div className="absolute bottom-0 inset-x-0 grid grid-cols-3 gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
+          <button onClick={() => navigate("/driver")} className="min-h-16 rounded-2xl bg-red-500 text-white font-bold text-xs px-2 shadow-lg">
+            Exit tracking
+          </button>
+          <button
+            type="button"
+            onClick={() => nextStep && requestStatusUpdate(nextStep)}
+            disabled={!nextStep || updating}
+            className="min-h-16 rounded-2xl bg-primary text-primary-foreground font-bold text-xs px-2 shadow-lg disabled:opacity-60"
+          >
+            {updating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : DRIVER_ACTION_LABELS[nextStep] || STATUS_LABELS[request.status]}
+          </button>
+          {navigateTarget ? (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navigateTarget.query)}&travelmode=driving`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-16 rounded-2xl bg-emerald-500 text-white font-bold text-xs px-2 shadow-lg flex items-center justify-center text-center"
+            >
+              Navigate with Google Maps
+            </a>
+          ) : (
+            <button disabled className="min-h-16 rounded-2xl bg-emerald-500/70 text-white font-bold text-xs px-2">Route loading…</button>
+          )}
+        </div>
+
+        {showJobDetails && (
+          <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+            <div className="sticky top-0 z-10 h-14 px-4 bg-header text-header-foreground flex items-center gap-3 shadow">
+              <button onClick={() => setShowJobDetails(false)} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10" aria-label="Back to tracking">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="font-bold">Accepted offer and job details</h1>
+            </div>
+            <div className="p-4 space-y-4 max-w-2xl mx-auto pb-10">
+              <div className="bg-card rounded-2xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">AGREED PRICE</p>
+                <p className="text-3xl font-bold text-primary mt-1">{formatMoney(request.accepted_price ?? myOffer?.price)}</p>
+                {myOffer?.eta_minutes && <p className="text-sm text-muted-foreground mt-1">Original pickup estimate: {myOffer.eta_minutes} minutes</p>}
+                {myOffer?.note && <p className="text-sm mt-3 pt-3 border-t border-border">{myOffer.note}</p>}
+              </div>
+              <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+                <div><p className="text-xs text-muted-foreground">CUSTOMER</p><p className="font-semibold">{request.customer_name || "Customer"}</p></div>
+                <div><p className="text-xs text-muted-foreground">PICKUP</p><p className="font-semibold text-primary">{request.pickup_location}</p></div>
+                <div><p className="text-xs text-muted-foreground">DESTINATION</p><p className="font-semibold text-emerald-700">{request.destination}</p></div>
+              </div>
+              <div className="bg-card rounded-2xl border border-border p-4 grid grid-cols-2 gap-4">
+                <div><p className="text-xs text-muted-foreground">Cargo</p><p className="font-semibold">{request.cargo_type}</p></div>
+                <div><p className="text-xs text-muted-foreground">Weight</p><p className="font-semibold">{request.cargo_weight || "—"}</p></div>
+                {request.cargo_description && <p className="col-span-2 text-sm text-muted-foreground pt-3 border-t border-border">{request.cargo_description}</p>}
+              </div>
+              <Button onClick={() => setShowJobDetails(false)} className="w-full h-12 font-semibold">Back to live tracking</Button>
+            </div>
+          </div>
+        )}
+
+        <AlertDialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
+          <AlertDialogContent>
+            <AlertDialogTitle>Complete this delivery?</AlertDialogTitle>
+            <AlertDialogDescription>Confirm that the cargo has been handed over and this delivery is finished.</AlertDialogDescription>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Go back</AlertDialogCancel>
+              <AlertDialogAction disabled={updating} onClick={() => {
+                if (pendingStatus?.from === request.status) void updateStatus(pendingStatus.status);
+                else toast({ title: "Delivery progress changed. Please review the current step." });
+                setPendingStatus(null);
+              }}>Confirm</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-8 space-y-5">
