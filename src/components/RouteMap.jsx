@@ -53,6 +53,8 @@ function summarizeSteps(steps) {
 export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669" }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
+  const fromMarkerRef = useRef(null);
+  const toMarkerRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [mapAttempt, setMapAttempt] = useState(0);
@@ -77,18 +79,34 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     // people an explicit way to zoom in and actually read street names.
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    new maplibregl.Marker({ element: markerEl(fromColor), anchor: "bottom" })
+    fromMarkerRef.current = new maplibregl.Marker({ element: markerEl(fromColor), anchor: "bottom" })
       .setLngLat([from.lng, from.lat])
       .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel))
       .addTo(map);
-    new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
+    toMarkerRef.current = new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
       .setLngLat([to.lng, to.lat])
       .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel))
       .addTo(map);
 
-    return () => map.remove();
+    return () => {
+      fromMarkerRef.current = null;
+      toMarkerRef.current = null;
+      map.remove();
+    };
      
   }, [mapAttempt]);
+
+  // The map instance stays mounted while a driver's GPS point changes.
+  // Move both markers explicitly; recreating only the route line left the
+  // visible driver pin stuck at its first position during live tracking.
+  useEffect(() => {
+    fromMarkerRef.current
+      ?.setLngLat([from.lng, from.lat])
+      .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel));
+    toMarkerRef.current
+      ?.setLngLat([to.lng, to.lat])
+      .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(toLabel));
+  }, [from.lat, from.lng, fromLabel, to.lat, to.lng, toLabel]);
 
   useEffect(() => {
     if (mapLoaded) return;

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon, Truck } from "lucide-react";
 import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
@@ -24,12 +24,20 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 // Statuses during which the customer can see the driver moving live —
 // matches fn_get_trip_contact_phone's "en route or later" gate, so location
 // only becomes visible once contact details do too.
-const LIVE_TRACKING_STATUSES = ["en_route_pickup", "collected", "in_transit"];
+const LIVE_TRACKING_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit"];
 // Under a minute so the customer's tracking map reads as actually moving,
 // not a pin that jumps every few minutes — 30s is frequent enough to feel
 // live without meaningfully worse battery/data use than the old 5-minute
 // interval for a trip that's usually well under an hour.
 const LOCATION_REPORT_INTERVAL_MS = 30 * 1000;
+
+const DRIVER_ACTION_LABELS = {
+  en_route_pickup: "Start trip to pickup",
+  collected: "Confirm goods collected",
+  in_transit: "Start delivery",
+  delivered: "Mark as delivered",
+  completed: "Complete job",
+};
 
 function formatDistanceLabel(km) {
   if (km == null) return "Distance unavailable";
@@ -233,6 +241,27 @@ export default function DriverJobDetail() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [request?.accepted_driver_id, request?.status, request?.id, user?.id]);
 
+  // Keep the display awake while this foreground tracking screen is open.
+  // GPS reporting deliberately remains foreground-only; this avoids adding
+  // Android background-location permissions and their stricter Play policy.
+  useEffect(() => {
+    if (request?.accepted_driver_id !== user?.id || !LIVE_TRACKING_STATUSES.includes(request?.status) || !("wakeLock" in navigator)) return;
+    let lock = null;
+    let active = true;
+    const acquire = async () => {
+      if (!active || document.visibilityState !== "visible") return;
+      try { lock = await navigator.wakeLock.request("screen"); } catch { /* unsupported or denied */ }
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") void acquire(); };
+    void acquire();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      lock?.release().catch(() => {});
+    };
+  }, [request?.accepted_driver_id, request?.status, user?.id]);
+
   const submitQuote = async () => {
     if (!price || Number(price) <= 0) {
       toast({ title: "Enter a valid price", variant: "destructive" });
@@ -425,10 +454,9 @@ export default function DriverJobDetail() {
       }
       await notifyJobStatusChange(request, newStatus, user.id);
       toast({ title: `Marked as ${STATUS_LABELS[newStatus].toLowerCase()}` });
-      // Right when they've just arrived is when a driver actually knows
-      // their return route — catch that intent here instead of relying on
-      // them to remember to go post one later from the Return Loads tab.
-      if (newStatus === "delivered") setShowReturnPrompt(true);
+      // Offer return-load space only after the delivery has been completed,
+      // so it never competes with the final hand-over step.
+      if (newStatus === "completed") setShowReturnPrompt(true);
       load();
     } catch (e) {
       toast({ title: "Update failed", description: e.message, variant: "destructive" });
@@ -473,6 +501,14 @@ export default function DriverJobDetail() {
     : (effDestLat != null && effDestLng != null
         ? { query: `${effDestLat},${effDestLng}`, label: "destination" }
         : request.destination ? { query: request.destination, label: "destination" } : null);
+  const trackingPosition = driverPos || (
+    request.driver_lat != null && request.driver_lng != null
+      ? { lat: request.driver_lat, lng: request.driver_lng }
+      : null
+  );
+  const trackingTarget = !headedToDestination
+    ? (effPickupLat != null && effPickupLng != null ? { lat: effPickupLat, lng: effPickupLng, label: "Pickup" } : null)
+    : (effDestLat != null && effDestLng != null ? { lat: effDestLat, lng: effDestLng, label: "Destination" } : null);
 
   return (
     <div className="p-4 pb-8 space-y-5">
@@ -499,6 +535,67 @@ export default function DriverJobDetail() {
           <StatusBadge status={request.status} />
         </div>
       </div>
+
+      {isMyJob && !["completed", "cancelled"].includes(request.status) && (
+        <section id="delivery-progress" className="bg-card rounded-2xl border-2 border-primary overflow-hidden shadow-lg scroll-mt-20">
+          <div className="px-4 py-3 bg-primary text-primary-foreground flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-primary-foreground/80">LIVE DELIVERY TRACKING</p>
+              <p className="font-bold">{STATUS_LABELS[request.status]}</p>
+            </div>
+            <span className="text-xs font-semibold bg-white/15 rounded-full px-3 py-1">
+              {trackingTarget ? `Going to ${trackingTarget.label.toLowerCase()}` : "Route pending"}
+            </span>
+          </div>
+
+          {trackingPosition && trackingTarget ? (
+            <React.Suspense fallback={<div className="h-[360px] bg-muted animate-pulse" />}>
+              <RouteMap
+                from={trackingPosition}
+                to={trackingTarget}
+                fromLabel="Your live location"
+                toLabel={trackingTarget.label}
+                fromColor="#ea580c"
+                height={360}
+              />
+            </React.Suspense>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center text-center px-6 bg-muted/40">
+              <MapPin className="w-8 h-8 text-primary mb-2" />
+              <p className="text-sm font-semibold">Preparing live tracking</p>
+              <p className="text-xs text-muted-foreground mt-1">{locationError || "Allow location access so the customer can follow this delivery."}</p>
+              <button type="button" onClick={fetchDriverLocation} className="mt-3 text-sm font-semibold text-primary underline">Enable location</button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2 p-3 border-t border-border">
+            <button onClick={openChat} className="min-h-14 rounded-xl border border-border flex flex-col items-center justify-center gap-1 text-xs font-semibold">
+              <MessageCircle className="w-4 h-4 text-primary" /> Message
+            </button>
+            {nextStep && (
+              <button
+                type="button"
+                onClick={() => requestStatusUpdate(nextStep)}
+                disabled={updating}
+                className="min-h-14 rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1 px-1 text-xs font-bold disabled:opacity-60"
+              >
+                {updating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Navigation className="w-5 h-5" />}
+                <span>{updating ? "Updating…" : DRIVER_ACTION_LABELS[nextStep]}</span>
+              </button>
+            )}
+            {navigateTarget && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(navigateTarget.query)}&travelmode=driving`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-14 rounded-xl bg-emerald-500 text-white flex flex-col items-center justify-center gap-1 px-1 text-xs font-bold text-center"
+              >
+                <MapIcon className="w-4 h-4" /> Google Maps
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Route */}
       <div className="bg-card rounded-2xl border border-border p-4">
@@ -818,7 +915,7 @@ export default function DriverJobDetail() {
             </div>
           )}
 
-          <div id="delivery-progress" className="bg-card rounded-2xl border border-border p-4 scroll-mt-24">
+          <div id="delivery-steps" className="bg-card rounded-2xl border border-border p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold">Delivery progress</h2>
               <span className="text-xs text-muted-foreground">{Math.min(activeStep + 1, STATUS_FLOW.length)} of {STATUS_FLOW.length} completed</span>
@@ -850,20 +947,15 @@ export default function DriverJobDetail() {
             </div>
           </div>
 
-          {request.status !== "completed" && request.status !== "delivered" && nextStep && (
-            <Button onClick={() => requestStatusUpdate(nextStep)} disabled={updating} className="w-full h-12 font-semibold">
-              {updating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Updating...</> : `Mark as ${STATUS_LABELS[nextStep]}`}
-            </Button>
-          )}
-          {request.status === "delivered" && (
-            <Button onClick={() => requestStatusUpdate("completed")} disabled={updating} className="w-full h-12 font-semibold">
-              {updating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Completing...</> : "Complete job"}
-            </Button>
-          )}
           {request.status === "completed" && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center">
-              <Check className="w-7 h-7 text-emerald-500 mx-auto mb-1" />
-              <p className="text-sm font-semibold text-emerald-700">Job completed</p>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center space-y-3">
+              <div>
+                <Check className="w-7 h-7 text-emerald-500 mx-auto mb-1" />
+                <p className="text-sm font-semibold text-emerald-700">Job completed</p>
+              </div>
+              <Button type="button" onClick={() => setShowReturnPrompt(true)} className="w-full h-11 font-semibold">
+                <Truck className="w-4 h-4 mr-2" /> Post a return load
+              </Button>
             </div>
           )}
         </div>
