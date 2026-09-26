@@ -35,6 +35,7 @@ export default function RequestDetail() {
   const [alreadyRated, setAlreadyRated] = useState(false);
   const [driverPhone, setDriverPhone] = useState(null);
   const [viewerCount, setViewerCount] = useState(0);
+  const [showAcceptedDetails, setShowAcceptedDetails] = useState(false);
 
   const load = async () => {
     const { data: req } = await supabase.from("transport_requests").select("*").eq("id", id).single();
@@ -187,8 +188,96 @@ export default function RequestDetail() {
   const showCustomerTracking = Boolean(request.accepted_driver_id)
     && !["delivered", "completed", "cancelled"].includes(request.status)
     && STATUS_FLOW.includes(request.status);
-  const hasLivePosition = request.driver_lat != null && request.driver_lng != null
-    && trackingTarget.lat != null && trackingTarget.lng != null;
+  const hasLivePosition = request.driver_lat != null && request.driver_lng != null;
+
+  if (showCustomerTracking) {
+    const resolvedTrackingTarget = trackingTarget.lat != null && trackingTarget.lng != null ? trackingTarget : null;
+    return (
+      <div className="fixed inset-0 z-40 bg-muted overflow-hidden">
+        {hasLivePosition ? (
+          <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: request.driver_lat, lng: request.driver_lng }}
+              to={resolvedTrackingTarget}
+              fromLabel="Your driver"
+              toLabel={resolvedTrackingTarget?.label || "Route target"}
+              fromColor="#ea580c"
+              height="100dvh"
+              immersive
+            />
+          </React.Suspense>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 bg-slate-100">
+            <Navigation className="w-12 h-12 text-primary mb-3" />
+            <p className="text-lg font-bold">Waiting for the driver's location</p>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">The map will open automatically as soon as the driver's GPS sends its first position.</p>
+          </div>
+        )}
+
+        <div className="absolute top-0 inset-x-0 p-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-gradient-to-b from-black/65 to-transparent">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate("/customer")} aria-label="Exit tracking" className="w-11 h-11 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-1 min-w-0 rounded-2xl bg-primary text-primary-foreground px-4 py-2.5 shadow-lg text-center">
+              <p className="text-[10px] font-semibold text-primary-foreground/75">LIVE DELIVERY TRACKING</p>
+              <p className="font-bold truncate">{STATUS_LABELS[request.status]}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute left-3 top-28 flex flex-col gap-3">
+          <button onClick={() => setShowAcceptedDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
+            <Truck className="w-5 h-5 text-primary" /> View offer
+          </button>
+          {driverPhone && (
+            <a href={`tel:${driverPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+              <Phone className="w-5 h-5 text-primary" /> Call
+            </a>
+          )}
+          <button onClick={() => openChat()} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+            <MessageCircle className="w-5 h-5 text-primary" /> Message
+          </button>
+        </div>
+
+        <div className="absolute bottom-0 inset-x-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
+          <div className="rounded-2xl bg-primary text-primary-foreground px-5 py-4 shadow-lg text-center">
+            <p className="text-xs text-primary-foreground/75">CURRENT DELIVERY STATUS</p>
+            <p className="text-lg font-bold">{STATUS_LABELS[request.status]}</p>
+            <p className="text-xs text-primary-foreground/80 mt-1">
+              {request.driver_location_updated_at ? `Driver location updated ${timeAgo(request.driver_location_updated_at)}` : "Waiting for the first GPS update"}
+            </p>
+          </div>
+        </div>
+
+        {showAcceptedDetails && (
+          <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+            <div className="sticky top-0 z-10 h-14 px-4 bg-header text-header-foreground flex items-center gap-3 shadow">
+              <button onClick={() => setShowAcceptedDetails(false)} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10" aria-label="Back to tracking">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h1 className="font-bold">Accepted offer and job details</h1>
+            </div>
+            <div className="p-4 space-y-4 max-w-2xl mx-auto pb-10">
+              <div className="bg-card rounded-2xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">ACCEPTED DRIVER</p>
+                <p className="text-lg font-bold mt-1">{acceptedOffer?.driver_name || "Your driver"}</p>
+                <p className="text-3xl font-bold text-primary mt-3">{formatMoney(request.accepted_price ?? acceptedOffer?.price)}</p>
+                {acceptedOffer?.vehicle_type && <p className="text-sm text-muted-foreground mt-1">{acceptedOffer.vehicle_type}</p>}
+                {acceptedOffer?.note && <p className="text-sm mt-3 pt-3 border-t border-border">{acceptedOffer.note}</p>}
+              </div>
+              <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+                <div><p className="text-xs text-muted-foreground">PICKUP</p><p className="font-semibold text-primary">{request.pickup_location}</p></div>
+                <div><p className="text-xs text-muted-foreground">DESTINATION</p><p className="font-semibold text-emerald-700">{request.destination}</p></div>
+                <div><p className="text-xs text-muted-foreground">CARGO</p><p className="font-semibold">{request.cargo_type} · {request.cargo_weight || "Weight not specified"}</p></div>
+              </div>
+              <Button onClick={() => setShowAcceptedDetails(false)} className="w-full h-12 font-semibold">Back to live tracking</Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-8 space-y-5">
