@@ -5,7 +5,10 @@ import { processJobCompletion } from "@/lib/payments";
 export const ADMIN_ACTIVE_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"];
 
 export async function advanceAdminJob(job, nextStatus, actorId) {
-  if (STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1] !== nextStatus) {
+  const expectedNext = job.status === "delivered"
+    ? "completed"
+    : STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1];
+  if (expectedNext !== nextStatus) {
     throw new Error("This is not the next delivery stage.");
   }
   const { data: changed, error } = await supabase

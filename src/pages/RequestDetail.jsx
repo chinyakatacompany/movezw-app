@@ -171,11 +171,13 @@ export default function RequestDetail() {
   }
   if (!request) return <div className="p-8 text-center text-muted-foreground">Request not found.</div>;
 
-  const activeStep = STATUS_FLOW.indexOf(request.status);
+  const activeStep = request.status === "delivered"
+    ? STATUS_FLOW.indexOf("in_transit")
+    : STATUS_FLOW.indexOf(request.status);
   const acceptedOffer = offers?.find((o) => o.id === request.accepted_offer_id);
   const pendingOffers = offers?.filter((o) => o.status === "pending") || [];
   const showOffers = request.status === "open";
-  const showTracking = STATUS_FLOW.includes(request.status) || request.status === "completed";
+  const showTracking = STATUS_FLOW.includes(request.status) || ["delivered", "completed"].includes(request.status);
   const hasFullRoute = request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null;
   // Live driver position, refreshed every 5 minutes by the driver's app —
   // heads to pickup while en route, then to the destination once collected.

@@ -35,7 +35,6 @@ const DRIVER_ACTION_LABELS = {
   en_route_pickup: "Start trip to pickup",
   collected: "Confirm goods collected",
   in_transit: "Start delivery",
-  delivered: "Mark as delivered",
   completed: "Complete job",
 };
 
@@ -416,7 +415,10 @@ export default function DriverJobDetail() {
 
   const updateStatus = async (newStatus) => {
     if (updating || request.accepted_driver_id !== user.id) return;
-    if (STATUS_FLOW[STATUS_FLOW.indexOf(request.status) + 1] !== newStatus) return;
+    const expectedNext = request.status === "delivered"
+      ? "completed"
+      : STATUS_FLOW[STATUS_FLOW.indexOf(request.status) + 1];
+    if (expectedNext !== newStatus) return;
     setUpdating(true);
     try {
       // Commission is reserved at acceptance now (fn_accept_offer), not
@@ -432,7 +434,7 @@ export default function DriverJobDetail() {
       if (newStatus === "collected" && request.pickup_lat == null) {
         captureLearnedLocation("pickup", request.pickup_location);
       }
-      if (newStatus === "delivered" && request.destination_lat == null) {
+      if (newStatus === "completed" && request.destination_lat == null) {
         captureLearnedLocation("destination", request.destination);
       }
       if (newStatus === "completed") {
@@ -482,8 +484,10 @@ export default function DriverJobDetail() {
   if (!request) return <div className="p-8 text-center text-muted-foreground">Job not found.</div>;
 
   const isMyJob = request.accepted_driver_id === user.id;
-  const activeStep = STATUS_FLOW.indexOf(request.status);
-  const nextStep = STATUS_FLOW[activeStep + 1];
+  const activeStep = request.status === "delivered"
+    ? STATUS_FLOW.indexOf("in_transit")
+    : STATUS_FLOW.indexOf(request.status);
+  const nextStep = request.status === "delivered" ? "completed" : STATUS_FLOW[activeStep + 1];
   const isOpen = request.status === "open";
   const headedToDestination = ["collected", "in_transit", "delivered"].includes(request.status);
   // Real turn-by-turn (voice guidance, auto-advance, re-routing) isn't
@@ -869,7 +873,7 @@ export default function DriverJobDetail() {
       )}
 
       {/* Manage delivery (accepted) */}
-      {isMyJob && (STATUS_FLOW.includes(request.status) || request.status === "completed") && (
+      {isMyJob && (STATUS_FLOW.includes(request.status) || ["delivered", "completed"].includes(request.status)) && (
         <div className="space-y-4">
           {navigateTarget && (
             <a

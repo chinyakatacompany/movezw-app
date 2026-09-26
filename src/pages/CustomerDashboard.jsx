@@ -13,7 +13,7 @@ const TRIP_STEPS = [
   { id: "en_route_pickup", label: "En route to pickup", icon: Truck },
   { id: "collected", label: "At pickup", icon: Package },
   { id: "in_transit", label: "In transit", icon: Truck },
-  { id: "delivered", label: "Delivered", icon: Flag },
+  { id: "completed", label: "Completed", icon: Flag },
 ];
 
 export default function CustomerDashboard() {
@@ -83,8 +83,10 @@ export default function CustomerDashboard() {
   }, [user?.id]);
 
   const active = (requests || []).filter((x) => !["completed", "cancelled"].includes(x.status));
-  const inTransit = active.find((x) => STATUS_FLOW.includes(x.status));
-  const tripStepIndex = inTransit ? TRIP_STEPS.findIndex((s) => s.id === inTransit.status) : -1;
+  const inTransit = active.find((x) => STATUS_FLOW.includes(x.status) || x.status === "delivered");
+  const tripStepIndex = inTransit
+    ? (inTransit.status === "delivered" ? TRIP_STEPS.findIndex((s) => s.id === "in_transit") : TRIP_STEPS.findIndex((s) => s.id === inTransit.status))
+    : -1;
 
   // Open jobs remain easy to return to after the customer leaves the live
   // request page. Quote counts refresh in real time so "View quotes" does

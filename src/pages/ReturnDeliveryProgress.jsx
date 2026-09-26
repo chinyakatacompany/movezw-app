@@ -50,8 +50,10 @@ function Progress({ id }) {
     } catch (err) { setError(err.message || 'Could not update progress. Please try again.'); }
     finally { setBusy(false); }
   };
-  const current = STATUS_FLOW.indexOf(delivery?.status);
-  const next = STATUS_FLOW[current + 1];
+  const current = delivery?.status === 'delivered'
+    ? STATUS_FLOW.indexOf('in_transit')
+    : STATUS_FLOW.indexOf(delivery?.status);
+  const next = delivery?.status === 'delivered' ? 'completed' : STATUS_FLOW[current + 1];
   return <main className="p-4 space-y-5">
     <Link to={user.role === 'driver' ? '/driver' : '/customer'} className="text-sm text-primary">Back to home</Link>
     <h1 className="text-2xl font-bold">Return delivery progress</h1>
