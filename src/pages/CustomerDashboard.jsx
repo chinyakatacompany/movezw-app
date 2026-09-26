@@ -3,11 +3,12 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
-import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download, MessageCircle } from "lucide-react";
-import { STATUS_FLOW } from "@/lib/movezw";
+import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download, MessageCircle, Navigation } from "lucide-react";
+import { STATUS_FLOW, STATUS_LABELS } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
+const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
 const TRIP_STEPS = [
   { id: "en_route_pickup", label: "En route to pickup", icon: Truck },
@@ -125,6 +126,78 @@ export default function CustomerDashboard() {
       .then(({ data, error }) => { if (!cancelled && !error) setTripPhone(data || null); });
     return () => { cancelled = true; };
   }, [inTransit?.accepted_offer_id, inTransit?.id]);
+
+  // An active delivery turns Home into the tracking screen. Because this
+  // stays inside AppLayout, the normal Home / Request / Me navigation is
+  // always visible instead of being covered by a separate full-screen page.
+  if (inTransit) {
+    const goingToPickup = ["confirmed", "en_route_pickup"].includes(inTransit.status);
+    const targetLat = goingToPickup ? inTransit.pickup_lat : inTransit.destination_lat;
+    const targetLng = goingToPickup ? inTransit.pickup_lng : inTransit.destination_lng;
+    const trackingTarget = targetLat != null && targetLng != null
+      ? { lat: targetLat, lng: targetLng, label: goingToPickup ? "Pickup" : "Destination" }
+      : null;
+    const hasDriverLocation = inTransit.driver_lat != null && inTransit.driver_lng != null;
+    const mapHeight = "calc(100dvh - 7.5rem)";
+
+    return (
+      <div className="relative overflow-hidden" style={{ height: mapHeight }}>
+        {hasDriverLocation ? (
+          <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
+            <RouteMap
+              from={{ lat: inTransit.driver_lat, lng: inTransit.driver_lng }}
+              to={trackingTarget}
+              fromLabel="Your driver"
+              toLabel={trackingTarget?.label || "Route target"}
+              fromColor="#ea580c"
+              height={mapHeight}
+              immersive
+            />
+          </React.Suspense>
+        ) : (
+          <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
+            <HomeMap height={mapHeight} />
+          </React.Suspense>
+        )}
+
+        <div className="absolute top-3 inset-x-3 rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-lg text-center">
+          <p className="text-[10px] font-semibold text-primary-foreground/75">LIVE DELIVERY TRACKING</p>
+          <p className="font-bold">{STATUS_LABELS[inTransit.status]}</p>
+          {!hasDriverLocation && <p className="text-xs text-primary-foreground/80 mt-1">Waiting for the driver's first GPS position</p>}
+        </div>
+
+        <div className="absolute top-24 right-3 max-w-[65%] rounded-xl bg-emerald-500 text-white px-3 py-2 shadow-lg text-right">
+          <p className="text-[9px] font-bold opacity-80">DESTINATION</p>
+          <p className="text-xs font-semibold truncate">{inTransit.destination}</p>
+        </div>
+
+        <div className="absolute left-3 top-24 flex flex-col gap-3">
+          <Link to={`/customer/request/${inTransit.id}?details=1`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
+            <Truck className="w-5 h-5 text-primary" /> View offer
+          </Link>
+          {tripPhone && (
+            <a href={`tel:${tripPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+              <Phone className="w-5 h-5 text-primary" /> Call
+            </a>
+          )}
+        </div>
+
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 max-w-[75%] rounded-xl bg-white/95 text-slate-900 px-3 py-2 shadow-lg text-center border border-border">
+          <p className="text-[9px] font-bold text-primary">PICKUP</p>
+          <p className="text-xs font-semibold truncate">{inTransit.pickup_location}</p>
+        </div>
+
+        <div className="absolute bottom-3 inset-x-3 rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-lg flex items-center gap-3">
+          <Navigation className="w-5 h-5 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] text-primary-foreground/75">CURRENT STATUS</p>
+            <p className="text-sm font-bold truncate">{STATUS_LABELS[inTransit.status]}</p>
+          </div>
+          <Link to={`/customer/request/${inTransit.id}?details=1`} className="text-xs font-bold bg-white/15 rounded-xl px-3 py-2">Details</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-2">

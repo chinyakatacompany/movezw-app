@@ -60,6 +60,17 @@ function summarizeSteps(steps) {
   return segments;
 }
 
+function bearingBetween(from, to) {
+  if (!to) return 0;
+  const startLat = from.lat * Math.PI / 180;
+  const endLat = to.lat * Math.PI / 180;
+  const deltaLng = (to.lng - from.lng) * Math.PI / 180;
+  const y = Math.sin(deltaLng) * Math.cos(endLat);
+  const x = Math.cos(startLat) * Math.sin(endLat)
+    - Math.sin(startLat) * Math.cos(endLat) * Math.cos(deltaLng);
+  return Math.atan2(y, x) * 180 / Math.PI;
+}
+
 // Route is fetched once from OSRM's free public routing server (no API key,
 // no paid tier) — not continuously re-fetched as the driver moves.
 export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669", immersive = false }) {
@@ -67,6 +78,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
   const mapRef = useRef(null);
   const fromMarkerRef = useRef(null);
   const toMarkerRef = useRef(null);
+  const routeRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [mapAttempt, setMapAttempt] = useState(0);
@@ -146,27 +158,34 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
   useEffect(() => {
     let cancelled = false;
     if (!to) {
+      routeRef.current = null;
       setRoute(null);
       setStatus("location");
       return () => { cancelled = true; };
     }
-    setStatus("loading");
-    setRoute(null);
+    // Keep the previous road and ETA visible while a fresh route is fetched
+    // for the moving truck. Only the very first calculation shows loading.
+    if (!routeRef.current) setStatus("loading");
     fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
         const r = data?.routes?.[0];
-        if (data.code !== "Ok" || !r) { setStatus("error"); return; }
-        setRoute({
+        if (data.code !== "Ok" || !r) {
+          if (!routeRef.current) setStatus("error");
+          return;
+        }
+        const nextRoute = {
           coordinates: r.geometry.coordinates, // [lng, lat] pairs, matches GeoJSON/MapLibre order
           distanceKm: r.distance / 1000,
           durationMin: r.duration / 60,
           steps: summarizeSteps(r.legs?.[0]?.steps || []),
-        });
+        };
+        routeRef.current = nextRoute;
+        setRoute(nextRoute);
         setStatus("ready");
       })
-      .catch(() => { if (!cancelled) setStatus("error"); });
+      .catch(() => { if (!cancelled && !routeRef.current) setStatus("error"); });
     return () => { cancelled = true; };
   }, [from.lat, from.lng, to?.lat, to?.lng]);
 
@@ -208,9 +227,23 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     map.setLayoutProperty("route-line-casing", "visibility", status === "ready" ? "visible" : "none");
     map.setLayoutProperty("route-line", "visibility", status === "ready" ? "visible" : "none");
 
-    const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
-    map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
-  }, [mapLoaded, status, route, from.lat, from.lng, to?.lat, to?.lng]);
+    if (immersive) {
+      // Navigation mode follows the truck closely. Rotating toward the next
+      // stop keeps the destination toward the top of the phone and the
+      // truck/pickup side toward the bottom, like a driving map.
+      map.easeTo({
+        center: [from.lng, from.lat],
+        zoom: 15.5,
+        bearing: bearingBetween(from, to),
+        pitch: 35,
+        duration: 700,
+        padding: { top: 150, bottom: 230, left: 70, right: 70 },
+      });
+    } else {
+      const bounds = coordinates.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+      map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+    }
+  }, [mapLoaded, status, route, from.lat, from.lng, to?.lat, to?.lng, immersive]);
 
   return (
     <div className={cn(immersive ? "h-full w-full overflow-hidden" : "rounded-xl overflow-hidden border border-border")}>
