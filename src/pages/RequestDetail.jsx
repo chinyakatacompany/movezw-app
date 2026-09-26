@@ -172,7 +172,6 @@ export default function RequestDetail() {
   if (!request) return <div className="p-8 text-center text-muted-foreground">Request not found.</div>;
 
   const activeStep = STATUS_FLOW.indexOf(request.status);
-  const enRouteOrLater = activeStep >= STATUS_FLOW.indexOf("en_route_pickup");
   const acceptedOffer = offers?.find((o) => o.id === request.accepted_offer_id);
   const pendingOffers = offers?.filter((o) => o.status === "pending") || [];
   const showOffers = request.status === "open";
@@ -180,12 +179,13 @@ export default function RequestDetail() {
   const hasFullRoute = request.pickup_lat != null && request.pickup_lng != null && request.destination_lat != null && request.destination_lng != null;
   // Live driver position, refreshed every 5 minutes by the driver's app —
   // heads to pickup while en route, then to the destination once collected.
-  const trackingTarget = request.status === "en_route_pickup"
+  const trackingTarget = ["confirmed", "en_route_pickup"].includes(request.status)
     ? { lat: request.pickup_lat, lng: request.pickup_lng, label: "Pickup" }
     : { lat: request.destination_lat, lng: request.destination_lng, label: "Destination" };
-  const showLiveTracking = enRouteOrLater
+  const showCustomerTracking = Boolean(request.accepted_driver_id)
     && !["delivered", "completed", "cancelled"].includes(request.status)
-    && request.driver_lat != null && request.driver_lng != null
+    && STATUS_FLOW.includes(request.status);
+  const hasLivePosition = request.driver_lat != null && request.driver_lng != null
     && trackingTarget.lat != null && trackingTarget.lng != null;
 
   return (
@@ -208,6 +208,69 @@ export default function RequestDetail() {
         </div>
         <p className="text-xs text-muted-foreground">Posted {timeAgo(request.created_at)}</p>
       </div>
+
+      {showCustomerTracking && (
+        <section className="bg-card rounded-2xl border-2 border-primary overflow-hidden shadow-lg">
+          <div className="px-4 py-3 bg-primary text-primary-foreground flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-primary-foreground/80">LIVE DELIVERY TRACKING</p>
+              <p className="font-bold">{STATUS_LABELS[request.status]}</p>
+            </div>
+            <span className="text-xs font-semibold bg-white/15 rounded-full px-3 py-1">
+              {hasLivePosition && request.driver_location_updated_at
+                ? `Updated ${timeAgo(request.driver_location_updated_at)}`
+                : "Waiting for driver GPS"}
+            </span>
+          </div>
+
+          {hasLivePosition ? (
+            <React.Suspense fallback={<div className="h-[360px] bg-muted animate-pulse" />}>
+              <RouteMap
+                from={{ lat: request.driver_lat, lng: request.driver_lng }}
+                to={trackingTarget}
+                fromLabel="Your driver"
+                toLabel={trackingTarget.label}
+                fromColor="#ea580c"
+                height={360}
+              />
+            </React.Suspense>
+          ) : (
+            <div className="h-52 flex flex-col items-center justify-center text-center px-6 bg-muted/40">
+              <Navigation className="w-8 h-8 text-primary mb-2" />
+              <p className="text-sm font-semibold">Waiting for the driver's live location</p>
+              <p className="text-xs text-muted-foreground mt-1">This map will start automatically when the driver's GPS is available.</p>
+            </div>
+          )}
+
+          <div className="p-3 border-t border-border">
+            <div className="flex items-center gap-2 mb-3 overflow-x-auto">
+              {STATUS_FLOW.slice(0, -1).map((step, index) => (
+                <React.Fragment key={step}>
+                  {index > 0 && <span className={cn("h-0.5 min-w-5 flex-1", index <= activeStep ? "bg-primary" : "bg-border")} />}
+                  <span className={cn(
+                    "w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold",
+                    index <= activeStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  )} title={STATUS_LABELS[step]}>
+                    {index < activeStep ? <Check className="w-3.5 h-3.5" /> : index + 1}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" className="h-11" onClick={() => openChat()}>
+                <MessageCircle className="w-4 h-4 mr-2" /> Message driver
+              </Button>
+              {driverPhone ? (
+                <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
+                  <Phone className="w-4 h-4 mr-2" /> Call driver
+                </a>
+              ) : (
+                <Button className="h-11" disabled><Phone className="w-4 h-4 mr-2" /> Call driver</Button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
         <div className="flex gap-3">
@@ -316,24 +379,6 @@ export default function RequestDetail() {
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {showLiveTracking && (
-        <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold flex items-center gap-2"><Navigation className="w-4 h-4 text-primary" /> Live driver location</h2>
-            <span className="text-[11px] text-muted-foreground">Updated {timeAgo(request.driver_location_updated_at)}</span>
-          </div>
-          <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
-            <RouteMap
-              from={{ lat: request.driver_lat, lng: request.driver_lng }}
-              to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
-              fromLabel="Your driver"
-              toLabel={trackingTarget.label}
-              fromColor="#ea580c"
-            />
-          </React.Suspense>
         </div>
       )}
 
