@@ -60,7 +60,6 @@ export const STATUS_FLOW = [
   "en_route_pickup",
   "collected",
   "in_transit",
-  "delivered",
   "completed",
 ];
 

@@ -38,7 +38,9 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
   const hasFullRoute = pickup.lat != null && pickup.lng != null && destination.lat != null && destination.lng != null;
   const showLiveMap = hasDriverLocation && hasTrackingTarget && !["confirmed", "delivered"].includes(job.status);
   const showPlannedMap = !showLiveMap && hasFullRoute;
-  const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1];
+  const nextStatus = job.status === "delivered"
+    ? "completed"
+    : STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1];
 
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-3">
