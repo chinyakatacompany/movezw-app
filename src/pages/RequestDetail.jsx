@@ -35,7 +35,7 @@ export default function RequestDetail() {
   const [alreadyRated, setAlreadyRated] = useState(false);
   const [driverPhone, setDriverPhone] = useState(null);
   const [viewerCount, setViewerCount] = useState(0);
-  const [showAcceptedDetails, setShowAcceptedDetails] = useState(false);
+  const [showAcceptedDetails, setShowAcceptedDetails] = useState(() => new URLSearchParams(window.location.search).get("details") === "1");
 
   const load = async () => {
     const { data: req } = await supabase.from("transport_requests").select("*").eq("id", id).single();
@@ -117,7 +117,7 @@ export default function RequestDetail() {
 
       await createNotification(offer.driver_id, "offer_accepted", "Offer accepted! 🎉", `Your offer for ${request.cargo_type} from ${request.pickup_location} was accepted.`, `/driver/job/${request.id}`);
       toast({ title: "Driver booked", description: `${offer.driver_name} has been notified.` });
-      load();
+      navigate("/customer");
     } catch (e) {
       toast({ title: "Could not accept offer", description: e.message, variant: "destructive" });
     } finally {
@@ -226,6 +226,16 @@ export default function RequestDetail() {
           </div>
         </div>
 
+        <div className="absolute top-24 right-3 max-w-[65%] rounded-xl bg-emerald-500 text-white px-3 py-2 shadow-lg text-right">
+          <p className="text-[9px] font-bold opacity-80">DESTINATION</p>
+          <p className="text-xs font-semibold truncate">{request.destination}</p>
+        </div>
+
+        <div className="absolute bottom-32 left-1/2 -translate-x-1/2 max-w-[75%] rounded-xl bg-white/95 text-slate-900 px-3 py-2 shadow-lg text-center border border-border">
+          <p className="text-[9px] font-bold text-primary">PICKUP</p>
+          <p className="text-xs font-semibold truncate">{request.pickup_location}</p>
+        </div>
+
         <div className="absolute left-3 top-28 flex flex-col gap-3">
           <button onClick={() => setShowAcceptedDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
             <Truck className="w-5 h-5 text-primary" /> View offer
@@ -240,7 +250,7 @@ export default function RequestDetail() {
           </button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
+        <div className="absolute bottom-3 inset-x-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
           <div className="rounded-2xl bg-primary text-primary-foreground px-5 py-4 shadow-lg text-center">
             <p className="text-xs text-primary-foreground/75">CURRENT DELIVERY STATUS</p>
             <p className="text-lg font-bold">{STATUS_LABELS[request.status]}</p>

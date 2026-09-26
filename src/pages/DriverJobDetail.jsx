@@ -557,6 +557,16 @@ export default function DriverJobDetail() {
           </div>
         </div>
 
+        <div className="absolute top-24 right-3 max-w-[65%] rounded-xl bg-emerald-500 text-white px-3 py-2 shadow-lg text-right">
+          <p className="text-[9px] font-bold opacity-80">DESTINATION</p>
+          <p className="text-xs font-semibold truncate">{request.destination}</p>
+        </div>
+
+        <div className="absolute bottom-28 left-1/2 -translate-x-1/2 max-w-[75%] rounded-xl bg-white/95 text-slate-900 px-3 py-2 shadow-lg text-center border border-border">
+          <p className="text-[9px] font-bold text-primary">PICKUP</p>
+          <p className="text-xs font-semibold truncate">{request.pickup_location}</p>
+        </div>
+
         <div className="absolute left-3 top-28 flex flex-col gap-3">
           <button onClick={() => setShowJobDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
             <Package className="w-5 h-5 text-primary" /> View offer
@@ -580,7 +590,7 @@ export default function DriverJobDetail() {
           </button>
         </div>
 
-        <div className="absolute bottom-0 inset-x-0 grid grid-cols-3 gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
+        <div className="absolute bottom-3 inset-x-0 grid grid-cols-3 gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-gradient-to-t from-black/75 via-black/45 to-transparent">
           <button onClick={() => navigate("/driver")} className="min-h-16 rounded-2xl bg-red-500 text-white font-bold text-xs px-2 shadow-lg">
             Exit tracking
           </button>
