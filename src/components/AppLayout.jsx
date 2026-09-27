@@ -23,6 +23,25 @@ const driverNav = [
   { to: "/driver/profile", label: "Me", icon: UserIcon },
 ];
 
+const RATED_DELIVERIES_STORAGE_KEY = "movezw-rated-delivery-ids";
+
+function locallyRatedDeliveryIds() {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(RATED_DELIVERIES_STORAGE_KEY) || "[]");
+    return Array.isArray(stored) ? stored.filter((id) => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberLocallyRatedDelivery(requestId) {
+  if (typeof window === "undefined" || !requestId) return;
+  const ids = new Set(locallyRatedDeliveryIds());
+  ids.add(requestId);
+  window.localStorage.setItem(RATED_DELIVERIES_STORAGE_KEY, JSON.stringify([...ids]));
+}
+
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -140,6 +159,7 @@ export default function AppLayout() {
         .in("request_id", jobs.map((job) => job.id));
       if (!mounted || ratingsError) return;
       const ratedIds = new Set((ratings || []).map((rating) => rating.request_id));
+      locallyRatedDeliveryIds().forEach((requestId) => ratedIds.add(requestId));
       const dismissedIds = new Set(dismissedRatingIds);
       setRatingJob(jobs.find((job) => !ratedIds.has(job.id) && !dismissedIds.has(job.id)) || null);
     };
@@ -168,27 +188,36 @@ export default function AppLayout() {
   const submitDriverRating = async () => {
     if (!ratingJob || !ratingScore || !user?.id) return;
     setSubmittingRating(true);
+    const completedJob = ratingJob;
+    const submittedScore = ratingScore;
     try {
       const { error } = await supabase.from("ratings").insert({
-        request_id: ratingJob.id,
+        request_id: completedJob.id,
         customer_id: user.id,
-        driver_id: ratingJob.accepted_driver_id,
-        stars: ratingScore,
+        driver_id: completedJob.accepted_driver_id,
+        stars: submittedScore,
         comment: ratingComment,
       });
-      if (error) throw error;
-      await createNotification(
-        ratingJob.accepted_driver_id,
-        "rating_received",
-        "New rating received ⭐",
-        `You received a ${ratingScore}-star rating.`,
-        "/driver"
-      );
-      setDismissedRatingIds((ids) => [...ids, ratingJob.id]);
+      // A duplicate means this delivery was already rated on another device;
+      // treat it as complete instead of trapping the customer in the popup.
+      if (error && error.code !== "23505") throw error;
+
+      rememberLocallyRatedDelivery(completedJob.id);
+      setDismissedRatingIds((ids) => [...ids, completedJob.id]);
       setRatingJob(null);
       setRatingScore(0);
       setRatingComment("");
       toast({ title: "Thanks for rating your driver!" });
+
+      // The rating is already saved, so notification delivery must never
+      // reopen or hold the popup if the driver's connection is unavailable.
+      void createNotification(
+        completedJob.accepted_driver_id,
+        "rating_received",
+        "New rating received ⭐",
+        `You received a ${submittedScore}-star rating.`,
+        "/driver"
+      ).catch((notificationError) => console.error("Failed to notify driver about rating:", notificationError));
     } catch (error) {
       toast({ title: "Could not submit rating", description: error.message, variant: "destructive" });
     } finally {

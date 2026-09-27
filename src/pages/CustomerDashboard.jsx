@@ -3,19 +3,12 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
-import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Flag, Star, Phone, User as UserIcon, Download, MessageCircle, Navigation } from "lucide-react";
+import { Plus, Truck, ArrowRight, ChevronRight, Bell, Package, Phone, Download, MessageCircle, Navigation } from "lucide-react";
 import { STATUS_FLOW, STATUS_LABELS } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
-
-const TRIP_STEPS = [
-  { id: "en_route_pickup", label: "En route to pickup", icon: Truck },
-  { id: "collected", label: "At pickup", icon: Package },
-  { id: "in_transit", label: "In transit", icon: Truck },
-  { id: "completed", label: "Completed", icon: Flag },
-];
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -25,7 +18,6 @@ export default function CustomerDashboard() {
   const openRequestKey = openRequests.map((request) => request.id).join(",");
   const [onlineDrivers, setOnlineDrivers] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
-  const [tripDriver, setTripDriver] = useState(null);
   const [tripPhone, setTripPhone] = useState(null);
   const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
   const [offerCounts, setOfferCounts] = useState({});
@@ -95,9 +87,6 @@ export default function CustomerDashboard() {
 
   const active = (requests || []).filter((x) => !["completed", "cancelled"].includes(x.status));
   const inTransit = active.find((x) => STATUS_FLOW.includes(x.status) || x.status === "delivered");
-  const tripStepIndex = inTransit
-    ? (inTransit.status === "delivered" ? TRIP_STEPS.findIndex((s) => s.id === "in_transit") : TRIP_STEPS.findIndex((s) => s.id === inTransit.status))
-    : -1;
 
   // Switch to the assigned driver's map as soon as an offer is accepted.
   // Before the first live trip ping arrives, seed the marker with that
@@ -185,14 +174,12 @@ export default function CustomerDashboard() {
   }, [user?.id, openRequestKey]);
 
   useEffect(() => {
-    if (!inTransit?.accepted_offer_id) { setTripDriver(null); setTripPhone(null); return; }
+    if (!inTransit?.id) { setTripPhone(null); return; }
     let cancelled = false;
-    supabase.from("offers").select("*").eq("id", inTransit.accepted_offer_id).single()
-      .then(({ data, error }) => { if (!cancelled && !error) setTripDriver(data || null); });
     supabase.rpc("fn_get_trip_contact_phone", { p_request_id: inTransit.id })
       .then(({ data, error }) => { if (!cancelled && !error) setTripPhone(data || null); });
     return () => { cancelled = true; };
-  }, [inTransit?.accepted_offer_id, inTransit?.id]);
+  }, [inTransit?.id]);
 
   // An active delivery turns Home into the tracking screen. Because this
   // stays inside AppLayout, the normal Home / Request / Me navigation is
@@ -283,164 +270,92 @@ export default function CustomerDashboard() {
     );
   }
 
+  const mapHeight = "calc(100dvh - 7.5rem)";
+
   return (
-    <div className="pb-2">
-      <div className="relative h-64 overflow-hidden rounded-b-3xl">
-        <React.Suspense fallback={<div className="w-full h-full bg-muted animate-pulse" />}>
-          <HomeMap height={256} />
-        </React.Suspense>
-        <div className="absolute top-3 left-3 bg-card/95 backdrop-blur rounded-full pl-2.5 pr-3 py-1.5 shadow flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
-          <Truck className="w-3.5 h-3.5 text-primary" />
-          {onlineDrivers} driver{onlineDrivers === 1 ? "" : "s"} nearby
+    <div className="relative overflow-hidden -mb-20" style={{ height: mapHeight }}>
+      <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
+        <HomeMap height={mapHeight} />
+      </React.Suspense>
+
+      <div className="absolute top-3 left-3 bg-card/95 backdrop-blur rounded-full pl-2.5 pr-3 py-2 shadow-lg flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
+        <Truck className="w-3.5 h-3.5 text-primary" />
+        {onlineDrivers} driver{onlineDrivers === 1 ? "" : "s"} nearby
+      </div>
+
+      <Link
+        to="/customer/notifications"
+        aria-label="Alerts"
+        className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center"
+      >
+        <Bell className="w-5 h-5 text-primary" />
+        {unreadAlerts > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+            {unreadAlerts > 9 ? "9+" : unreadAlerts}
+          </span>
+        )}
+      </Link>
+
+      {showInstall && (
+        <button
+          type="button"
+          onClick={promptInstall}
+          className="absolute top-16 left-3 w-16 min-h-16 rounded-2xl bg-accent text-accent-foreground shadow-lg flex flex-col items-center justify-center gap-1 px-1 text-[10px] font-bold"
+        >
+          <Download className="w-5 h-5" /> Install app
+        </button>
+      )}
+
+      {openRequests.length > 0 ? (
+        <div className="absolute inset-x-0 bottom-3 flex gap-3 overflow-x-auto px-3 pb-1 snap-x snap-mandatory">
+          {openRequests.map((request) => {
+            const quoteCount = offerCounts[request.id] || 0;
+            return (
+              <Link
+                key={request.id}
+                to={`/customer/request/${request.id}`}
+                className="min-w-[86%] snap-center bg-white/95 backdrop-blur rounded-2xl border border-border p-4 shadow-xl text-slate-900"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Package className="w-5 h-5" />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold truncate">{request.cargo_type}</p>
+                      {request.batch_total > 1 && <span className="text-[10px] font-bold text-accent">Load {request.batch_index}/{request.batch_total}</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{request.pickup_location} → {request.destination}</p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", quoteCount > 0 ? "text-red-600" : "text-muted-foreground")}>
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        {quoteCount > 0 ? `${quoteCount} quote${quoteCount === 1 ? "" : "s"} received` : "Waiting for quotes"}
+                      </span>
+                      <span className="text-xs text-primary font-bold inline-flex items-center gap-1">
+                        {quoteCount > 0 ? "View quotes" : "View job"} <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
+      ) : (
         <Link
           to="/customer/new"
-          className="absolute left-3 right-3 bottom-3 bg-primary text-primary-foreground rounded-2xl px-4 py-3.5 shadow-lg flex items-center gap-3 hover:bg-primary/90 transition-colors"
+          className="absolute left-3 right-3 bottom-3 bg-primary text-primary-foreground rounded-2xl px-4 py-3.5 shadow-xl flex items-center gap-3"
         >
           <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0">
             <Plus className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Request a Truck (van)</p>
+            <p className="font-semibold text-sm">Request a Truck</p>
             <p className="text-xs text-primary-foreground/80">Get quotes from nearby drivers</p>
           </div>
           <ChevronRight className="w-5 h-5 shrink-0" />
         </Link>
-      </div>
-
-      <div className="p-4 space-y-6">
-        <Link to="/alerts" className="flex items-center gap-3 bg-card rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors">
-          <div className="relative shrink-0">
-            <Bell className="w-5 h-5 text-primary" />
-            {unreadAlerts > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 rounded-full bg-accent text-white text-[9px] font-bold flex items-center justify-center">
-                {unreadAlerts > 9 ? "9+" : unreadAlerts}
-              </span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Alerts</p>
-            <p className="text-xs text-muted-foreground">
-              {unreadAlerts > 0 ? `You have ${unreadAlerts} new alert${unreadAlerts === 1 ? "" : "s"}` : "No new alerts"}
-            </p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-        </Link>
-
-        {showInstall && (
-          <button
-            type="button"
-            onClick={promptInstall}
-            className="w-full flex items-center gap-3 bg-accent text-accent-foreground rounded-2xl px-4 py-3.5 shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors"
-          >
-            <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-              <Download className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="font-semibold text-sm">Install MoveZW app</p>
-              <p className="text-xs text-accent-foreground/80">Faster access, right from your home screen</p>
-            </div>
-          </button>
-        )}
-
-        {openRequests.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold">Open jobs</h2>
-              <Link to="/customer/history" className="text-xs font-medium text-primary">View all</Link>
-            </div>
-            <div className="space-y-3">
-              {openRequests.map((request) => {
-                const quoteCount = offerCounts[request.id] || 0;
-                return (
-                  <Link
-                    key={request.id}
-                    to={`/customer/request/${request.id}`}
-                    className="block bg-card rounded-2xl border border-border p-4 hover:border-primary/40 transition-colors"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <Package className="w-5 h-5" />
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-semibold truncate">{request.cargo_type}</p>
-                          {request.batch_total > 1 && (
-                            <span className="text-[11px] font-semibold text-accent whitespace-nowrap">Load {request.batch_index} of {request.batch_total}</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{request.pickup_location} → {request.destination}</p>
-                        <div className="flex items-center justify-between mt-3">
-                          <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", quoteCount > 0 ? "text-red-600" : "text-muted-foreground")}>
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            {quoteCount > 0 ? `${quoteCount} quote${quoteCount === 1 ? "" : "s"} received` : "Waiting for quotes"}
-                          </span>
-                          <span className="text-xs text-primary font-semibold inline-flex items-center gap-1">
-                            {quoteCount > 0 ? "View quotes" : "View job"} <ArrowRight className="w-3 h-3" />
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {inTransit && (
-          <div className="bg-card rounded-2xl border border-border p-4">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold flex items-center gap-1.5"><Truck className="w-4 h-4 text-primary" /> Trip in progress</h2>
-              <Link to={`/customer/request/${inTransit.id}`} className="text-xs text-primary font-medium inline-flex items-center gap-1">
-                Track <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">{inTransit.cargo_type} · {inTransit.pickup_location} → {inTransit.destination}</p>
-
-            <div className="flex items-start">
-              {TRIP_STEPS.map((step, i) => {
-                const done = i <= tripStepIndex;
-                const StepIcon = step.icon;
-                return (
-                  <React.Fragment key={step.id}>
-                    {i > 0 && <div className={cn("h-0.5 flex-1 mt-4", i <= tripStepIndex ? "bg-primary" : "bg-muted")} />}
-                    <div className="flex flex-col items-center gap-1 w-14 shrink-0">
-                      <span className={cn("w-8 h-8 rounded-full flex items-center justify-center", done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
-                        <StepIcon className="w-4 h-4" />
-                      </span>
-                      <span className={cn("text-[10px] text-center leading-tight", done ? "text-foreground font-medium" : "text-muted-foreground")}>{step.label}</span>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-            </div>
-
-            {tripDriver && (
-              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border">
-                <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
-                  {tripDriver.driver_photo_url ? (
-                    <img src={tripDriver.driver_photo_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <UserIcon className="w-5 h-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{tripDriver.driver_name}</p>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" /> {(tripDriver.driver_rating || 0).toFixed(1)} · {tripDriver.vehicle_type}
-                  </p>
-                </div>
-                {tripPhone && (
-                  <a href={`tel:${tripPhone}`} className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Phone className="w-4 h-4 text-primary" />
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
