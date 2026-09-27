@@ -27,6 +27,7 @@ export default function CustomerDashboard() {
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripDriver, setTripDriver] = useState(null);
   const [tripPhone, setTripPhone] = useState(null);
+  const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
   const [offerCounts, setOfferCounts] = useState({});
   // Customers now sign up and land straight on this page (see Register.jsx's
   // frictionless anonymous signup) without ever passing through Login.jsx /
@@ -98,6 +99,63 @@ export default function CustomerDashboard() {
     ? (inTransit.status === "delivered" ? TRIP_STEPS.findIndex((s) => s.id === "in_transit") : TRIP_STEPS.findIndex((s) => s.id === inTransit.status))
     : -1;
 
+  // Switch to the assigned driver's map as soon as an offer is accepted.
+  // Before the first live trip ping arrives, seed the marker with that
+  // driver's most recent matching location; live request coordinates replace
+  // it automatically on the next Realtime/poll update.
+  useEffect(() => {
+    if (!inTransit?.id || !inTransit.accepted_driver_id) {
+      setAcceptedDriverLocation(null);
+      return;
+    }
+    if (inTransit.driver_lat != null && inTransit.driver_lng != null) {
+      setAcceptedDriverLocation(null);
+      return;
+    }
+    let mounted = true;
+    supabase.rpc("fn_get_assigned_driver_location", { p_request_id: inTransit.id })
+      .then(({ data, error }) => {
+        if (!mounted || error) return;
+        const location = Array.isArray(data) ? data[0] : data;
+        setAcceptedDriverLocation(location?.latitude != null && location?.longitude != null
+          ? { lat: location.latitude, lng: location.longitude }
+          : null);
+      });
+    return () => { mounted = false; };
+  }, [inTransit?.id, inTransit?.accepted_driver_id, inTransit?.driver_lat, inTransit?.driver_lng]);
+
+  // Realtime is the fast path, while this ten-second refresh is a safety net
+  // for mobile networks that briefly disconnect a websocket. It updates only
+  // the active request, so the customer map keeps following the driver's
+  // latest coordinates without reloading the whole dashboard.
+  useEffect(() => {
+    if (!user?.id || !inTransit?.id) return;
+    let mounted = true;
+    const refreshTrackedRequest = async () => {
+      const { data, error } = await supabase
+        .from("transport_requests")
+        .select("*")
+        .eq("id", inTransit.id)
+        .eq("customer_id", user.id)
+        .maybeSingle();
+      if (!mounted || error || !data) return;
+      setRequests((current) => current
+        ? current.map((request) => (request.id === data.id ? data : request))
+        : [data]);
+    };
+    void refreshTrackedRequest();
+    const intervalId = window.setInterval(refreshTrackedRequest, 10 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshTrackedRequest();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [user?.id, inTransit?.id]);
+
   // Open jobs remain easy to return to after the customer leaves the live
   // request page. Quote counts refresh in real time so "View quotes" does
   // not depend on the customer noticing a notification first.
@@ -146,7 +204,11 @@ export default function CustomerDashboard() {
     const trackingTarget = targetLat != null && targetLng != null
       ? { lat: targetLat, lng: targetLng, label: goingToPickup ? "Pickup" : "Destination" }
       : null;
-    const hasDriverLocation = inTransit.driver_lat != null && inTransit.driver_lng != null;
+    const liveDriverLocation = inTransit.driver_lat != null && inTransit.driver_lng != null
+      ? { lat: inTransit.driver_lat, lng: inTransit.driver_lng }
+      : null;
+    const displayedDriverLocation = liveDriverLocation || acceptedDriverLocation;
+    const hasDriverLocation = Boolean(displayedDriverLocation);
     const mapHeight = "calc(100dvh - 7.5rem)";
 
     return (
@@ -154,7 +216,7 @@ export default function CustomerDashboard() {
         {hasDriverLocation ? (
           <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
             <RouteMap
-              from={{ lat: inTransit.driver_lat, lng: inTransit.driver_lng }}
+              from={displayedDriverLocation}
               to={trackingTarget}
               fromLabel="Your driver"
               toLabel={trackingTarget?.label || "Route target"}
@@ -172,7 +234,7 @@ export default function CustomerDashboard() {
         <div className="absolute top-3 left-3 right-16 rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-lg text-center">
           <p className="text-[10px] font-semibold text-primary-foreground/75">LIVE DELIVERY TRACKING</p>
           <p className="font-bold">{STATUS_LABELS[inTransit.status]}</p>
-          {!hasDriverLocation && <p className="text-xs text-primary-foreground/80 mt-1">Waiting for the driver's first GPS position</p>}
+          {!hasDriverLocation && <p className="text-xs text-primary-foreground/80 mt-1">Driver assigned · waiting for the first GPS position</p>}
         </div>
 
         <Link

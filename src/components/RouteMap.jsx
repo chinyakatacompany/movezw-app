@@ -26,6 +26,8 @@ const ROUTE_COLOR = "#2563eb";
 // forever with no visible error. This bounds how long we wait before
 // offering a retry (a fresh map instance triggers fresh network requests).
 const LOAD_TIMEOUT_MS = 8000;
+const MARKER_TRANSITION_MS = 8000;
+const ROUTE_REFRESH_INTERVAL_MS = 30 * 1000;
 
 // Teardrop pin (Google Maps style) instead of a plain dot. Anchored at its
 // bottom tip via the Marker's `anchor: "bottom"` option below.
@@ -71,14 +73,17 @@ function bearingBetween(from, to) {
   return Math.atan2(y, x) * 180 / Math.PI;
 }
 
-// Route is fetched once from OSRM's free public routing server (no API key,
-// no paid tier) — not continuously re-fetched as the driver moves.
+// Routes come from OSRM's free public routing server (no API key, no paid
+// tier). The road line refreshes at a lower cadence than the moving marker
+// so tracking stays smooth without overloading the public router.
 export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669", immersive = false }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const fromMarkerRef = useRef(null);
   const toMarkerRef = useRef(null);
   const routeRef = useRef(null);
+  const markerAnimationRef = useRef(null);
+  const lastRouteRequestRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [mapAttempt, setMapAttempt] = useState(0);
@@ -118,6 +123,10 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     }
 
     return () => {
+      if (markerAnimationRef.current != null) {
+        cancelAnimationFrame(markerAnimationRef.current);
+        markerAnimationRef.current = null;
+      }
       fromMarkerRef.current = null;
       toMarkerRef.current = null;
       map.remove();
@@ -125,13 +134,30 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
      
   }, [mapAttempt]);
 
-  // The map instance stays mounted while a driver's GPS point changes.
-  // Move both markers explicitly; recreating only the route line left the
-  // visible driver pin stuck at its first position during live tracking.
+  // The map instance stays mounted while a driver's GPS point changes. Ease
+  // the truck marker between reports so the customer sees movement instead
+  // of a pin that jumps to a new point every few seconds.
   useEffect(() => {
-    fromMarkerRef.current
-      ?.setLngLat([from.lng, from.lat])
-      .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel));
+    const marker = fromMarkerRef.current;
+    if (marker) {
+      marker.setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 }).setText(fromLabel));
+      if (markerAnimationRef.current != null) cancelAnimationFrame(markerAnimationRef.current);
+      const start = marker.getLngLat();
+      const startedAt = performance.now();
+      const animate = (now) => {
+        const progress = Math.min(1, (now - startedAt) / MARKER_TRANSITION_MS);
+        const eased = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        marker.setLngLat([
+          start.lng + (from.lng - start.lng) * eased,
+          start.lat + (from.lat - start.lat) * eased,
+        ]);
+        if (progress < 1) markerAnimationRef.current = requestAnimationFrame(animate);
+        else markerAnimationRef.current = null;
+      };
+      markerAnimationRef.current = requestAnimationFrame(animate);
+    }
     if (to && !toMarkerRef.current && mapRef.current) {
       toMarkerRef.current = new maplibregl.Marker({ element: markerEl(toColor), anchor: "bottom" })
         .addTo(mapRef.current);
@@ -166,6 +192,15 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     // Keep the previous road and ETA visible while a fresh route is fetched
     // for the moving truck. Only the very first calculation shows loading.
     if (!routeRef.current) setStatus("loading");
+    const now = Date.now();
+    const previousRequest = lastRouteRequestRef.current;
+    const sameTarget = previousRequest
+      && previousRequest.toLat === to.lat
+      && previousRequest.toLng === to.lng;
+    if (routeRef.current && sameTarget && now - previousRequest.at < ROUTE_REFRESH_INTERVAL_MS) {
+      return () => { cancelled = true; };
+    }
+    lastRouteRequestRef.current = { at: now, toLat: to.lat, toLng: to.lng };
     fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`)
       .then((res) => res.json())
       .then((data) => {
@@ -236,7 +271,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
         zoom: 15.5,
         bearing: bearingBetween(from, to),
         pitch: 35,
-        duration: 700,
+        duration: MARKER_TRANSITION_MS,
         padding: { top: 150, bottom: 230, left: 70, right: 70 },
       });
     } else {

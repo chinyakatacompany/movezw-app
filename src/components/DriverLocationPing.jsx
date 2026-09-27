@@ -7,7 +7,9 @@ import {
 } from "@/lib/devicePreferences";
 
 const PROFILE_REPORT_INTERVAL_MS = 10 * 60 * 1000;
-const TRIP_REPORT_INTERVAL_MS = 30 * 1000;
+// Ten-second trip updates make the customer's truck marker visibly follow
+// the driver without using battery-heavy, per-GPS-callback database writes.
+const TRIP_REPORT_INTERVAL_MS = 10 * 1000;
 const ACTIVE_TRIP_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit"];
 
 // This component lives above the router, so location reporting no longer
