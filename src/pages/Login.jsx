@@ -9,12 +9,24 @@ import AuthLayout from "@/components/AuthLayout";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { useDocumentMeta } from "@/lib/useDocumentMeta";
 
+const LOGIN_ROLE_STORAGE_KEY = "movezw_login_role";
+const isLoginRole = (value) => value === "customer" || value === "driver";
+
 export default function Login() {
   useDocumentMeta("Log In | MoveZW", "Log in to your MoveZW account to book transport or manage your driver profile.");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const emailConfirmed = searchParams.get("confirmed") === "1";
-  const [accountType, setAccountType] = useState(searchParams.get("role") === "driver" ? "driver" : "customer");
+  const [accountType, setAccountType] = useState(() => {
+    const requestedRole = searchParams.get("role");
+    if (isLoginRole(requestedRole)) {
+      localStorage.setItem(LOGIN_ROLE_STORAGE_KEY, requestedRole);
+      return requestedRole;
+    }
+
+    const savedRole = localStorage.getItem(LOGIN_ROLE_STORAGE_KEY);
+    return isLoginRole(savedRole) ? savedRole : "customer";
+  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -22,6 +34,13 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const selectAccountType = (role) => {
+    if (!isLoginRole(role)) return;
+    localStorage.setItem(LOGIN_ROLE_STORAGE_KEY, role);
+    setAccountType(role);
+    setError("");
+  };
 
   const handleDriverSubmit = async (e) => {
     e.preventDefault();
@@ -88,14 +107,16 @@ export default function Login() {
     >
       <div className="mb-5">
         <div className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={() => setAccountType("customer")}
+          <button type="button" onClick={() => selectAccountType("customer")}
+            aria-pressed={accountType === "customer"}
             className={cn("relative rounded-xl border-2 p-3 text-left transition-all",
               accountType === "customer" ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40")}>
             <ShoppingBag className={cn("w-5 h-5 mb-1.5", accountType === "customer" ? "text-primary" : "text-muted-foreground")} />
             <p className="text-sm font-semibold">Customer</p>
             {accountType === "customer" && <Check className="w-4 h-4 text-primary absolute top-2 right-2" />}
           </button>
-          <button type="button" onClick={() => setAccountType("driver")}
+          <button type="button" onClick={() => selectAccountType("driver")}
+            aria-pressed={accountType === "driver"}
             className={cn("relative rounded-xl border-2 p-3 text-left transition-all",
               accountType === "driver" ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40")}>
             <Truck className={cn("w-5 h-5 mb-1.5", accountType === "driver" ? "text-primary" : "text-muted-foreground")} />

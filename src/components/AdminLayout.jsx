@@ -35,7 +35,7 @@ export default function AdminLayout() {
   };
 
   const NavList = ({ onNavigate }) => (
-    <nav className="flex-1 p-4 space-y-1">
+    <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 space-y-1 scroll-soft">
       {nav.map(({ to, label, icon: Icon }) => (
         <Link
           key={to}
@@ -66,15 +66,15 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-muted/40 flex">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
-        <div className="h-16 px-6 flex items-center gap-2 border-b border-sidebar-border">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col overflow-hidden bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
+        <div className="h-16 shrink-0 px-6 flex items-center gap-2 border-b border-sidebar-border">
           <div className="w-8 h-8 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-sm">
             <Truck className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
           <span className="font-bold text-lg tracking-tight">MoveZW</span>
         </div>
         <NavList />
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="shrink-0 p-4 border-t border-sidebar-border">
           <UserBlock />
           <button
             onClick={() => setConfirmLogout(true)}
@@ -110,16 +110,16 @@ export default function AdminLayout() {
             <motion.div
               initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
               transition={{ type: "tween", duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 bg-sidebar h-full flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-72 bg-sidebar h-full flex flex-col overflow-hidden"
             >
-              <div className="h-14 px-4 flex items-center justify-between border-b border-sidebar-border">
+              <div className="h-14 shrink-0 px-4 flex items-center justify-between border-b border-sidebar-border">
                 <span className="font-bold">Admin Menu</span>
                 <button onClick={() => setOpen(false)} aria-label="Close menu" className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <NavList onNavigate={() => setOpen(false)} />
-              <div className="p-4 border-t border-sidebar-border">
+              <div className="shrink-0 p-4 border-t border-sidebar-border">
                 <UserBlock />
                 <button
                   onClick={() => { setOpen(false); setConfirmLogout(true); }}
