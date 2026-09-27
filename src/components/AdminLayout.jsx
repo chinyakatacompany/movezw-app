@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
-import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut, FileText, MessageCircle } from "lucide-react";
+import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut, FileText, MessageCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/admin/issues", label: "Issues", icon: AlertTriangle },
   { to: "/admin/analytics", label: "Analytics", icon: TrendingUp },
   { to: "/admin/verification", label: "Driver Verification", icon: BadgeCheck },
   { to: "/admin/users", label: "User Management", icon: Users },

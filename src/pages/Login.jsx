@@ -13,6 +13,7 @@ export default function Login() {
   useDocumentMeta("Log In | MoveZW", "Log in to your MoveZW account to book transport or manage your driver profile.");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const emailConfirmed = searchParams.get("confirmed") === "1";
   const [accountType, setAccountType] = useState(searchParams.get("role") === "driver" ? "driver" : "customer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -107,6 +108,16 @@ export default function Login() {
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {error}
+        </div>
+      )}
+
+      {emailConfirmed && accountType === "driver" && (
+        <div
+          className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+          role="status"
+        >
+          <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Your email has been confirmed. Log in to your driver account.</span>
         </div>
       )}
 

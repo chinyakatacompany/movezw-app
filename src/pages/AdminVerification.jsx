@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
 import { getVerificationDocSignedUrl } from "@/lib/documents";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function AdminVerification() {
   const [profiles, setProfiles] = useState(null);
@@ -16,6 +17,7 @@ export default function AdminVerification() {
   const [note, setNote] = useState("");
   const [acting, setActing] = useState(null);
   const [noProfileDrivers, setNoProfileDrivers] = useState(null);
+  const [unapproveTarget, setUnapproveTarget] = useState(null);
 
   const load = () => {
     let query = supabase.from("driver_profiles").select("*").order("created_at", { ascending: false }).limit(50);
@@ -63,6 +65,24 @@ export default function AdminVerification() {
       load();
     } catch (e) {
       toast({ title: "Action failed", description: e.message, variant: "destructive" });
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const unapprove = async (profile) => {
+    setActing(profile.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-issues", {
+        body: { action: "unapprove_driver", targetId: profile.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Driver unapproved", description: "The driver can no longer accept new jobs until approved again." });
+      setUnapproveTarget(null);
+      load();
+    } catch (e) {
+      toast({ title: "Could not unapprove driver", description: e.message, variant: "destructive" });
     } finally {
       setActing(null);
     }
@@ -177,6 +197,17 @@ export default function AdminVerification() {
                   </Button>
                 </div>
               )}
+              {p.verification_status === "approved" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setUnapproveTarget(p)}
+                  disabled={acting === p.id}
+                  className="w-full mt-3 text-amber-700 border-amber-300 hover:bg-amber-50"
+                >
+                  <X className="w-4 h-4 mr-1.5" /> Unapprove driver
+                </Button>
+              )}
               {p.verification_note && p.verification_status !== "pending" && (
                 <p className="text-xs text-muted-foreground mt-2 bg-muted/60 rounded-lg px-3 py-2">{p.verification_note}</p>
               )}
@@ -184,6 +215,16 @@ export default function AdminVerification() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(unapproveTarget)}
+        onClose={() => setUnapproveTarget(null)}
+        onConfirm={() => unapproveTarget && unapprove(unapproveTarget)}
+        title={`Unapprove ${unapproveTarget?.full_name || "this driver"}?`}
+        description="The driver will immediately stop qualifying for new jobs and return to pending verification. Existing accepted deliveries will not be cancelled."
+        confirmText="Unapprove driver"
+        destructive
+      />
     </div>
   );
 }

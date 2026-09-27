@@ -9,6 +9,7 @@ import AuthLayout from "@/components/AuthLayout";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { useDocumentMeta } from "@/lib/useDocumentMeta";
+import { DRIVER_CONFIRMATION_REDIRECT_URL } from "@/lib/authRedirects";
 
 export default function Register() {
   useDocumentMeta("Sign Up | MoveZW", "Create a free MoveZW account to book verified transport or start earning as a driver in Zimbabwe.");
@@ -111,12 +112,27 @@ export default function Register() {
         // Android app that's https://localhost (Capacitor's WebView
         // origin), not the real site, which would send a confirmation
         // link nobody could open.
-        emailRedirectTo: "https://www.movezw.co.zw/login",
+        // The role query opens the Driver tab, while `confirmed=1` lets the
+        // login screen explain that the email was successfully verified.
+        // Native Android app links preserve both query parameters.
+        emailRedirectTo: DRIVER_CONFIRMATION_REDIRECT_URL,
       },
     });
     setLoading(false);
     if (error) {
       setError(getErrorMessage(error));
+      return;
+    }
+    // A successful signup must contain a real Auth user. Supabase may return
+    // an intentionally non-specific response for an address that is already
+    // registered; an empty identities list distinguishes that response from
+    // a newly created account without exposing any account details.
+    if (!data?.user?.id) {
+      setError("We could not create your driver account. Please try again.");
+      return;
+    }
+    if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setError("This email may already be registered. Try logging in or resetting your password.");
       return;
     }
     // Tagged with the exact account it belongs to so a stale flag from an
