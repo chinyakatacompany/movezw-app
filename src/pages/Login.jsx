@@ -15,7 +15,7 @@ const isLoginRole = (value) => value === "customer" || value === "driver";
 export default function Login() {
   useDocumentMeta("Log In | MoveZW", "Log in to your MoveZW account to book transport or manage your driver profile.");
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const emailConfirmed = searchParams.get("confirmed") === "1";
   const [accountType, setAccountType] = useState(() => {
     const requestedRole = searchParams.get("role");
@@ -40,6 +40,13 @@ export default function Login() {
     localStorage.setItem(LOGIN_ROLE_STORAGE_KEY, role);
     setAccountType(role);
     setError("");
+
+    // Keep the URL aligned with the user's explicit choice. Otherwise an old
+    // role-specific link (for example, an email confirmation URL containing
+    // role=driver) would select that old role again after a reload.
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set("role", role);
+    setSearchParams(nextSearchParams, { replace: true });
   };
 
   const handleDriverSubmit = async (e) => {
