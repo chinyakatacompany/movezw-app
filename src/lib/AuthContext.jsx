@@ -8,6 +8,7 @@ const AuthContext = createContext();
 // Retain navigation for urgent driver notifications. Customer new-offer
 // notifications are handled separately by CustomerOfferInbox below.
 const AUTO_NAVIGATE_TYPES = new Set(['new_offer', 'offer_accepted']);
+const profileCacheKey = (userId) => `movezw_profile_${userId}`;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -108,7 +109,7 @@ export const AuthProvider = ({ children }) => {
       // fields, etc.) the way a real driver email would.
       const realEmail = authUser.email && !authUser.email.endsWith('@relogin.movezw.internal') ? authUser.email : null;
 
-      setUser({
+      const nextUser = {
         id: authUser.id,
         email: realEmail,
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
@@ -116,12 +117,28 @@ export const AuthProvider = ({ children }) => {
         role,
         is_suspended: profile?.is_suspended || false,
         terms_accepted_at: termsAcceptedAt,
-      });
+      };
+      setUser(nextUser);
       setIsAuthenticated(true);
       setAuthError(null);
+      // The Supabase refresh token keeps the account signed in. This small
+      // profile cache prevents a brief network outage during app startup
+      // from making that valid signed-in session look logged out.
+      localStorage.setItem(profileCacheKey(authUser.id), JSON.stringify(nextUser));
     } catch (err) {
       console.error('Failed to load profile:', err);
-      setAuthError({ type: 'unknown', message: err.message });
+      try {
+        const cached = JSON.parse(localStorage.getItem(profileCacheKey(authUser.id)) || 'null');
+        if (cached?.id === authUser.id) {
+          setUser(cached);
+          setIsAuthenticated(true);
+          setAuthError(null);
+        } else {
+          setAuthError({ type: 'unknown', message: err.message });
+        }
+      } catch {
+        setAuthError({ type: 'unknown', message: err.message });
+      }
     } finally {
       setIsLoadingAuth(false);
       setAuthChecked(true);
@@ -188,6 +205,7 @@ export const AuthProvider = ({ children }) => {
   }, [user?.id, user?.role]);
 
   const logout = async () => {
+    if (user?.id) localStorage.removeItem(profileCacheKey(user.id));
     await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);

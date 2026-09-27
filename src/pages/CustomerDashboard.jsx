@@ -73,14 +73,23 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false)
-      .then(({ count, error }) => {
-        if (!error) setUnreadAlerts(count || 0);
-      });
+    let active = true;
+    const refreshUnread = () => {
+      supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false)
+        .then(({ count, error }) => {
+          if (active && !error) setUnreadAlerts(count || 0);
+        });
+    };
+    refreshUnread();
+    const channel = supabase
+      .channel(`customer-home-alert-count-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, refreshUnread)
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(channel); };
   }, [user?.id]);
 
   const active = (requests || []).filter((x) => !["completed", "cancelled"].includes(x.status));
@@ -160,11 +169,24 @@ export default function CustomerDashboard() {
           </React.Suspense>
         )}
 
-        <div className="absolute top-3 inset-x-3 rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-lg text-center">
+        <div className="absolute top-3 left-3 right-16 rounded-2xl bg-primary text-primary-foreground px-4 py-3 shadow-lg text-center">
           <p className="text-[10px] font-semibold text-primary-foreground/75">LIVE DELIVERY TRACKING</p>
           <p className="font-bold">{STATUS_LABELS[inTransit.status]}</p>
           {!hasDriverLocation && <p className="text-xs text-primary-foreground/80 mt-1">Waiting for the driver's first GPS position</p>}
         </div>
+
+        <Link
+          to="/customer/notifications"
+          aria-label="Alerts"
+          className="absolute top-3 right-3 w-11 h-11 rounded-full bg-white text-slate-900 shadow-lg flex items-center justify-center"
+        >
+          <Bell className="w-5 h-5 text-primary" />
+          {unreadAlerts > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+              {unreadAlerts > 9 ? "9+" : unreadAlerts}
+            </span>
+          )}
+        </Link>
 
         <div className="absolute top-24 right-3 max-w-[65%] rounded-xl bg-emerald-500 text-white px-3 py-2 shadow-lg text-right">
           <p className="text-[9px] font-bold opacity-80">DESTINATION</p>

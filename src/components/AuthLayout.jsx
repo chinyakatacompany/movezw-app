@@ -1,7 +1,7 @@
 import React from "react";
-import { Truck, Download } from "lucide-react";
-import { PLAY_STORE_URL } from "@/lib/appLinks";
+import { Truck } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import PlayStoreLink from "@/components/PlayStoreLink";
 
 export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, showInstall }) {
   return (
@@ -19,14 +19,7 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
             <PwaInstallButton className="h-10 px-4 rounded-full bg-accent text-accent-foreground text-sm font-semibold shadow-md shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle">
               Install MoveZW web app
             </PwaInstallButton>
-            <a
-              href={PLAY_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            >
-              <Download className="w-3.5 h-3.5" /> Android on Google Play
-            </a>
+            <PlayStoreLink className="gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground [&>svg]:w-3.5 [&>svg]:h-3.5" />
           </div>
         )}
         <div className="text-center mb-8">

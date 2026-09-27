@@ -3,6 +3,28 @@ import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
+import {
+  isNativePushEnabled,
+  NATIVE_PUSH_PREFERENCE_EVENT,
+  setNativePushPreference,
+} from "@/lib/devicePreferences";
+
+export async function enableNativePush() {
+  if (!isNativePushEnabled()) setNativePushPreference(true);
+  let status = await PushNotifications.checkPermissions();
+  if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
+    status = await PushNotifications.requestPermissions();
+  }
+  if (status.receive !== "granted") return false;
+  await PushNotifications.register();
+  return true;
+}
+
+export async function disableNativePush(userId) {
+  if (isNativePushEnabled()) setNativePushPreference(false);
+  await PushNotifications.unregister().catch(() => {});
+  if (userId) await supabase.from("device_push_tokens").delete().eq("user_id", userId);
+}
 
 // Web push (see push_subscriptions / sw.js) only survives while the browser
 // process is still alive in the background — on Android, once the app is
@@ -19,7 +41,7 @@ export default function NativePushRegistration() {
     let cancelled = false;
 
     const registrationListener = PushNotifications.addListener("registration", async (token) => {
-      if (cancelled) return;
+      if (cancelled || !isNativePushEnabled()) return;
       await supabase.from("device_push_tokens").upsert(
         { user_id: user.id, token: token.value, platform: "android" },
         { onConflict: "token" }
@@ -33,20 +55,35 @@ export default function NativePushRegistration() {
       if (url && url.startsWith("/")) window.location.assign(url);
     });
 
-    PushNotifications.checkPermissions().then(async (status) => {
-      let granted = status.receive === "granted";
-      if (status.receive === "prompt" || status.receive === "prompt-with-rationale") {
-        const req = await PushNotifications.requestPermissions();
-        granted = req.receive === "granted";
+    const syncRegistration = async () => {
+      if (cancelled) return;
+      if (!isNativePushEnabled()) {
+        await PushNotifications.unregister().catch(() => {});
+        await supabase.from("device_push_tokens").delete().eq("user_id", user.id);
+        return;
       }
-      if (granted && !cancelled) PushNotifications.register();
-    });
+      await enableNativePush();
+    };
+    const onPreference = () => { void syncRegistration(); };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void syncRegistration();
+    };
+
+    // Alerts default to on for every fresh install/login and are repaired on
+    // resume if Android rotated or invalidated the Firebase token. A stored
+    // opt-out is respected and prevents registration until the user enables
+    // alerts again from MoveZW settings.
+    void syncRegistration();
+    window.addEventListener(NATIVE_PUSH_PREFERENCE_EVENT, onPreference);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
       registrationListener.then((l) => l.remove());
       errorListener.then((l) => l.remove());
       actionListener.then((l) => l.remove());
+      window.removeEventListener(NATIVE_PUSH_PREFERENCE_EVENT, onPreference);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [user?.id]);
 

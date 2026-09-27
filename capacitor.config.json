@@ -5,7 +5,7 @@
   "backgroundColor": "#0B2D68",
   "plugins": {
     "PushNotifications": {
-      "presentationOptions": ["alert", "sound"]
+      "presentationOptions": ["badge", "alert", "sound"]
     }
   }
 }

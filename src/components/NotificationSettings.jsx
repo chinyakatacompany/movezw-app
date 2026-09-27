@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/api/supabaseClient";
 import { pushSupported, getExistingSubscription, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import { disableNativePush, enableNativePush } from "@/components/NativePushRegistration";
+import {
+  isNativePushEnabled,
+  NATIVE_PUSH_PREFERENCE_EVENT,
+} from "@/lib/devicePreferences";
 
 // The installed Android app doesn't use this browser Web Push path at all —
 // Android's WebView doesn't expose PushManager, so pushSupported() below
@@ -34,9 +40,28 @@ export default function NotificationSettings({ description }) {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [vibration, setVibrationState] = useState("long");
+  const [nativeEnabled, setNativeEnabled] = useState(isNativePushEnabled);
+  const [nativePermission, setNativePermission] = useState("prompt");
 
   useEffect(() => {
     if (!user?.id) return;
+    if (isNativeAndroid) {
+      let active = true;
+      const checkNative = async () => {
+        const status = await PushNotifications.checkPermissions();
+        if (!active) return;
+        setNativeEnabled(isNativePushEnabled());
+        setNativePermission(status.receive);
+        setChecking(false);
+      };
+      const onPreference = () => { void checkNative(); };
+      window.addEventListener(NATIVE_PUSH_PREFERENCE_EVENT, onPreference);
+      void checkNative();
+      return () => {
+        active = false;
+        window.removeEventListener(NATIVE_PUSH_PREFERENCE_EVENT, onPreference);
+      };
+    }
     let active = true;
     Promise.all([
       getExistingSubscription().catch(() => null),
@@ -91,13 +116,55 @@ export default function NotificationSettings({ description }) {
     if (error) toast({ title: "Could not save vibration setting", variant: "destructive" });
   };
 
+  const enableNative = async () => {
+    setLoading(true);
+    try {
+      const granted = await enableNativePush();
+      setNativeEnabled(true);
+      setNativePermission(granted ? "granted" : "denied");
+      toast(granted
+        ? { title: "Alerts enabled", description: "New jobs and offers will use the long buzz by default." }
+        : { title: "Notification permission needed", description: "Allow MoveZW notifications in Android Settings, then try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disableNative = async () => {
+    setLoading(true);
+    try {
+      await disableNativePush(user.id);
+      setNativeEnabled(false);
+      toast({ title: "Alerts turned off" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (isNativeAndroid) {
+    const active = nativeEnabled && nativePermission === "granted";
     return (
-      <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
+      <div className="bg-card rounded-2xl border border-border p-4 card-shadow space-y-3">
         <p className="text-sm font-semibold flex items-center gap-2"><Bell className="w-4 h-4 text-primary" /> Alerts</p>
         <p className="text-xs text-muted-foreground mt-1">
-          Notifications are on for the app — you'll get an alert with a long vibration for new jobs, even if the app is closed.
+          {checking
+            ? "Checking Android notification access…"
+            : active
+              ? "On — new jobs and offers use a strong long buzz, even if MoveZW is closed. Android settings can override the vibration."
+              : nativeEnabled
+                ? "MoveZW alerts are on, but Android notification permission is blocked. Allow it in your phone settings."
+                : "Alerts are off on this device."}
         </p>
+        {!checking && (active ? (
+          <button onClick={disableNative} disabled={loading} className="text-xs font-semibold text-muted-foreground hover:text-destructive disabled:opacity-60">
+            {loading ? "Turning off…" : "Turn off alerts on this device"}
+          </button>
+        ) : (
+          <button onClick={enableNative} disabled={loading} className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+            {loading ? "Enabling…" : "Enable notifications"}
+          </button>
+        ))}
       </div>
     );
   }

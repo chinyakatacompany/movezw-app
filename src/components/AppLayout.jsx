@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const customerNav = [
   { to: "/customer", label: "Home", icon: Home },
-  { to: "/customer/new", label: "Request", icon: Plus },
+  { to: "/customer/new", label: "Request Truck", icon: Plus },
   { to: "/customer/profile", label: "Me", icon: UserIcon },
 ];
 
@@ -165,10 +165,14 @@ export default function AppLayout() {
             const active = to === location.pathname || (to !== `/${user.role}` && location.pathname.startsWith(to));
             if (to === "/customer/new") {
               return (
-                <Link key={to} to={to} aria-label={label} aria-current={active ? "page" : undefined} className="flex items-center justify-center">
+                <Link key={to} to={to} aria-label={label} aria-current={active ? "page" : undefined} className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  active ? "text-primary" : "text-muted-foreground"
+                )}>
                   <span className="w-12 h-12 -mt-7 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center border-4 border-background">
                     <Icon className="w-5 h-5" />
                   </span>
+                  <span>{label}</span>
                 </Link>
               );
             }

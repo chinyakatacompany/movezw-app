@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { STATUS_FLOW, STATUS_LABELS } from '@/lib/movezw';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function ReturnDeliveryProgress() {
   const { id } = useParams();
@@ -15,7 +14,6 @@ function Progress({ id }) {
   const [delivery, setDelivery] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(null);
   useEffect(() => {
     let active = true;
     let sequence = 0;
@@ -39,7 +37,6 @@ function Progress({ id }) {
   const advance = async (expected) => {
     if (busy) return;
     setBusy(true);
-    setConfirm(null);
     try {
       const { error: err } = await supabase.rpc('advance_return_load_delivery', { p_delivery_id: id, p_expected_status: expected });
       if (err) throw err;
@@ -71,20 +68,9 @@ function Progress({ id }) {
         </li>)}
       </ol>
       {delivery.status === 'completed' ? <p className="font-semibold">Delivery completed</p>
-        : delivery.driver_id === user.id ? <button disabled={busy} onClick={() => {
-          if (next === 'completed') setConfirm(delivery.status);
-          else void advance(delivery.status);
-        }} className="w-full rounded-xl bg-primary text-primary-foreground p-4 font-semibold disabled:opacity-50">
+        : delivery.driver_id === user.id ? <button disabled={busy} onClick={() => void advance(delivery.status)} className="w-full rounded-xl bg-primary text-primary-foreground p-4 font-semibold disabled:opacity-50">
           {busy ? 'Updating…' : `Mark as ${STATUS_LABELS[next]}`}
         </button> : <p className="text-sm text-muted-foreground">Your driver's progress updates appear here automatically.</p>}
     </>}
-    <Dialog open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
-      <DialogContent>
-        <DialogTitle>Complete this delivery?</DialogTitle>
-        <DialogDescription>Confirm only when this step has been finished. The customer will see the updated progress.</DialogDescription>
-        <button disabled={busy} onClick={() => void advance(confirm)} className="rounded-xl bg-primary text-primary-foreground p-3">Confirm</button>
-        <button onClick={() => setConfirm(null)} className="rounded-xl border p-3">Go back</button>
-      </DialogContent>
-    </Dialog>
   </main>;
 }
