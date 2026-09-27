@@ -17,6 +17,7 @@ export default function CustomerDashboard() {
   const openRequests = (requests || []).filter((request) => request.status === "open");
   const openRequestKey = openRequests.map((request) => request.id).join(",");
   const [onlineDrivers, setOnlineDrivers] = useState(null);
+  const [locationRetryToken, setLocationRetryToken] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripPhone, setTripPhone] = useState(null);
   const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
@@ -269,15 +270,25 @@ export default function CustomerDashboard() {
   return (
     <div className="relative overflow-hidden -mb-20" style={{ height: mapHeight }}>
       <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
-        <HomeMap height={mapHeight} onNearbyDriverCount={setOnlineDrivers} />
+        <HomeMap
+          height={mapHeight}
+          onNearbyDriverCount={setOnlineDrivers}
+          locationRetryToken={locationRetryToken}
+        />
       </React.Suspense>
 
-      <div className="absolute top-3 left-3 bg-card/95 backdrop-blur rounded-full pl-2.5 pr-3 py-2 shadow-lg flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
-        <Truck className="w-3.5 h-3.5 text-primary" />
-        {onlineDrivers == null
-          ? "Enable location · drivers within 40 km"
-          : `${onlineDrivers} driver${onlineDrivers === 1 ? "" : "s"} within 40 km`}
-      </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (onlineDrivers == null) setLocationRetryToken((token) => token + 1);
+        }}
+        aria-label={onlineDrivers == null
+          ? "Nearby drivers"
+          : `${onlineDrivers} driver${onlineDrivers === 1 ? "" : "s"} nearby`}
+        className="absolute top-3 left-3 w-11 h-11 bg-card/95 backdrop-blur rounded-full shadow-lg flex items-center justify-center text-foreground"
+      >
+        <Truck className="w-5 h-5 text-primary" />
+      </button>
 
       <Link
         to="/customer/notifications"

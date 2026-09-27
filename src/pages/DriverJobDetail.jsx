@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
@@ -71,6 +71,7 @@ export default function DriverJobDetail() {
   const [showRouteMap, setShowRouteMap] = useState(false);
   const [showReturnPrompt, setShowReturnPrompt] = useState(false);
   const [showJobDetails, setShowJobDetails] = useState(false);
+  const autoAdvancedCollectedRef = useRef(null);
 
   // pickup_lat/lng and destination_lat/lng are only ever set when the
   // customer picked a suggestion (or used pin-drop / "use my location") in
@@ -419,12 +420,16 @@ export default function DriverJobDetail() {
       ? "completed"
       : STATUS_FLOW[STATUS_FLOW.indexOf(request.status) + 1];
     if (expectedNext !== newStatus) return;
+    // Collecting the goods means the delivery has started. Persist the final
+    // in-transit state in the same update so driver, customer and admin tiles
+    // never remain stuck on an intermediate "Goods collected" step.
+    const persistedStatus = newStatus === "collected" ? "in_transit" : newStatus;
     setUpdating(true);
     try {
       // Commission is reserved at acceptance now (fn_accept_offer), not
       // collection — nothing to charge or gate here anymore.
       const { data: changed, error: statusErr } = await supabase.from("transport_requests")
-        .update({ status: newStatus }).eq("id", request.id)
+        .update({ status: persistedStatus }).eq("id", request.id)
         .eq('accepted_driver_id', user.id).eq('status', request.status).select('id').maybeSingle();
       if (statusErr) throw statusErr;
       if (!changed) {
@@ -434,10 +439,10 @@ export default function DriverJobDetail() {
       if (newStatus === "collected" && request.pickup_lat == null) {
         captureLearnedLocation("pickup", request.pickup_location);
       }
-      if (newStatus === "completed" && request.destination_lat == null) {
+      if (persistedStatus === "completed" && request.destination_lat == null) {
         captureLearnedLocation("destination", request.destination);
       }
-      if (newStatus === "completed") {
+      if (persistedStatus === "completed") {
         const { error: profErr } = await supabase
           .from("driver_profiles")
           .update({ completed_jobs: (profile.completed_jobs || 0) + 1 })
@@ -454,11 +459,11 @@ export default function DriverJobDetail() {
           await createNotification(user.id, "admin", "Earnings credited 💰", `Your earnings for this job are now in your wallet.`, `/wallet`);
         } catch (_) {}
       }
-      await notifyJobStatusChange(request, newStatus, user.id);
-      toast({ title: `Marked as ${STATUS_LABELS[newStatus].toLowerCase()}` });
+      await notifyJobStatusChange(request, persistedStatus, user.id);
+      toast({ title: `Marked as ${STATUS_LABELS[persistedStatus].toLowerCase()}` });
       // Offer return-load space only after the delivery has been completed,
       // so it never competes with the final hand-over step.
-      if (newStatus === "completed") setShowReturnPrompt(true);
+      if (persistedStatus === "completed") setShowReturnPrompt(true);
       load();
     } catch (e) {
       toast({ title: "Update failed", description: e.message, variant: "destructive" });
@@ -476,6 +481,20 @@ export default function DriverJobDetail() {
   const requestStatusUpdate = (status) => {
     void updateStatus(status);
   };
+
+  // Bring any job that was already left on the legacy collected state into
+  // the new flow automatically when its assigned driver opens the screen.
+  useEffect(() => {
+    if (
+      request?.status === "collected"
+      && request.accepted_driver_id === user?.id
+      && !updating
+      && autoAdvancedCollectedRef.current !== request.id
+    ) {
+      autoAdvancedCollectedRef.current = request.id;
+      void updateStatus("in_transit");
+    }
+  }, [request?.status, request?.accepted_driver_id, user?.id, updating]);
 
   if (loading) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
