@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast as sonnerToast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/api/supabaseClient';
 import { playNotificationChime, unlockAudioOnFirstGesture } from '@/lib/sound';
 
@@ -206,6 +208,13 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     if (user?.id) localStorage.removeItem(profileCacheKey(user.id));
+    if (user?.id && Capacitor.getPlatform() === 'android') {
+      // Do not leave this phone subscribed to the old account after a real
+      // logout. The default-on preference remains intact, so the next login
+      // automatically registers a fresh token for the correct account.
+      await supabase.from('device_push_tokens').delete().eq('user_id', user.id);
+      await PushNotifications.unregister().catch(() => {});
+    }
     await supabase.auth.signOut();
     setUser(null);
     setIsAuthenticated(false);
