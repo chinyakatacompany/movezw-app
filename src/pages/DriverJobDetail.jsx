@@ -17,7 +17,6 @@ import { toast } from "@/components/ui/use-toast";
 import { geolocationUnavailableReason, geocodeAddress, locationErrorMessage } from "@/lib/geo";
 import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 import ImageLightbox from "@/components/ImageLightbox";
-import { AlertDialog, AlertDialogContent, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 
@@ -47,7 +46,6 @@ export default function DriverJobDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [pendingStatus, setPendingStatus] = useState(null);
   const { user } = useAuth();
   const [storedRequest, setRequest] = useState(null);
   const request = useUnexpiredRequests(storedRequest ? [storedRequest] : [])[0] || null;
@@ -476,8 +474,7 @@ export default function DriverJobDetail() {
   }, [loading, location.hash, id]);
 
   const requestStatusUpdate = (status) => {
-    if (status === 'completed') setPendingStatus({ status, from: request.status });
-    else void updateStatus(status);
+    void updateStatus(status);
   };
 
   if (loading) {
@@ -646,20 +643,6 @@ export default function DriverJobDetail() {
           </div>
         )}
 
-        <AlertDialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
-          <AlertDialogContent>
-            <AlertDialogTitle>Complete this delivery?</AlertDialogTitle>
-            <AlertDialogDescription>Confirm that the cargo has been handed over and this delivery is finished.</AlertDialogDescription>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Go back</AlertDialogCancel>
-              <AlertDialogAction disabled={updating} onClick={() => {
-                if (pendingStatus?.from === request.status) void updateStatus(pendingStatus.status);
-                else toast({ title: "Delivery progress changed. Please review the current step." });
-                setPendingStatus(null);
-              }}>Confirm</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     );
   }
@@ -1114,23 +1097,6 @@ export default function DriverJobDetail() {
           )}
         </div>
       )}
-
-      <AlertDialog open={!!pendingStatus} onOpenChange={(open) => { if (!open) setPendingStatus(null); }}>
-        <AlertDialogContent>
-          <AlertDialogTitle>Complete this delivery?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Confirm that the cargo has been handed over and this delivery is finished.
-          </AlertDialogDescription>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Go back</AlertDialogCancel>
-            <AlertDialogAction disabled={updating} onClick={() => {
-              if (pendingStatus?.from === request.status) void updateStatus(pendingStatus.status);
-              else toast({ title: 'Delivery progress changed. Please review the current step.' });
-              setPendingStatus(null);
-            }}>Confirm</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {!isMyJob && !isOpen && myOffer?.status !== "pending" && (
         <div className="bg-card rounded-2xl border border-border">

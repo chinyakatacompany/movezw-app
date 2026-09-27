@@ -1,10 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Truck, Star, ShieldCheck, Download } from "lucide-react";
+import { ArrowRight, Truck, Star, ShieldCheck } from "lucide-react";
 import { useSiteContent } from "@/lib/siteContent";
-import { PLAY_STORE_URL } from "@/lib/appLinks";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import PlayStoreLink from "@/components/PlayStoreLink";
 
 export default function Hero() {
   const { t } = useSiteContent();
@@ -48,14 +48,7 @@ export default function Hero() {
             <PwaInstallButton className="h-12 px-7 rounded-xl bg-accent text-accent-foreground text-base font-semibold shadow-lg shadow-accent/25 hover:bg-accent/90 transition-colors animate-pulse-subtle">
               Install MoveZW web app
             </PwaInstallButton>
-            <a
-              href={PLAY_STORE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl border border-border bg-card text-foreground text-sm font-semibold hover:bg-muted transition-colors"
-            >
-              <Download className="w-4 h-4" /> Android on Google Play
-            </a>
+            <PlayStoreLink className="h-12 px-6 rounded-xl border border-border bg-card text-foreground text-sm font-semibold hover:bg-muted transition-colors" />
           </div>
 
           <div className="mt-8 flex items-center gap-5 justify-center lg:justify-start text-sm text-muted-foreground">

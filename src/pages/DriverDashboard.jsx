@@ -13,6 +13,11 @@ import { AVAILABILITY_LABELS, distanceKm } from "@/lib/matching";
 import { getLocationPermissionState, requestCurrentLocation } from "@/lib/geo";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  isLocationTrackingEnabled,
+  LOCATION_PREFERENCE_EVENT,
+  setLocationTrackingEnabled,
+} from "@/lib/devicePreferences";
 
 function timeOfDayGreeting() {
   const h = new Date().getHours();
@@ -32,6 +37,7 @@ export default function DriverDashboard() {
   const [locationPermission, setLocationPermission] = useState("checking");
   const [locationReason, setLocationReason] = useState(null);
   const [requestingLocation, setRequestingLocation] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState(isLocationTrackingEnabled);
 
   // Best-effort — lets each request card show "X km away". No map, no
   // dedicated loading/error UI: if location isn't available, cards simply
@@ -42,7 +48,7 @@ export default function DriverDashboard() {
       if (!active) return;
       setLocationPermission(state);
       setLocationReason(reason);
-      if (state === "granted") {
+      if (state === "granted" && isLocationTrackingEnabled()) {
         requestCurrentLocation({ enableHighAccuracy: false, maximumAge: 300000 })
           .then((pos) => { if (active) setDriverPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }); })
           .catch(() => {});
@@ -51,8 +57,16 @@ export default function DriverDashboard() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    const syncPreference = () => setLocationEnabled(isLocationTrackingEnabled());
+    window.addEventListener(LOCATION_PREFERENCE_EVENT, syncPreference);
+    return () => window.removeEventListener(LOCATION_PREFERENCE_EVENT, syncPreference);
+  }, []);
+
   const enableLocation = async ({ quiet = false } = {}) => {
     if (requestingLocation) return null;
+    if (!isLocationTrackingEnabled()) setLocationTrackingEnabled(true);
+    setLocationEnabled(true);
     setRequestingLocation(true);
     try {
       const pos = await requestCurrentLocation();
@@ -66,7 +80,7 @@ export default function DriverDashboard() {
           .eq("id", profile.id);
         if (error) console.error("Failed to save driver location:", error);
       }
-      if (!quiet) toast({ title: "Location enabled", description: "Live tracking is ready while an active delivery is open." });
+      if (!quiet) toast({ title: "Location enabled", description: "MoveZW will keep live tracking active across the app during a delivery." });
       return coords;
     } catch (error) {
       setLocationPermission("denied");
@@ -76,6 +90,12 @@ export default function DriverDashboard() {
     } finally {
       setRequestingLocation(false);
     }
+  };
+
+  const disableLocation = () => {
+    setLocationTrackingEnabled(false);
+    setLocationEnabled(false);
+    toast({ title: "MoveZW location turned off", description: "You can enable it again before going online or starting a delivery." });
   };
 
   useEffect(() => {
@@ -177,7 +197,7 @@ export default function DriverDashboard() {
   const verified = profile?.verification_status === "approved";
 
   const updateAvailability = async (status) => {
-    if (status === "online" && locationPermission !== "granted") {
+    if (status === "online" && (!locationEnabled || locationPermission !== "granted")) {
       const coords = await enableLocation({ quiet: true });
       if (!coords) {
         toast({
@@ -259,6 +279,8 @@ export default function DriverDashboard() {
     );
   }
 
+  const locationReady = locationEnabled && locationPermission === "granted";
+
   return (
     <div className="p-4 space-y-6">
       <div className="relative -mx-4 -mt-4 mb-2 overflow-hidden bg-gradient-to-br from-header to-black/30 rounded-b-3xl px-4 pt-6 pb-8">
@@ -285,20 +307,30 @@ export default function DriverDashboard() {
 
       <DriverDeliveryPanel key={user.id} jobs={myJobs || []} />
 
-      <div className={`rounded-2xl border p-4 ${locationPermission === "granted" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+      <div className={`rounded-2xl border p-4 ${locationReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${locationPermission === "granted" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-            {locationPermission === "granted" ? <CheckCircle2 className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${locationReady ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            {locationReady ? <CheckCircle2 className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold">Location access</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {locationPermission === "granted"
-                ? "Enabled — nearby matching and live tracking are ready. Keep MoveZW open during an active trip."
-                : locationReason || "Enable GPS so customers and admins can follow active deliveries."}
+              {locationReady
+                ? "On — nearby matching and live tracking stay active across MoveZW during a delivery."
+                : !locationEnabled
+                  ? "Turn location on to receive nearby jobs and share live delivery progress."
+                  : locationReason || "Allow GPS so customers and admins can follow active deliveries."}
             </p>
           </div>
-          {locationPermission !== "granted" && (
+          {locationReady ? (
+            <button
+              type="button"
+              onClick={disableLocation}
+              className="rounded-xl border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-800"
+            >
+              Turn off
+            </button>
+          ) : (
             <button
               type="button"
               disabled={requestingLocation || locationPermission === "checking"}
