@@ -30,6 +30,7 @@ import AdminVerification from '@/pages/AdminVerification';
 import AdminAssistedOnboarding from '@/pages/AdminAssistedOnboarding';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminJobs from '@/pages/AdminJobs';
+import AdminIssues from '@/pages/AdminIssues';
 import AdminReports from '@/pages/AdminReports';
 import AdminAnalytics from '@/pages/AdminAnalytics';
 import AdminFinance from '@/pages/AdminFinance';
@@ -188,6 +189,7 @@ const AuthenticatedApp = () => {
           </RoleGuard>
         }>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/issues" element={<AdminIssues />} />
           <Route path="/admin/verification" element={<AdminVerification />} />
           <Route path="/admin/verification/:userId/onboard" element={<AdminAssistedOnboarding />} />
           <Route path="/admin/users" element={<AdminUsers />} />

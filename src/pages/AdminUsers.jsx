@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { getOrCreateAdminConversation } from "@/lib/messaging";
 import { deleteAccount } from "@/lib/account";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function AdminUsers() {
   const { user: admin } = useAuth();
@@ -22,6 +23,8 @@ export default function AdminUsers() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [confirmEmailTarget, setConfirmEmailTarget] = useState(null);
+  const [confirmingEmailId, setConfirmingEmailId] = useState(null);
 
   const load = () => {
     supabase
@@ -112,6 +115,28 @@ export default function AdminUsers() {
     }
   };
 
+  const confirmDriverEmail = async (target) => {
+    if (!target) return;
+    setConfirmingEmailId(target.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-confirm-email", {
+        body: { targetUserId: target.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: data?.alreadyConfirmed ? "Email already confirmed" : "Driver email confirmed",
+        description: data?.alreadyConfirmed
+          ? `${target.full_name || "This driver"} can already log in.`
+          : `${target.full_name || "The driver"} can now log in without opening an email link.`,
+      });
+    } catch (e) {
+      toast({ title: "Could not confirm email", description: e.message, variant: "destructive" });
+    } finally {
+      setConfirmingEmailId(null);
+    }
+  };
+
   const filtered = (users || []).filter((u) =>
     !q || (u.full_name || "").toLowerCase().includes(q.toLowerCase()) || (u.phone || "").toLowerCase().includes(q.toLowerCase())
   );
@@ -199,6 +224,21 @@ export default function AdminUsers() {
                     <Button size="sm" variant="outline" onClick={() => startEdit(u)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
+                    {u.role === "driver" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmEmailTarget(u)}
+                        disabled={confirmingEmailId === u.id}
+                        className="text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        title="Manually confirm this driver's email"
+                      >
+                        {confirmingEmailId === u.id
+                          ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          : <CheckCircle2 className="w-4 h-4 mr-1" />}
+                        Confirm email
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -262,6 +302,15 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmEmailTarget)}
+        onClose={() => setConfirmEmailTarget(null)}
+        onConfirm={() => confirmDriverEmail(confirmEmailTarget)}
+        title={`Confirm ${confirmEmailTarget?.full_name || "this driver's"} email?`}
+        description="This bypasses the email verification link and immediately allows this driver to log in. Only use it after verifying that the email belongs to the driver."
+        confirmText="Confirm email"
+      />
     </div>
   );
 }

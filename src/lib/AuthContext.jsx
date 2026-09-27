@@ -46,11 +46,21 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (authUser) => {
     try {
-      const { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .single();
+
+      // Signup normally creates this row through handle_new_user(). If an
+      // older/broken trigger ever left a valid Auth account without its app
+      // profile, repair only the currently authenticated user's own row from
+      // the trusted auth metadata instead of leaving them unable to log in.
+      if (error?.code === 'PGRST116') {
+        const repaired = await supabase.rpc('ensure_my_profile');
+        profile = repaired.data;
+        error = repaired.error;
+      }
 
       if (error) throw error;
 
