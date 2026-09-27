@@ -3,8 +3,12 @@ import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/api/supabaseClient";
-import { Home, Plus, Truck, Bell, User as UserIcon, LogOut, MessageCircle, Repeat } from "lucide-react";
+import { Home, Plus, Truck, Bell, User as UserIcon, LogOut, MessageCircle, Repeat, Star, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/use-toast";
+import { createNotification } from "@/lib/movezw";
 
 const customerNav = [
   { to: "/customer", label: "Home", icon: Home },
@@ -25,6 +29,11 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
   const [activeJobCount, setActiveJobCount] = useState(0);
+  const [ratingJob, setRatingJob] = useState(null);
+  const [dismissedRatingIds, setDismissedRatingIds] = useState([]);
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   const isDriver = user?.role === "driver";
   const nav = isDriver ? driverNav : customerNav;
@@ -99,6 +108,101 @@ export default function AppLayout() {
       });
     return () => { active = false; };
   }, [user?.id, isDriver, location.pathname]);
+
+  // A completed job opens the rating screen wherever the customer currently
+  // is in the app. Realtime shows it immediately; polling and visibility
+  // refreshes cover a temporarily disconnected mobile websocket. "Rate
+  // later" dismisses it only for this app session, so it is offered again
+  // after the next launch until a rating exists.
+  useEffect(() => {
+    if (!user?.id || user.role !== "customer") {
+      setRatingJob(null);
+      return;
+    }
+    let mounted = true;
+    const refreshRatingPrompt = async () => {
+      const { data: jobs, error: jobsError } = await supabase
+        .from("transport_requests")
+        .select("id, cargo_type, pickup_location, destination, accepted_driver_id, updated_at")
+        .eq("customer_id", user.id)
+        .eq("status", "completed")
+        .not("accepted_driver_id", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (!mounted || jobsError || !jobs?.length) {
+        if (mounted && !jobsError) setRatingJob(null);
+        return;
+      }
+      const { data: ratings, error: ratingsError } = await supabase
+        .from("ratings")
+        .select("request_id")
+        .eq("customer_id", user.id)
+        .in("request_id", jobs.map((job) => job.id));
+      if (!mounted || ratingsError) return;
+      const ratedIds = new Set((ratings || []).map((rating) => rating.request_id));
+      const dismissedIds = new Set(dismissedRatingIds);
+      setRatingJob(jobs.find((job) => !ratedIds.has(job.id) && !dismissedIds.has(job.id)) || null);
+    };
+    void refreshRatingPrompt();
+    const channel = supabase
+      .channel(`customer-completed-rating-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "transport_requests", filter: `customer_id=eq.${user.id}` },
+        refreshRatingPrompt
+      )
+      .subscribe();
+    const intervalId = window.setInterval(refreshRatingPrompt, 15 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshRatingPrompt();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, user?.role, dismissedRatingIds]);
+
+  const submitDriverRating = async () => {
+    if (!ratingJob || !ratingScore || !user?.id) return;
+    setSubmittingRating(true);
+    try {
+      const { error } = await supabase.from("ratings").insert({
+        request_id: ratingJob.id,
+        customer_id: user.id,
+        driver_id: ratingJob.accepted_driver_id,
+        stars: ratingScore,
+        comment: ratingComment,
+      });
+      if (error) throw error;
+      await createNotification(
+        ratingJob.accepted_driver_id,
+        "rating_received",
+        "New rating received ⭐",
+        `You received a ${ratingScore}-star rating.`,
+        "/driver"
+      );
+      setDismissedRatingIds((ids) => [...ids, ratingJob.id]);
+      setRatingJob(null);
+      setRatingScore(0);
+      setRatingComment("");
+      toast({ title: "Thanks for rating your driver!" });
+    } catch (error) {
+      toast({ title: "Could not submit rating", description: error.message, variant: "destructive" });
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  const rateLater = () => {
+    if (!ratingJob) return;
+    setDismissedRatingIds((ids) => [...ids, ratingJob.id]);
+    setRatingJob(null);
+    setRatingScore(0);
+    setRatingComment("");
+  };
 
   const handleLogout = () => {
     logout(false);
@@ -202,6 +306,50 @@ export default function AppLayout() {
           })}
         </div>
       </nav>
+
+      {ratingJob && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3" role="dialog" aria-modal="true" aria-labelledby="driver-rating-title">
+          <div className="w-full max-w-md rounded-t-3xl sm:rounded-3xl bg-background border border-border shadow-2xl p-6 safe-bottom">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center mx-auto">
+              <Star className="w-7 h-7 fill-amber-400" />
+            </div>
+            <div className="text-center mt-4">
+              <p className="text-xs font-bold tracking-wide text-primary">DELIVERY COMPLETED</p>
+              <h2 id="driver-rating-title" className="text-xl font-bold mt-1">Rate your driver</h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                {ratingJob.pickup_location} → {ratingJob.destination}
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-1.5 my-6" aria-label="Choose a rating from 1 to 5 stars">
+              {[1, 2, 3, 4, 5].map((score) => (
+                <button
+                  key={score}
+                  type="button"
+                  aria-label={`${score} star${score === 1 ? "" : "s"}`}
+                  onClick={() => setRatingScore(score)}
+                  className="p-1"
+                >
+                  <Star className={cn("w-10 h-10 transition-colors", score <= ratingScore ? "text-amber-400 fill-amber-400" : "text-slate-200")} />
+                </button>
+              ))}
+            </div>
+
+            <Textarea
+              placeholder="Leave a comment (optional)"
+              value={ratingComment}
+              onChange={(event) => setRatingComment(event.target.value)}
+              rows={3}
+            />
+            <Button onClick={submitDriverRating} disabled={!ratingScore || submittingRating} className="w-full h-12 mt-4 font-semibold">
+              {submittingRating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</> : "Submit rating"}
+            </Button>
+            <button type="button" onClick={rateLater} className="w-full py-3 text-sm font-medium text-muted-foreground">
+              Rate later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

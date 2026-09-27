@@ -212,7 +212,7 @@ export default function CustomerDashboard() {
     const mapHeight = "calc(100dvh - 7.5rem)";
 
     return (
-      <div className="relative overflow-hidden" style={{ height: mapHeight }}>
+      <div className="relative overflow-hidden -mb-20" style={{ height: mapHeight }}>
         {hasDriverLocation ? (
           <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
             <RouteMap
