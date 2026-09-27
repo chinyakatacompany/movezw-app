@@ -16,7 +16,7 @@ export default function CustomerDashboard() {
   const requests = useUnexpiredRequests(allRequests);
   const openRequests = (requests || []).filter((request) => request.status === "open");
   const openRequestKey = openRequests.map((request) => request.id).join(",");
-  const [onlineDrivers, setOnlineDrivers] = useState(0);
+  const [onlineDrivers, setOnlineDrivers] = useState(null);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [tripPhone, setTripPhone] = useState(null);
   const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
@@ -57,12 +57,6 @@ export default function CustomerDashboard() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
-
-  useEffect(() => {
-    supabase.rpc("fn_online_driver_count").then(({ data, error }) => {
-      if (!error) setOnlineDrivers(data || 0);
-    });
-  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -275,12 +269,14 @@ export default function CustomerDashboard() {
   return (
     <div className="relative overflow-hidden -mb-20" style={{ height: mapHeight }}>
       <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
-        <HomeMap height={mapHeight} />
+        <HomeMap height={mapHeight} onNearbyDriverCount={setOnlineDrivers} />
       </React.Suspense>
 
       <div className="absolute top-3 left-3 bg-card/95 backdrop-blur rounded-full pl-2.5 pr-3 py-2 shadow-lg flex items-center gap-1.5 text-xs font-semibold text-foreground pointer-events-none">
         <Truck className="w-3.5 h-3.5 text-primary" />
-        {onlineDrivers} driver{onlineDrivers === 1 ? "" : "s"} nearby
+        {onlineDrivers == null
+          ? "Enable location · drivers within 40 km"
+          : `${onlineDrivers} driver${onlineDrivers === 1 ? "" : "s"} within 40 km`}
       </div>
 
       <Link

@@ -56,12 +56,13 @@ function myLocationEl() {
 // fn_nearby_driver_positions, which rounds coordinates server-side to
 // ~1km precision so this screen never exposes a driver's exact live
 // location, only roughly where they are.
-export default function HomeMap({ height = 260 }) {
+export default function HomeMap({ height = 260, onNearbyDriverCount }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [customerLocation, setCustomerLocation] = useState(null);
   const driverMarkersRef = useRef([]);
 
   useEffect(() => {
@@ -96,28 +97,54 @@ export default function HomeMap({ height = 260 }) {
       (pos) => {
         const map = mapRef.current;
         if (!map) return;
+        const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCustomerLocation(location);
         new maplibregl.Marker({ element: myLocationEl() })
-          .setLngLat([pos.coords.longitude, pos.coords.latitude])
+          .setLngLat([location.lng, location.lat])
           .addTo(map);
-        map.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 13 });
+        map.easeTo({ center: [location.lng, location.lat], zoom: 13 });
       },
-      () => { /* best-effort — keep the default view */ },
+      () => {
+        setCustomerLocation(null);
+        onNearbyDriverCount?.(null);
+      },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
     );
-  }, [mapLoaded]);
+  }, [mapLoaded, onNearbyDriverCount]);
 
-  // Nearby drivers — coarse positions only (see fn_nearby_driver_positions).
+  // Count and display only approved, online drivers within 40 km of the
+  // customer's current position. Coordinates remain rounded server-side so
+  // this public Home map never exposes an available driver's exact location.
   useEffect(() => {
-    if (!mapLoaded) return;
-    supabase.rpc("fn_nearby_driver_positions").then(({ data, error }) => {
+    if (!mapLoaded || !customerLocation) {
+      onNearbyDriverCount?.(null);
+      return;
+    }
+    let active = true;
+    const refreshNearbyDrivers = () => supabase.rpc("fn_nearby_driver_positions_within_radius", {
+      p_lat: customerLocation.lat,
+      p_lng: customerLocation.lng,
+      p_radius_km: 40,
+    }).then(({ data, error }) => {
+      if (!active) return;
       const map = mapRef.current;
-      if (error || !map || !data) return;
+      if (error || !map || !data) {
+        onNearbyDriverCount?.(null);
+        return;
+      }
       driverMarkersRef.current.forEach((m) => m.remove());
-      driverMarkersRef.current = data
-        .filter((d) => d.lat != null && d.lng != null)
+      const nearbyDrivers = data.filter((d) => d.lat != null && d.lng != null);
+      driverMarkersRef.current = nearbyDrivers
         .map((d) => new maplibregl.Marker({ element: driverMarkerEl() }).setLngLat([d.lng, d.lat]).addTo(map));
+      onNearbyDriverCount?.(nearbyDrivers.length);
     });
-  }, [mapLoaded]);
+    void refreshNearbyDrivers();
+    const intervalId = window.setInterval(refreshNearbyDrivers, 30 * 1000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [mapLoaded, customerLocation, onNearbyDriverCount]);
 
   return (
     <div style={{ height }} className="relative">
