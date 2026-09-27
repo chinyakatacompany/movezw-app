@@ -56,13 +56,14 @@ function myLocationEl() {
 // fn_nearby_driver_positions, which rounds coordinates server-side to
 // ~1km precision so this screen never exposes a driver's exact live
 // location, only roughly where they are.
-export default function HomeMap({ height = 260, onNearbyDriverCount }) {
+export default function HomeMap({ height = 260, onNearbyDriverCount, locationRetryToken = 0 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [customerLocation, setCustomerLocation] = useState(null);
+  const myLocationMarkerRef = useRef(null);
   const driverMarkersRef = useRef([]);
 
   useEffect(() => {
@@ -89,20 +90,18 @@ export default function HomeMap({ height = 260, onNearbyDriverCount }) {
     return () => clearTimeout(timeoutId);
   }, [mapLoaded, attempt]);
 
-  // My location — best-effort. If permission is denied or the origin isn't
-  // secure, this silently keeps the default Harare view instead of erroring.
+  // Ask for the customer's position independently of the map tile/style
+  // request. The nearby-driver count must still work when the map provider is
+  // slow or temporarily unavailable.
   useEffect(() => {
-    if (!mapLoaded || geolocationUnavailableReason()) return;
+    if (geolocationUnavailableReason()) {
+      onNearbyDriverCount?.(null);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const map = mapRef.current;
-        if (!map) return;
         const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setCustomerLocation(location);
-        new maplibregl.Marker({ element: myLocationEl() })
-          .setLngLat([location.lng, location.lat])
-          .addTo(map);
-        map.easeTo({ center: [location.lng, location.lat], zoom: 13 });
       },
       () => {
         setCustomerLocation(null);
@@ -110,13 +109,30 @@ export default function HomeMap({ height = 260, onNearbyDriverCount }) {
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
     );
-  }, [mapLoaded, onNearbyDriverCount]);
+  }, [onNearbyDriverCount, locationRetryToken]);
+
+  // Map presentation is a separate concern from obtaining the location and
+  // counting nearby drivers. Add/re-add the marker whenever a map instance
+  // becomes ready without triggering another permission request.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapLoaded || !map || !customerLocation) return;
+    myLocationMarkerRef.current?.remove();
+    myLocationMarkerRef.current = new maplibregl.Marker({ element: myLocationEl() })
+      .setLngLat([customerLocation.lng, customerLocation.lat])
+      .addTo(map);
+    map.easeTo({ center: [customerLocation.lng, customerLocation.lat], zoom: 13 });
+    return () => {
+      myLocationMarkerRef.current?.remove();
+      myLocationMarkerRef.current = null;
+    };
+  }, [mapLoaded, customerLocation, attempt]);
 
   // Count and display only approved, online drivers within 40 km of the
   // customer's current position. Coordinates remain rounded server-side so
   // this public Home map never exposes an available driver's exact location.
   useEffect(() => {
-    if (!mapLoaded || !customerLocation) {
+    if (!customerLocation) {
       onNearbyDriverCount?.(null);
       return;
     }
@@ -127,15 +143,16 @@ export default function HomeMap({ height = 260, onNearbyDriverCount }) {
       p_radius_km: 40,
     }).then(({ data, error }) => {
       if (!active) return;
-      const map = mapRef.current;
-      if (error || !map || !data) {
+      if (error || !data) {
         onNearbyDriverCount?.(null);
         return;
       }
       driverMarkersRef.current.forEach((m) => m.remove());
       const nearbyDrivers = data.filter((d) => d.lat != null && d.lng != null);
-      driverMarkersRef.current = nearbyDrivers
-        .map((d) => new maplibregl.Marker({ element: driverMarkerEl() }).setLngLat([d.lng, d.lat]).addTo(map));
+      const map = mapRef.current;
+      driverMarkersRef.current = mapLoaded && map
+        ? nearbyDrivers.map((d) => new maplibregl.Marker({ element: driverMarkerEl() }).setLngLat([d.lng, d.lat]).addTo(map))
+        : [];
       onNearbyDriverCount?.(nearbyDrivers.length);
     });
     void refreshNearbyDrivers();
