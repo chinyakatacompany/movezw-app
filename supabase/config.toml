@@ -1,0 +1,2 @@
+[functions.driver-location-background]
+verify_jwt = false

@@ -16,13 +16,34 @@ Create `.env.local` in the project root with your Supabase project's values:
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_VAPID_PUBLIC_KEY=your_web_push_vapid_public_key
-VITE_GOOGLE_MAPS_API_KEY=your_http_referrer_restricted_browser_key
 ```
 
-Google Maps is loaded only on accepted-job live-tracking screens. Restrict the
-browser key to `https://movezw.co.zw/*` and `https://www.movezw.co.zw/*`, and
-restrict its API access to Maps JavaScript API. If the key is absent or Google
-Maps cannot load, MoveZW automatically keeps tracking on its MapLibre map.
+The website, PWA, admin dashboard, and installed Android app all use MapLibre
+with OpenStreetMap tiles and OSRM routes. No Google Maps API key or Google Cloud
+billing account is required.
+
+## Android active-delivery background tracking
+
+Only an assigned driver with an active delivery starts native background
+tracking. Android displays a persistent **MoveZW delivery tracking** notification
+while the service is running. Completing/cancelling the trip, turning tracking
+off, or signing out stops it. MoveZW deliberately does not request the broad
+`ACCESS_BACKGROUND_LOCATION` permission; the foreground service begins while
+the driver has the app open.
+
+Before releasing the Android build, apply the database migration and deploy the
+narrow tracking endpoint:
+
+```bash
+npx supabase db push
+npx supabase functions deploy driver-location-background --no-verify-jwt
+```
+
+The endpoint verifies user authentication when a trip starts, then gives the
+native service a random single-trip token. Only a SHA-256 hash is stored, the
+token expires after 24 hours, and every location write rechecks that the driver
+is still assigned to an active job. Never replace that token with the Supabase
+service-role key.
 
 For native Android push, deploy the Supabase notification functions with a
 `FIREBASE_SERVICE_ACCOUNT_JSON` secret containing the Firebase service-account

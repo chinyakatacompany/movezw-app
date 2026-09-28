@@ -55,12 +55,10 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Foreground-only: matching, live delivery tracking, and "use my
-         location" all call navigator.geolocation while a page is open —
-         nothing runs once the app is backgrounded, so this deliberately
-         does not request ACCESS_BACKGROUND_LOCATION, which would trigger
-         a much stricter Play Store review requirement this app doesn't
-         need and shouldn't claim. -->
+    <!-- Active deliveries use an Android foreground service with a visible
+         persistent notification. ACCESS_BACKGROUND_LOCATION is intentionally
+         not requested: tracking begins while MoveZW is open and only runs for
+         the assigned driver's active delivery. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Android 13+ (API 33) requires this to show any notification at all,

@@ -3,6 +3,9 @@
   "appName": "MoveZW",
   "webDir": "dist",
   "backgroundColor": "#0B2D68",
+  "android": {
+    "useLegacyBridge": true
+  },
   "plugins": {
     "PushNotifications": {
       "presentationOptions": ["badge", "alert", "sound"]
