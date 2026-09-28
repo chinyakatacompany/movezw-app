@@ -12,7 +12,7 @@ const FAQS = [
   },
   {
     q: "How do I pay for my delivery?",
-    a: "Choose Pay on Delivery (100% after delivery) or the 80/20 plan (80% before loading and 20% after delivery) when posting your request. The selected terms are shown to drivers before they quote.",
+    a: "Payment terms are optional. Choose Pay on Delivery, choose an X/Y plan and state your preferred split in the cargo description, or agree the arrangement directly with the driver. The selected terms are shown before a driver quotes.",
   },
   {
     q: "Can I track my delivery?",
