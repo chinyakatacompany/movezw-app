@@ -12,7 +12,7 @@ const FAQS = [
   },
   {
     q: "How do I pay for my delivery?",
-    a: "MoveZW currently supports cash on delivery. Additional secure payment options are coming soon.",
+    a: "Choose Pay on Delivery (100% after delivery) or the 80/20 plan (80% before loading and 20% after delivery) when posting your request. The selected terms are shown to drivers before they quote.",
   },
   {
     q: "Can I track my delivery?",
