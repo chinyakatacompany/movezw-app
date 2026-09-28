@@ -16,7 +16,13 @@ Create `.env.local` in the project root with your Supabase project's values:
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_VAPID_PUBLIC_KEY=your_web_push_vapid_public_key
+VITE_GOOGLE_MAPS_API_KEY=your_http_referrer_restricted_browser_key
 ```
+
+Google Maps is loaded only on accepted-job live-tracking screens. Restrict the
+browser key to `https://movezw.co.zw/*` and `https://www.movezw.co.zw/*`, and
+restrict its API access to Maps JavaScript API. If the key is absent or Google
+Maps cannot load, MoveZW automatically keeps tracking on its MapLibre map.
 
 For native Android push, deploy the Supabase notification functions with a
 `FIREBASE_SERVICE_ACCOUNT_JSON` secret containing the Firebase service-account

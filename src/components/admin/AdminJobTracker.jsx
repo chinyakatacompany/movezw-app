@@ -4,6 +4,7 @@ import { geocodeAddress } from "@/lib/geo";
 import { STATUS_FLOW, STATUS_LABELS, timeAgo } from "@/lib/movezw";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+const TrackingMap = React.lazy(() => import("@/components/TrackingMap"));
 
 export default function AdminJobTracker({ job, busy = false, onAdvance }) {
   const [resolved, setResolved] = useState({ pickup: null, destination: null });
@@ -55,7 +56,7 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
 
       {showLiveMap ? (
         <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
-          <RouteMap
+          <TrackingMap
             from={{ lat: job.driver_lat, lng: job.driver_lng }}
             to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
             fromLabel="Driver"

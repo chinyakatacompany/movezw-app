@@ -12,6 +12,7 @@ import { acceptOffer as acceptOfferRpc, cancelTransportRequest } from "@/lib/pay
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+const TrackingMap = React.lazy(() => import("@/components/TrackingMap"));
 
 const SORT_OPTIONS = [
   { id: "price", label: "Lowest price" },
@@ -196,7 +197,7 @@ export default function RequestDetail() {
       <div className="fixed inset-0 z-40 bg-muted overflow-hidden">
         {hasLivePosition ? (
           <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
-            <RouteMap
+            <TrackingMap
               from={{ lat: request.driver_lat, lng: request.driver_lng }}
               to={resolvedTrackingTarget}
               fromLabel="Your driver"
@@ -326,7 +327,7 @@ export default function RequestDetail() {
 
           {hasLivePosition ? (
             <React.Suspense fallback={<div className="h-[360px] bg-muted animate-pulse" />}>
-              <RouteMap
+              <TrackingMap
                 from={{ lat: request.driver_lat, lng: request.driver_lng }}
                 to={trackingTarget}
                 fromLabel="Your driver"

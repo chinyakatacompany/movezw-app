@@ -8,7 +8,7 @@ import { STATUS_FLOW, STATUS_LABELS } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 const HomeMap = React.lazy(() => import("@/components/HomeMap"));
-const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+const TrackingMap = React.lazy(() => import("@/components/TrackingMap"));
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -197,7 +197,7 @@ export default function CustomerDashboard() {
       <div className="relative overflow-hidden -mb-20" style={{ height: mapHeight }}>
         {hasDriverLocation ? (
           <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
-            <RouteMap
+            <TrackingMap
               from={displayedDriverLocation}
               to={trackingTarget}
               fromLabel="Your driver"
