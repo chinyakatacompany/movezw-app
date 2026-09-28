@@ -6,7 +6,7 @@ import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, User as UserIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState } from "@/lib/movezw";
+import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState, getPaymentTerms } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { acceptOffer as acceptOfferRpc, cancelTransportRequest } from "@/lib/payments";
 import { toast } from "@/components/ui/use-toast";
@@ -281,6 +281,7 @@ export default function RequestDetail() {
                 <div><p className="text-xs text-muted-foreground">PICKUP</p><p className="font-semibold text-primary">{request.pickup_location}</p></div>
                 <div><p className="text-xs text-muted-foreground">DESTINATION</p><p className="font-semibold text-emerald-700">{request.destination}</p></div>
                 <div><p className="text-xs text-muted-foreground">CARGO</p><p className="font-semibold">{request.cargo_type} · {request.cargo_weight || "Weight not specified"}</p></div>
+                <div><p className="text-xs text-muted-foreground">PAYMENT TERMS</p><p className="font-semibold">{getPaymentTerms(request.payment_terms).label} · {getPaymentTerms(request.payment_terms).description}</p></div>
               </div>
               <Button onClick={() => setShowAcceptedDetails(false)} className="w-full h-12 font-semibold">Back to live tracking</Button>
             </div>
@@ -418,6 +419,7 @@ export default function RequestDetail() {
           <div><p className="text-xs text-muted-foreground">Budget</p><p className="font-medium">{formatMoney(request.budget)}</p></div>
           <div><p className="text-xs text-muted-foreground">Timing</p><p className="font-medium capitalize">{request.timing === "scheduled" ? formatDate(request.scheduled_date) : "Now"}</p></div>
           <div><p className="text-xs text-muted-foreground">Agreed price</p><p className="font-medium">{formatMoney(request.accepted_price)}</p></div>
+          <div className="col-span-2"><p className="text-xs text-muted-foreground">Payment terms</p><p className="font-medium">{getPaymentTerms(request.payment_terms).label} · {getPaymentTerms(request.payment_terms).description}</p></div>
         </div>
         {request.cargo_description && <p className="text-sm text-muted-foreground pt-1 border-t border-border">{request.cargo_description}</p>}
       </div>
