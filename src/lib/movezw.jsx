@@ -175,21 +175,32 @@ export const COMMISSION_RATE = 0.1; // 10% platform commission
 // these customer-to-driver payments.
 export const PAYMENT_TERMS = [
   {
+    id: "unspecified",
+    label: "Not specified",
+    shortLabel: "Not specified",
+    description: "Agree payment terms with the driver",
+  },
+  {
     id: "pod",
     label: "Pay on delivery (POD)",
     shortLabel: "POD",
     description: "100% after delivery",
   },
   {
-    id: "80_20",
-    label: "80/20 plan",
-    shortLabel: "80/20",
-    description: "80% before loading, 20% after delivery",
+    id: "split",
+    label: "X/Y payment plan",
+    shortLabel: "X/Y",
+    description: "Custom split — add the percentages in the cargo description",
   },
 ];
 
 export function getPaymentTerms(value) {
-  return PAYMENT_TERMS.find((term) => term.id === value) || PAYMENT_TERMS[0];
+  // Compatibility for requests created while the first fixed 80/20 version
+  // was live. The follow-up migration converts these rows to `split`, but
+  // this keeps every UI safe during the deployment window.
+  const normalized = value === "80_20" ? "split" : value;
+  return PAYMENT_TERMS.find((term) => term.id === normalized)
+    || PAYMENT_TERMS.find((term) => term.id === "unspecified");
 }
 
 // `available` reflects what's actually wired up today, not the eventual
