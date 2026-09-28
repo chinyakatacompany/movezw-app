@@ -19,6 +19,7 @@ import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 import ImageLightbox from "@/components/ImageLightbox";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
+const TrackingMap = React.lazy(() => import("@/components/TrackingMap"));
 
 // Statuses during which the customer can see the driver moving live —
 // matches fn_get_trip_contact_phone's "en route or later" gate, so location
@@ -540,7 +541,7 @@ export default function DriverJobDetail() {
       <div className="fixed inset-0 z-40 bg-muted overflow-hidden">
         {trackingPosition ? (
           <React.Suspense fallback={<div className="absolute inset-0 bg-muted animate-pulse" />}>
-            <RouteMap
+            <TrackingMap
               from={trackingPosition}
               to={trackingTarget}
               fromLabel="Your live location"
@@ -706,7 +707,7 @@ export default function DriverJobDetail() {
 
           {trackingPosition && trackingTarget ? (
             <React.Suspense fallback={<div className="h-[360px] bg-muted animate-pulse" />}>
-              <RouteMap
+              <TrackingMap
                 from={trackingPosition}
                 to={trackingTarget}
                 fromLabel="Your live location"
