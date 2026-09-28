@@ -1,21 +1,20 @@
 import { useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
+import { BackgroundGeolocation } from "@capgo/background-geolocation";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import {
-  isLocationTrackingEnabled,
-  LOCATION_PREFERENCE_EVENT,
-} from "@/lib/devicePreferences";
+import { isLocationTrackingEnabled, LOCATION_PREFERENCE_EVENT } from "@/lib/devicePreferences";
 
 const PROFILE_REPORT_INTERVAL_MS = 10 * 60 * 1000;
-// Ten-second trip updates make the customer's truck marker visibly follow
-// the driver without using battery-heavy, per-GPS-callback database writes.
 const TRIP_REPORT_INTERVAL_MS = 10 * 1000;
 const ACTIVE_TRIP_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit"];
+const BACKGROUND_FUNCTION = "driver-location-background";
+const BACKGROUND_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${BACKGROUND_FUNCTION}`;
+const SUPABASE_PUBLIC_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// This component lives above the router, so location reporting no longer
-// stops when a driver leaves the job-details page. Location starts enabled,
-// can be turned off from the driver dashboard, and is shared with an
-// accepted job only while that delivery is active.
+// Web/PWA drivers use browser geolocation while MoveZW is open. During an
+// active delivery, the installed Android app instead starts a native foreground
+// service whose persistent notification makes background location use visible.
 export default function DriverLocationPing() {
   const { user } = useAuth();
   const profileIdRef = useRef(null);
@@ -24,30 +23,39 @@ export default function DriverLocationPing() {
 
   useEffect(() => {
     if (!user?.id || user.role !== "driver") return;
+
+    const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
     let cancelled = false;
     let watchId = null;
     let lastProfileReportAt = 0;
     let lastTripReportAt = 0;
+    let nativeRequestId = null;
+    let nativeTargetId = null;
+    let nativeInitialised = false;
+    let nativeGeneration = 0;
 
     const clearWatch = () => {
       if (watchId != null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
       watchId = null;
     };
 
-    const reportPosition = (pos) => {
+    const saveProfilePosition = (lat, lng) => {
+      const now = Date.now();
+      if (!profileIdRef.current || now - lastProfileReportAt < PROFILE_REPORT_INTERVAL_MS) return;
+      lastProfileReportAt = now;
+      supabase.from("driver_profiles")
+        .update({ latitude: lat, longitude: lng })
+        .eq("id", profileIdRef.current)
+        .then(({ error }) => { if (error) console.error("Failed to save driver location:", error); });
+    };
+
+    const reportBrowserPosition = (pos) => {
       if (cancelled || !isLocationTrackingEnabled()) return;
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
+      saveProfilePosition(lat, lng);
+
       const now = Date.now();
-
-      if (profileIdRef.current && now - lastProfileReportAt >= PROFILE_REPORT_INTERVAL_MS) {
-        lastProfileReportAt = now;
-        supabase.from("driver_profiles")
-          .update({ latitude: lat, longitude: lng })
-          .eq("id", profileIdRef.current)
-          .then(({ error }) => { if (error) console.error("Failed to save driver location:", error); });
-      }
-
       if (activeRequestIdRef.current && now - lastTripReportAt >= TRIP_REPORT_INTERVAL_MS) {
         lastTripReportAt = now;
         supabase.rpc("fn_update_driver_location", {
@@ -58,23 +66,110 @@ export default function DriverLocationPing() {
       }
     };
 
-    const startTracking = () => {
-      clearWatch();
-      if (!isLocationTrackingEnabled() || !navigator.geolocation) return;
+    const revokeNativeSession = (requestId) => {
+      if (!requestId) return;
+      void supabase.functions.invoke(BACKGROUND_FUNCTION, {
+        body: { action: "stop", request_id: requestId },
+      });
+    };
 
-      // One immediate reading requests permission on a fresh install and
-      // refreshes the driver's matching position after every app open.
-      navigator.geolocation.getCurrentPosition(reportPosition, () => {}, {
+    const configureNativeTracking = async (requestId) => {
+      if (!isNativeAndroid) return;
+      const targetId = requestId && isLocationTrackingEnabled() ? requestId : null;
+      if (nativeInitialised && nativeTargetId === targetId) return;
+
+      const generation = ++nativeGeneration;
+      const previousId = nativeRequestId;
+      nativeTargetId = targetId;
+      nativeRequestId = null;
+      nativeInitialised = true;
+
+      try {
+        await BackgroundGeolocation.stop();
+      } catch {
+        // The first stop normally finds no active native watcher.
+      }
+      if (previousId && previousId !== targetId) revokeNativeSession(previousId);
+      if (!targetId || cancelled || generation !== nativeGeneration) return;
+
+      const { data, error } = await supabase.functions.invoke(BACKGROUND_FUNCTION, {
+        body: { action: "start", request_id: targetId },
+      });
+      if (error || !data?.tracking_token) {
+        if (generation === nativeGeneration) {
+          nativeTargetId = null;
+          nativeInitialised = false;
+        }
+        console.error("Failed to authorise background trip tracking:", error || data?.error);
+        return;
+      }
+      if (cancelled || generation !== nativeGeneration) {
+        revokeNativeSession(targetId);
+        return;
+      }
+
+      try {
+        await BackgroundGeolocation.start(
+          {
+            backgroundTitle: "MoveZW delivery tracking",
+            backgroundMessage: "Live location is being shared for your active delivery",
+            requestPermissions: true,
+            stale: false,
+            distanceFilter: 0,
+            minIntervalMs: TRIP_REPORT_INTERVAL_MS,
+            networkFallback: true,
+            url: BACKGROUND_FUNCTION_URL,
+            headers: {
+              apikey: SUPABASE_PUBLIC_KEY,
+              Authorization: `Bearer ${SUPABASE_PUBLIC_KEY}`,
+              "x-movezw-request-id": targetId,
+              "x-movezw-tracking-token": data.tracking_token,
+            },
+          },
+          (position, backgroundError) => {
+            if (backgroundError) {
+              console.error("Background location error:", backgroundError);
+              return;
+            }
+            if (position) saveProfilePosition(position.latitude, position.longitude);
+          },
+        );
+        if (cancelled || generation !== nativeGeneration) {
+          await BackgroundGeolocation.stop();
+          revokeNativeSession(targetId);
+          return;
+        }
+        nativeRequestId = targetId;
+      } catch (backgroundError) {
+        if (generation === nativeGeneration) {
+          nativeTargetId = null;
+          nativeInitialised = false;
+        }
+        revokeNativeSession(targetId);
+        console.error("Could not start MoveZW background tracking:", backgroundError);
+      }
+    };
+
+    const configureTracking = () => {
+      clearWatch();
+      if (!isLocationTrackingEnabled()) {
+        void configureNativeTracking(null);
+        return;
+      }
+      if (isNativeAndroid && activeRequestIdRef.current) {
+        void configureNativeTracking(activeRequestIdRef.current);
+        return;
+      }
+
+      void configureNativeTracking(null);
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(reportBrowserPosition, () => {}, {
         enableHighAccuracy: true,
         timeout: 20000,
         maximumAge: 10000,
       });
-
-      // Keep watching across every in-app screen while online or delivering.
-      // Android retains final authority if the user revokes permission or
-      // switches off GPS in the phone settings.
       if (availabilityRef.current === "online" || activeRequestIdRef.current) {
-        watchId = navigator.geolocation.watchPosition(reportPosition, () => {}, {
+        watchId = navigator.geolocation.watchPosition(reportBrowserPosition, () => {}, {
           enableHighAccuracy: true,
           timeout: 20000,
           maximumAge: 10000,
@@ -95,7 +190,7 @@ export default function DriverLocationPing() {
       if (activeRequestIdRef.current !== nextId) {
         activeRequestIdRef.current = nextId;
         lastTripReportAt = 0;
-        startTracking();
+        configureTracking();
       }
     };
 
@@ -118,7 +213,7 @@ export default function DriverLocationPing() {
       profileIdRef.current = profiles?.[0]?.id || null;
       availabilityRef.current = profiles?.[0]?.availability_status || "offline";
       activeRequestIdRef.current = activeTrip?.id || null;
-      startTracking();
+      configureTracking();
     };
 
     const profileChannel = supabase
@@ -130,9 +225,9 @@ export default function DriverLocationPing() {
           const nextAvailability = payload.new.availability_status || "offline";
           if (availabilityRef.current !== nextAvailability) {
             availabilityRef.current = nextAvailability;
-            startTracking();
+            configureTracking();
           }
-        }
+        },
       )
       .subscribe();
 
@@ -141,15 +236,15 @@ export default function DriverLocationPing() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "transport_requests", filter: `accepted_driver_id=eq.${user.id}` },
-        () => { void refreshActiveTrip(); }
+        () => { void refreshActiveTrip(); },
       )
       .subscribe();
 
-    const onPreference = () => startTracking();
+    const onPreference = () => configureTracking();
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         void refreshActiveTrip();
-        startTracking();
+        configureTracking();
       }
     };
     window.addEventListener(LOCATION_PREFERENCE_EVENT, onPreference);
@@ -158,7 +253,12 @@ export default function DriverLocationPing() {
 
     return () => {
       cancelled = true;
+      nativeGeneration += 1;
       clearWatch();
+      if (isNativeAndroid) {
+        void BackgroundGeolocation.stop();
+        revokeNativeSession(nativeRequestId || activeRequestIdRef.current);
+      }
       window.removeEventListener(LOCATION_PREFERENCE_EVENT, onPreference);
       document.removeEventListener("visibilitychange", onVisible);
       supabase.removeChannel(profileChannel);
