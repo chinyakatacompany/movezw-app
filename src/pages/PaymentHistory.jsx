@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { ArrowLeft, Receipt, Loader2, Download, CheckCircle2, Clock, Banknote } from "lucide-react";
-import { formatMoney, formatDate, EmptyState } from "@/lib/movezw";
+import { formatMoney, formatDate, EmptyState, getPaymentTerms } from "@/lib/movezw";
 import { cn } from "@/lib/utils";
 
 const PAY_LABELS = {
@@ -71,6 +71,7 @@ export default function PaymentHistory() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{p.pickup_location} → {p.destination}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{invNo} · {formatDate(p.updated_at)}</p>
+                    <p className="text-xs text-primary font-medium mt-1">{getPaymentTerms(p.payment_terms).label} · {getPaymentTerms(p.payment_terms).description}</p>
                   </div>
                   <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border shrink-0", ps.cls)}>
                     <PsIcon className="w-3 h-3" /> {ps.label}

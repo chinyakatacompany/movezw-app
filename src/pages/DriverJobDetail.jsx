@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon, Truck } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState } from "@/lib/movezw";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState, getPaymentTerms } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
@@ -887,7 +887,7 @@ export default function DriverJobDetail() {
 
       {/* Cargo */}
       <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
               <Weight className="w-3.5 h-3.5 shrink-0" />
@@ -908,6 +908,14 @@ export default function DriverJobDetail() {
               <p className="text-[11px]">Timing</p>
             </div>
             <p className="text-sm font-bold">{request.timing === "scheduled" ? formatDateTime(request.scheduled_date) : "Now"}</p>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+              <DollarSign className="w-3.5 h-3.5 shrink-0" />
+              <p className="text-[11px]">Payment terms</p>
+            </div>
+            <p className="text-sm font-bold">{getPaymentTerms(request.payment_terms).shortLabel}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{getPaymentTerms(request.payment_terms).description}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 pt-2 border-t border-border">
@@ -1043,7 +1051,7 @@ export default function DriverJobDetail() {
               <h2 className="text-sm font-semibold">Agreed price</h2>
               <p className="text-lg font-bold text-primary">{formatMoney(request.accepted_price)}</p>
             </div>
-            <p className="text-xs text-muted-foreground">Payment: {request.payment_status === "cod" ? "Cash on delivery" : request.payment_status}</p>
+            <p className="text-xs text-muted-foreground">Payment terms: {getPaymentTerms(request.payment_terms).label} · {getPaymentTerms(request.payment_terms).description}</p>
             <div className="grid grid-cols-2 gap-2 mt-3">
               <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
                 <MessageCircle className="w-4 h-4 text-primary" /> Message

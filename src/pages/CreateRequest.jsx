@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
-import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, formatMoney } from "@/lib/movezw";
+import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, PAYMENT_TERMS, formatMoney } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -52,6 +52,7 @@ export default function CreateRequest() {
     timing: "now",
     scheduled_date: "",
     budget: "",
+    payment_terms: "pod",
   });
   const [loads, setLoads] = useState(1);
   const [showRouteMap, setShowRouteMap] = useState(false);
@@ -150,6 +151,7 @@ export default function CreateRequest() {
         // Budget entered is per load — each row in the batch posts at the
         // same price, not the price divided or multiplied.
         budget: Number(form.budget) || 0,
+        payment_terms: form.payment_terms,
         status: "open",
       };
 
@@ -399,6 +401,31 @@ export default function CreateRequest() {
             ) : (
               <p className="text-xs text-muted-foreground">Drivers will quote around your budget — you pick the best offer.</p>
             )}
+          </div>
+          <div className="space-y-2">
+            <Label>Payment terms</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PAYMENT_TERMS.map((term) => (
+                <button
+                  key={term.id}
+                  type="button"
+                  onClick={() => set("payment_terms", term.id)}
+                  aria-pressed={form.payment_terms === term.id}
+                  className={cn(
+                    "rounded-xl border-2 p-3 text-left transition-all",
+                    form.payment_terms === term.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40"
+                  )}
+                >
+                  <p className="text-sm font-semibold">{term.label}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{term.description}</p>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This arrangement is shown to drivers before they quote. Payment is made directly between you and the driver.
+            </p>
           </div>
         </div>
 

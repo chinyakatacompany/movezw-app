@@ -48,7 +48,7 @@ export const TERMS_SECTIONS = [
   {
     key: "terms.8",
     title: "8. Payments",
-    body: "MoveZW currently facilitates cash-on-delivery payments directly between customers and drivers, based on the price a driver quotes and the customer accepts for a given job. Additional payment methods may be introduced. Any platform service fees will be clearly disclosed before they apply.",
+    body: "Customers choose the payment terms shown on each transport request: Pay on Delivery (100% after delivery) or the 80/20 plan (80% before loading and 20% after delivery). Payment is made directly between the customer and driver based on the accepted quote. MoveZW records the selected arrangement but does not currently hold or escrow the delivery payment. Any platform service fees will be clearly disclosed before they apply.",
   },
   {
     key: "terms.9",

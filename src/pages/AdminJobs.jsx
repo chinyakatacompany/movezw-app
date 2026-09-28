@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp, Eye, Users } from "lucide-react";
-import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange } from "@/lib/movezw";
+import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange, getPaymentTerms } from "@/lib/movezw";
 import { cancelTransportRequest, processJobCompletion } from "@/lib/payments";
 import { ADMIN_ACTIVE_STATUSES, advanceAdminJob } from "@/lib/adminJobs";
 import { cn } from "@/lib/utils";
@@ -258,6 +258,7 @@ export default function AdminJobs() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate">{j.cargo_type} · {j.pickup_location} → {j.destination}</p>
                     <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_at)}</p>
+                    <p className="mt-1 text-xs font-medium text-primary">{getPaymentTerms(j.payment_terms).label} · {getPaymentTerms(j.payment_terms).description}</p>
                     {j.status === "cancelled" && j.expired_at && (
                       <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 24 hours</p>
                     )}

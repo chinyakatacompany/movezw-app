@@ -10,7 +10,7 @@ import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const FAQS = [
   { q: "How do I track my delivery?", a: "Open the request from your Trips list — its status updates live from pickup through to delivery." },
-  { q: "How do I pay for a delivery?", a: "MoveZW currently supports cash on delivery. Secure online payments are coming soon." },
+  { q: "How do I pay for a delivery?", a: "When posting a job, choose Pay on Delivery (100% after delivery) or the 80/20 plan (80% before loading and 20% after delivery). Payment is made directly to the driver under the selected terms." },
   { q: "How are drivers verified?", a: "Every driver submits a National ID, driver's licence and vehicle registration, which our admin team reviews before approval." },
   { q: "Can I cancel a request?", a: "Yes — you can cancel an open request any time before a driver is en route to pickup." },
   { q: "How do I become a driver?", a: "Sign up as a driver and complete onboarding. After admin verification you'll start receiving job requests." },
