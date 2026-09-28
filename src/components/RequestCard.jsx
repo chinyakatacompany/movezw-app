@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { MapPin, Navigation, Clock, DollarSign, Package, CalendarClock } from "lucide-react";
-import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS } from "@/lib/movezw";
+import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS, getPaymentTerms } from "@/lib/movezw";
 
 export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm, tripDistanceKm }) {
   return (
@@ -51,6 +51,10 @@ export default function RequestCard({ request, to, showCustomer = false, rightSl
             ~{tripDistanceKm < 1 ? `${Math.round(tripDistanceKm * 1000)} m` : `${tripDistanceKm.toFixed(1)} km`} trip distance (straight-line estimate)
           </p>
         )}
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground pl-6">
+          <DollarSign className="w-3.5 h-3.5 shrink-0" />
+          <span>Payment: {getPaymentTerms(request.payment_terms).label} · {getPaymentTerms(request.payment_terms).description}</span>
+        </div>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
