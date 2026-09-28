@@ -52,7 +52,7 @@ export default function CreateRequest() {
     timing: "now",
     scheduled_date: "",
     budget: "",
-    payment_terms: "pod",
+    payment_terms: "unspecified",
   });
   const [loads, setLoads] = useState(1);
   const [showRouteMap, setShowRouteMap] = useState(false);
@@ -403,8 +403,8 @@ export default function CreateRequest() {
             )}
           </div>
           <div className="space-y-2">
-            <Label>Payment terms</Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Label>Payment terms <span className="font-normal text-muted-foreground">(optional)</span></Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {PAYMENT_TERMS.map((term) => (
                 <button
                   key={term.id}
@@ -424,7 +424,7 @@ export default function CreateRequest() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              This arrangement is shown to drivers before they quote. Payment is made directly between you and the driver.
+              For an X/Y plan, add the actual split in the cargo description above, for example 70/30 or 80/20. Payment is made directly between you and the driver.
             </p>
           </div>
         </div>
