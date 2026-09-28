@@ -64,9 +64,9 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-muted/40 flex">
+    <div className="h-dvh overflow-hidden bg-muted/40 lg:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col overflow-hidden bg-sidebar border-r border-sidebar-border h-screen sticky top-0">
+      <aside className="hidden h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar lg:flex">
         <div className="h-16 shrink-0 px-6 flex items-center gap-2 border-b border-sidebar-border">
           <div className="w-8 h-8 rounded-xl bg-sidebar-primary flex items-center justify-center shadow-sm">
             <Truck className="w-5 h-5 text-sidebar-primary-foreground" />
@@ -86,18 +86,33 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="lg:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border h-14 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-            <Truck className="w-5 h-5 text-primary-foreground" />
+      <div className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Mobile top bar */}
+        <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md lg:hidden">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+              <Truck className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <span className="font-bold text-lg">MoveZW</span>
           </div>
-          <span className="font-bold text-lg">MoveZW</span>
-        </div>
-        <button onClick={() => setOpen(true)} aria-label="Open menu" className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center">
-          <Menu className="w-5 h-5" />
-        </button>
-      </header>
+          <button onClick={() => setOpen(true)} aria-label="Open menu" className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center">
+            <Menu className="w-5 h-5" />
+          </button>
+        </header>
+
+        {/* Admin pages scroll here; the sidebar keeps its own scroll position. */}
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain scroll-soft">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
       {/* Mobile drawer */}
       <AnimatePresence>
@@ -133,18 +148,6 @@ export default function AdminLayout() {
           </>
         )}
       </AnimatePresence>
-
-      <main className="flex-1 min-w-0">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
-      </main>
 
       <ConfirmDialog
         open={confirmLogout}

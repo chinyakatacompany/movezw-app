@@ -164,9 +164,19 @@ export default function Register() {
   if (done) {
     return (
       <AuthLayout icon={Mail} title="Check your email" subtitle={`We sent a confirmation link to ${email}`}>
-        <p className="text-sm text-muted-foreground text-center">
-          Click the link in that email to activate your account, then come back and log in.
-        </p>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Click the link in that email to activate your account, then come back and log in.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 font-medium"
+            onClick={() => navigate("/login?role=driver")}
+          >
+            Back to driver login
+          </Button>
+        </div>
       </AuthLayout>
     );
   }
