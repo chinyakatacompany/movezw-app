@@ -170,6 +170,28 @@ export function formatDateTime(dateStr) {
 
 export const COMMISSION_RATE = 0.1; // 10% platform commission
 
+// Commercial terms agreed between the customer and driver. MoveZW records
+// the selected arrangement on the job but does not claim to hold or process
+// these customer-to-driver payments.
+export const PAYMENT_TERMS = [
+  {
+    id: "pod",
+    label: "Pay on delivery (POD)",
+    shortLabel: "POD",
+    description: "100% after delivery",
+  },
+  {
+    id: "80_20",
+    label: "80/20 plan",
+    shortLabel: "80/20",
+    description: "80% before loading, 20% after delivery",
+  },
+];
+
+export function getPaymentTerms(value) {
+  return PAYMENT_TERMS.find((term) => term.id === value) || PAYMENT_TERMS[0];
+}
+
 // `available` reflects what's actually wired up today, not the eventual
 // goal — EcoCash top-ups are a manual admin-approved transfer (see
 // Wallet.jsx's top-up flow), and Cash on Delivery is the only supported way
