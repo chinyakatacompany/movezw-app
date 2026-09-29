@@ -12,7 +12,7 @@ const FAQS = [
   },
   {
     q: "How do I pay for my delivery?",
-    a: "Payment terms are optional. Choose Pay on Delivery, choose an X/Y plan and state your preferred split in the cargo description, or agree the arrangement directly with the driver. The selected terms are shown before a driver quotes.",
+    a: "Payment terms are optional. Choose Pay on Delivery, enter any X/Y percentage split that totals 100 (for example 80/20 or 20/80), or agree the arrangement directly with the driver. The selected terms are shown before a driver quotes.",
   },
   {
     q: "Can I track my delivery?",
