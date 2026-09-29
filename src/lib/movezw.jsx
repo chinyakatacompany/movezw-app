@@ -19,6 +19,10 @@ export const VEHICLE_TYPES = [
   "3 Ton Truck",
   "5 Ton Truck",
   "10 Ton Truck",
+  "15 Ton Truck",
+  "20 Ton Truck",
+  "30 Ton Truck",
+  "40 Ton Truck",
   "Articulated Truck",
 ];
 
@@ -30,6 +34,10 @@ export const VEHICLE_ICONS = {
   "3 Ton Truck": "🚚",
   "5 Ton Truck": "🚚",
   "10 Ton Truck": "🚛",
+  "15 Ton Truck": "🚛",
+  "20 Ton Truck": "🚛",
+  "30 Ton Truck": "🚛",
+  "40 Ton Truck": "🚛",
   "Articulated Truck": "🚛",
 };
 
