@@ -23,8 +23,53 @@ export const VEHICLE_CAPACITY_RANK = {
   "3 Ton Truck": 5,
   "5 Ton Truck": 6,
   "10 Ton Truck": 7,
-  "Articulated Truck": 8,
+  "15 Ton Truck": 8,
+  "20 Ton Truck": 9,
+  "30 Ton Truck": 10,
+  "40 Ton Truck": 11,
+  "Articulated Truck": 12,
 };
+
+export const VEHICLE_CAPACITY_TONS = {
+  Motorcycle: 0.25,
+  "Small Delivery Vehicle": 0.5,
+  Pickup: 1,
+  "Cargo Van": 1.5,
+  "1 Ton Truck": 1,
+  "3 Ton Truck": 3,
+  "5 Ton Truck": 5,
+  "10 Ton Truck": 10,
+  "15 Ton Truck": 15,
+  "16 Ton Truck": 16,
+  "20 Ton Truck": 20,
+  "30 Ton Truck": 30,
+  "40 Ton Truck": 40,
+  "Articulated Truck": 40,
+};
+
+export function cargoWeightTons(value) {
+  const text = String(value || "").trim().toLowerCase().replaceAll(",", "");
+  const amount = Number(text.match(/[0-9]+(?:\.[0-9]+)?/)?.[0]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return /(^|[^a-z])(t|ton|tons|tonne|tonnes)([^a-z]|$)/.test(text) ? amount : amount / 1000;
+}
+
+// Notification categories requested by operations. Boundaries belong to the
+// smaller group, so 10 tons is group 1 and 20 tons is group 2.
+export function vehicleNotificationBand(tons) {
+  if (!Number.isFinite(tons) || tons <= 0) return null;
+  if (tons <= 10) return "up_to_10";
+  if (tons <= 20) return "over_10_to_20";
+  return "over_20_to_articulated";
+}
+
+export function requestNotificationBand(request) {
+  const values = [
+    VEHICLE_CAPACITY_TONS[request?.vehicle_type],
+    cargoWeightTons(request?.cargo_weight),
+  ].filter(Number.isFinite);
+  return vehicleNotificationBand(values.length ? Math.max(...values) : NaN);
+}
 
 // Haversine distance in km — ready for future live GPS proximity matching
 export function distanceKm(lat1, lng1, lat2, lng2) {
@@ -65,11 +110,13 @@ export async function fetchRoadDistanceKm(from, to, retries = 2) {
   return null;
 }
 
-// Whether a driver's vehicle can service the request.
-// Today: any approved vehicle qualifies (request has no vehicle preference).
-// Future: map cargo_weight → required VEHICLE_CAPACITY_RANK and compare.
-export function vehicleFits(driver, _request) {
-  return Boolean(driver.vehicle_type);
+// Notifications go only to drivers in the request's capacity group. This is
+// deliberately category-based: every approved online driver in the matching
+// group is alerted together.
+export function vehicleFits(driver, request) {
+  const driverBand = vehicleNotificationBand(VEHICLE_CAPACITY_TONS[driver?.vehicle_type]);
+  const requestBand = requestNotificationBand(request);
+  return Boolean(driverBand && requestBand && driverBand === requestBand);
 }
 
 // Score a driver for a request (higher = better match).
@@ -117,27 +164,38 @@ export function findMatchingDrivers(request, drivers) {
     .map((r) => r.driver);
 }
 
-// Fetch drivers, match against a request, and notify the top matches.
-// Best-effort, client-side; designed to move to a backend function later.
-export async function notifyMatchingDriversForRequest(request, limit = 10) {
-  const { data: drivers, error } = await supabase
-    .rpc("fn_driver_public_profiles")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) console.error("Failed to load drivers for matching:", error);
-  const matched = findMatchingDrivers(request, drivers || []).slice(0, limit);
+// Fetch every driver profile in bounded pages, match the request's vehicle
+// group, and notify all approved online drivers in that group. Sending writes
+// in batches avoids one oversized Promise.all when the driver base grows.
+export async function notifyMatchingDriversForRequest(request) {
+  const drivers = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .rpc("fn_driver_public_profiles")
+      .order("created_at", { ascending: false })
+      .range(offset, offset + 499);
+    if (error) {
+      console.error("Failed to load drivers for matching:", error);
+      break;
+    }
+    drivers.push(...(data || []));
+    if (!data || data.length < 500) break;
+  }
+  const matched = findMatchingDrivers(request, drivers);
   const budgetLabel = request.budget ? `$${request.budget}` : "flexible budget";
-  await Promise.all(
-    matched.map((d) =>
-      createNotification(
-        d.user_id,
-        "job_assigned",
-        "New job match nearby",
-        `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
-        `/driver/job/${request.id}`
+  for (let start = 0; start < matched.length; start += 100) {
+    await Promise.all(
+      matched.slice(start, start + 100).map((d) =>
+        createNotification(
+          d.user_id,
+          "job_assigned",
+          "New job match nearby",
+          `${request.cargo_type} · ${request.pickup_location} → ${request.destination} (${budgetLabel})`,
+          `/driver/job/${request.id}`
+        )
       )
-    )
-  );
+    );
+  }
   return matched.length;
 }
 

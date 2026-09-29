@@ -25,9 +25,8 @@ const MAX_LOADS = 10;
 // Recommended $/km by vehicle size, shown to the customer as a starting
 // point for their budget — bigger trucks cost more to run, so a flat rate
 // across all vehicle types either overpays for a van or underpays for an
-// articulated truck. vehicle_type here only feeds this recommendation, it
-// never filters who a request reaches — any driver can see and quote on
-// any open job regardless of what's selected here.
+// articulated truck. The selected vehicle and entered cargo weight also
+// determine which vehicle-capacity group receives the new-job alert.
 const RATE_PER_KM = {
   "Small Delivery Vehicle": 1,
   Pickup: 1.2,
@@ -36,6 +35,10 @@ const RATE_PER_KM = {
   "3 Ton Truck": 1.5,
   "5 Ton Truck": 1.5,
   "10 Ton Truck": 2,
+  "15 Ton Truck": 2.25,
+  "20 Ton Truck": 2.5,
+  "30 Ton Truck": 2.75,
+  "40 Ton Truck": 3,
   "Articulated Truck": 3,
 };
 
