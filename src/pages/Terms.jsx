@@ -48,7 +48,7 @@ export const TERMS_SECTIONS = [
   {
     key: "terms.8",
     title: "8. Payments",
-    body: "Customers may leave payment terms unspecified, choose Pay on Delivery (100% after delivery), or choose an X/Y payment plan and state their preferred split in the cargo description. Payment is made directly between the customer and driver based on the accepted quote. MoveZW records the selected arrangement but does not currently hold or escrow the delivery payment. Any platform service fees will be clearly disclosed before they apply.",
+    body: "Customers may leave payment terms unspecified, choose Pay on Delivery (100% after delivery), or enter any X/Y percentage plan that totals 100, such as 80/20, 20/80 or 65/35. The first figure is paid before loading and the second after delivery. Payment is made directly between the customer and driver based on the accepted quote. MoveZW records the selected arrangement but does not currently hold or escrow the delivery payment. Any platform service fees will be clearly disclosed before they apply.",
   },
   {
     key: "terms.9",
