@@ -10,7 +10,7 @@ import WhatsAppIcon from "@/components/WhatsAppIcon";
 
 const FAQS = [
   { q: "How do I track my delivery?", a: "Open the request from your Trips list — its status updates live from pickup through to delivery." },
-  { q: "How do I pay for a delivery?", a: "Payment terms are optional. Choose Pay on Delivery, select an X/Y plan and write your preferred split in the cargo description, or agree the terms directly with the driver. Payment is made directly to the driver." },
+  { q: "How do I pay for a delivery?", a: "Payment terms are optional. Choose Pay on Delivery, enter any X/Y percentage split that totals 100 (for example 80/20 or 20/80), or agree the terms directly with the driver. The first figure is paid before loading and the second after delivery. Payment is made directly to the driver." },
   { q: "How are drivers verified?", a: "Every driver submits a National ID, driver's licence and vehicle registration, which our admin team reviews before approval." },
   { q: "Can I cancel a request?", a: "Yes — you can cancel an open request any time before a driver is en route to pickup." },
   { q: "How do I become a driver?", a: "Sign up as a driver and complete onboarding. After admin verification you'll start receiving job requests." },
