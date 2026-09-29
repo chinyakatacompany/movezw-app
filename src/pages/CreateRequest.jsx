@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
-import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, PAYMENT_TERMS, formatMoney } from "@/lib/movezw";
+import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, PAYMENT_TERMS, formatMoney, normalizePaymentSplit } from "@/lib/movezw";
 import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,7 @@ export default function CreateRequest() {
     scheduled_date: "",
     budget: "",
     payment_terms: "unspecified",
+    payment_split: "",
   });
   const [loads, setLoads] = useState(1);
   const [showRouteMap, setShowRouteMap] = useState(false);
@@ -131,6 +132,15 @@ export default function CreateRequest() {
 
   const submit = async (e) => {
     e.preventDefault();
+    const paymentSplit = form.payment_terms === "split" ? normalizePaymentSplit(form.payment_split) : null;
+    if (form.payment_terms === "split" && !paymentSplit) {
+      toast({
+        title: "Enter a valid payment split",
+        description: "Use two percentages that total 100, for example 80/20, 20/80 or 65/35.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     try {
       const basePayload = {
@@ -151,7 +161,7 @@ export default function CreateRequest() {
         // Budget entered is per load — each row in the batch posts at the
         // same price, not the price divided or multiplied.
         budget: Number(form.budget) || 0,
-        payment_terms: form.payment_terms,
+        payment_terms: paymentSplit || form.payment_terms,
         status: "open",
       };
 
@@ -423,9 +433,25 @@ export default function CreateRequest() {
                 </button>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              For an X/Y plan, add the actual split in the cargo description above, for example 70/30 or 80/20. Payment is made directly between you and the driver.
-            </p>
+            {form.payment_terms === "split" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="payment_split">Your percentage split</Label>
+                <Input
+                  id="payment_split"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="e.g. 80/20, 20/80 or 65/35"
+                  value={form.payment_split}
+                  onChange={(e) => set("payment_split", e.target.value)}
+                  aria-describedby="payment-split-help"
+                  required
+                />
+                <p id="payment-split-help" className="text-xs text-muted-foreground">
+                  First figure is paid before loading; second is paid after delivery. The two figures must total 100.
+                </p>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Payment is made directly between you and the driver.</p>
           </div>
         </div>
 
