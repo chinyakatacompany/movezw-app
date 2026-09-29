@@ -190,7 +190,7 @@ export const PAYMENT_TERMS = [
     id: "split",
     label: "X/Y payment plan",
     shortLabel: "X/Y",
-    description: "Custom split — add the percentages in the cargo description",
+    description: "Choose any percentage split that totals 100",
   },
 ];
 
@@ -198,9 +198,29 @@ export function getPaymentTerms(value) {
   // Compatibility for requests created while the first fixed 80/20 version
   // was live. The follow-up migration converts these rows to `split`, but
   // this keeps every UI safe during the deployment window.
+  if (/^(100|\d{1,2})\/(100|\d{1,2})$/.test(value || "")) {
+    return {
+      id: "split",
+      label: `${value} payment plan`,
+      shortLabel: value,
+      description: `${value.split("/")[0]}% before loading · ${value.split("/")[1]}% after delivery`,
+    };
+  }
+
   const normalized = value === "80_20" ? "split" : value;
   return PAYMENT_TERMS.find((term) => term.id === normalized)
     || PAYMENT_TERMS.find((term) => term.id === "unspecified");
+}
+
+export function normalizePaymentSplit(value) {
+  const compact = String(value || "").replace(/\s+/g, "");
+  const match = compact.match(/^(\d{1,3})\/(\d{1,3})$/);
+  if (!match) return null;
+
+  const beforeLoading = Number(match[1]);
+  const afterDelivery = Number(match[2]);
+  if (beforeLoading > 100 || afterDelivery > 100 || beforeLoading + afterDelivery !== 100) return null;
+  return `${beforeLoading}/${afterDelivery}`;
 }
 
 // `available` reflects what's actually wired up today, not the eventual
