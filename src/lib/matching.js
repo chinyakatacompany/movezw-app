@@ -30,47 +30,6 @@ export const VEHICLE_CAPACITY_RANK = {
   "Articulated Truck": 12,
 };
 
-export const VEHICLE_CAPACITY_TONS = {
-  Motorcycle: 0.25,
-  "Small Delivery Vehicle": 0.5,
-  Pickup: 1,
-  "Cargo Van": 1.5,
-  "1 Ton Truck": 1,
-  "3 Ton Truck": 3,
-  "5 Ton Truck": 5,
-  "10 Ton Truck": 10,
-  "15 Ton Truck": 15,
-  "16 Ton Truck": 16,
-  "20 Ton Truck": 20,
-  "30 Ton Truck": 30,
-  "40 Ton Truck": 40,
-  "Articulated Truck": 40,
-};
-
-export function cargoWeightTons(value) {
-  const text = String(value || "").trim().toLowerCase().replaceAll(",", "");
-  const amount = Number(text.match(/[0-9]+(?:\.[0-9]+)?/)?.[0]);
-  if (!Number.isFinite(amount) || amount <= 0) return null;
-  return /(^|[^a-z])(t|ton|tons|tonne|tonnes)([^a-z]|$)/.test(text) ? amount : amount / 1000;
-}
-
-// Notification categories requested by operations. Boundaries belong to the
-// smaller group, so 10 tons is group 1 and 20 tons is group 2.
-export function vehicleNotificationBand(tons) {
-  if (!Number.isFinite(tons) || tons <= 0) return null;
-  if (tons <= 10) return "up_to_10";
-  if (tons <= 20) return "over_10_to_20";
-  return "over_20_to_articulated";
-}
-
-export function requestNotificationBand(request) {
-  const values = [
-    VEHICLE_CAPACITY_TONS[request?.vehicle_type],
-    cargoWeightTons(request?.cargo_weight),
-  ].filter(Number.isFinite);
-  return vehicleNotificationBand(values.length ? Math.max(...values) : NaN);
-}
-
 // Haversine distance in km — ready for future live GPS proximity matching
 export function distanceKm(lat1, lng1, lat2, lng2) {
   if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return null;
@@ -110,13 +69,10 @@ export async function fetchRoadDistanceKm(from, to, retries = 2) {
   return null;
 }
 
-// Notifications go only to drivers in the request's capacity group. This is
-// deliberately category-based: every approved online driver in the matching
-// group is alerted together.
-export function vehicleFits(driver, request) {
-  const driverBand = vehicleNotificationBand(VEHICLE_CAPACITY_TONS[driver?.vehicle_type]);
-  const requestBand = requestNotificationBand(request);
-  return Boolean(driverBand && requestBand && driverBand === requestBand);
+// Vehicle size does not restrict alerts. Every approved online driver with a
+// registered vehicle may see the request and decide whether to quote.
+export function vehicleFits(driver, _request) {
+  return Boolean(driver?.vehicle_type);
 }
 
 // Score a driver for a request (higher = better match).
@@ -164,9 +120,9 @@ export function findMatchingDrivers(request, drivers) {
     .map((r) => r.driver);
 }
 
-// Fetch every driver profile in bounded pages, match the request's vehicle
-// group, and notify all approved online drivers in that group. Sending writes
-// in batches avoids one oversized Promise.all when the driver base grows.
+// Fetch every driver profile in bounded pages and notify all approved online
+// drivers, regardless of truck size. Sending writes in batches avoids one
+// oversized Promise.all when the driver base grows.
 export async function notifyMatchingDriversForRequest(request) {
   const drivers = [];
   for (let offset = 0; ; offset += 500) {
