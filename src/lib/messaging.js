@@ -39,6 +39,7 @@ export async function getOrCreateAdminConversation({ adminId, adminName, userId,
 
 // Find or create a conversation between a customer and driver for a request.
 export async function getOrCreateConversation({ request, driverId, driverName, customerName }) {
+  if (request.accepted_driver_id !== driverId || !['confirmed','en_route_pickup','collected','in_transit','delivered','completed'].includes(request.status)) throw new Error('Chat unlocks after this driver is accepted for the job.');
   const { data: existing } = await supabase
     .from("conversations")
     .select("*")

@@ -1,7 +1,7 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "sb_publishable_zagKnQO6bBT3xo6J61bmPw_jMkNzSfh";
+
 
 function getServiceRoleKey(): string {
   const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -32,22 +32,18 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user: caller }, error: authError } = await callerClient.auth.getUser();
-    if (authError || !caller) return json({ error: "Not authenticated." }, 401);
-
     const serviceRoleKey = getServiceRoleKey();
     if (!serviceRoleKey) return json({ error: "Email confirmation is not configured." }, 500);
     const db = createClient(SUPABASE_URL, serviceRoleKey);
+    const { data: { user: caller }, error: authError } = await db.auth.getUser(authHeader.replace(/^Bearer /, ""));
+    if (authError || !caller) return json({ error: "Not authenticated." }, 401);
 
     const { data: callerProfile, error: callerProfileError } = await db
       .from("profiles")
-      .select("id, role, full_name")
+      .select("id, role, full_name, is_suspended, deleted_at")
       .eq("id", caller.id)
       .single();
-    if (callerProfileError || callerProfile?.role !== "admin") {
+    if (callerProfileError || callerProfile?.role !== "admin" || callerProfile.is_suspended || callerProfile.deleted_at) {
       return json({ error: "Only an administrator can confirm driver emails." }, 403);
     }
 

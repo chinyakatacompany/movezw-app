@@ -4,3 +4,8 @@ verify_jwt = false
 # Database/cron supplies a dedicated worker token; a service-only RPC verifies it.
 [functions.notify-drivers-push]
 verify_jwt = false
+
+[functions.notify-app-events]
+verify_jwt = false
+[functions.call-ice]
+verify_jwt = false

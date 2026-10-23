@@ -221,3 +221,44 @@ Native active-delivery tracking retains its visible foreground-service
 notification; this does not introduce covert 24-hour/background tracking while
 an offline driver has no active delivery. Version 1.0.22 (23) must be built,
 signed and installed for these changes to reach existing native users.
+
+### Registration alerts and private job calls
+
+Drivers enter the admin user directory immediately when Auth creates their profile,
+before email confirmation or document onboarding. Drivers can resend their own
+verification link from registration/login; an active administrator can confirm a
+driver email from Users after verifying ownership. Registration and bid/revised
+price alerts are inserted by database triggers and queued in `app_push_outbox`.
+The `notify-app-events` worker retries delivery from cron; older app calls to
+`notify-offer-push` are acknowledged without sending duplicate alerts.
+
+Before acceptance, a pending bidder and the customer can send only a fixed Ring
+attention alert (one per recipient per minute). Conversation RLS and call RPCs
+block job chat/audio until that driver is accepted. Ring never requests microphone
+access and never carries a phone number or free text. After acceptance, the Call
+buttons use audio-only WebRTC with authenticated, participant-only signaling.
+Incoming calls expire after 45 seconds; calls stop when the job loses its accepted
+state. Call signaling is deleted after expiry plus one day.
+
+For reliable audio across carrier NAT/firewalls, provision a coturn-compatible
+relay and set Supabase Edge Function secrets `TURN_URLS` (comma-separated
+`turn:`/`turns:` URLs) and `TURN_SHARED_SECRET` (coturn REST shared secret).
+`call-ice` authenticates accepted job participants and returns short-lived HMAC
+credentials; never put the shared secret in Vite/browser configuration. Without a
+relay the app uses STUN, so some network pairs cannot connect. Verify a real call
+between two devices on separate mobile networks before treating voice as ready.
+
+Android 1.0.23 / versionCode 24 includes microphone permission and email-link
+session handling. Build and distribute a newly signed APK with the existing
+signing key; a web deployment does not replace the bundled installed app.
+OS notification permission and a registered push token/subscription are required
+for background alerts. Repeating in-app ring audio runs while the app is open;
+background push uses the OS notification sound, not a full-screen phone dialer.
+
+Validation: `node --test src/lib/*.test.* src/components/DriverLocationPing.test.mjs
+supabase/functions/notify-drivers-push/index.test.mjs
+supabase/functions/notify-app-events/index.test.mjs
+supabase/tests/registration-private-calls.test.mjs`. The database test runs the
+migration in PGlite with cron/net stubs and checks unconfirmed directory access,
+transactional notifications, ring cooldown, RLS, participant-only signaling, and
+cancellation. No real user is called or notified by the tests.

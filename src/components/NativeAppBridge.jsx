@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
+import { supabase } from "@/api/supabaseClient";
 import { App } from "@capacitor/app";
 
 // Two things the WebView doesn't give you for free on native Android:
@@ -32,14 +33,27 @@ export default function NativeAppBridge() {
       }
     });
 
-    const urlSub = App.addListener("appUrlOpen", ({ url }) => {
+    const receiveUrl = async ({ url }) => {
       try {
         const parsed = new URL(url);
-        navigate(parsed.pathname + parsed.search + parsed.hash);
-      } catch {
-        // not a URL we can route internally — ignore
-      }
-    });
+        if (parsed.protocol !== "https:" || !["www.movezw.co.zw", "movezw.co.zw"].includes(parsed.hostname)) return;
+        const tokens = new URLSearchParams(parsed.hash.slice(1));
+        if (tokens.get("access_token") && tokens.get("refresh_token")) {
+          const { error } = await supabase.auth.setSession({ access_token: tokens.get("access_token"), refresh_token: tokens.get("refresh_token") });
+          if (error) { navigate("/login?role=driver&confirmation_error=1"); return; }
+          navigate("/");
+          return;
+        }
+        if (parsed.searchParams.has("code")) {
+          const { error } = await supabase.auth.exchangeCodeForSession(parsed.searchParams.get("code"));
+          navigate(error ? "/login?role=driver&confirmation_error=1" : "/");
+          return;
+        }
+        navigate(parsed.pathname + parsed.search);
+      } catch { navigate("/login?role=driver&confirmation_error=1"); }
+    };
+    const urlSub = App.addListener("appUrlOpen", receiveUrl);
+    void App.getLaunchUrl().then(result => { if (result?.url) void receiveUrl(result); });
 
     return () => {
       backSub.then((s) => s.remove());

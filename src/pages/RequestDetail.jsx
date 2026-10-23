@@ -1,3 +1,5 @@
+import JobContactActions from '@/components/JobContactActions';
+import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -34,7 +36,6 @@ export default function RequestDetail() {
   const [comment, setComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
-  const [driverPhone, setDriverPhone] = useState(null);
   const [viewerCount, setViewerCount] = useState(0);
   const [showAcceptedDetails, setShowAcceptedDetails] = useState(() => new URLSearchParams(window.location.search).get("details") === "1");
 
@@ -45,10 +46,6 @@ export default function RequestDetail() {
     setOffers(offs || []);
     setLoading(false);
 
-    if (req?.accepted_driver_id) {
-      const { data: phone } = await supabase.rpc("fn_get_trip_contact_phone", { p_request_id: req.id });
-      setDriverPhone(phone || null);
-    }
   };
 
   useEffect(() => { load(); }, [id]);
@@ -241,10 +238,10 @@ export default function RequestDetail() {
           <button onClick={() => setShowAcceptedDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
             <Truck className="w-5 h-5 text-primary" /> View offer
           </button>
-          {driverPhone && (
-            <a href={`tel:${driverPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+          {request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status) && (
+            <button type="button" onClick={() => requestJobCall(request.id)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
               <Phone className="w-5 h-5 text-primary" /> Call
-            </a>
+            </button>
           )}
           <button onClick={() => openChat()} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
             <MessageCircle className="w-5 h-5 text-primary" /> Message
@@ -363,10 +360,10 @@ export default function RequestDetail() {
               <Button variant="outline" className="h-11" onClick={() => openChat()}>
                 <MessageCircle className="w-4 h-4 mr-2" /> Message driver
               </Button>
-              {driverPhone ? (
-                <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
+              {(request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status)) ? (
+                <button type="button" onClick={() => requestJobCall(request.id)} className="inline-flex items-center justify-center h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
                   <Phone className="w-4 h-4 mr-2" /> Call driver
-                </a>
+                </button>
               ) : (
                 <Button className="h-11" disabled><Phone className="w-4 h-4 mr-2" /> Call driver</Button>
               )}
@@ -475,9 +472,7 @@ export default function RequestDetail() {
                     <Button onClick={() => acceptOffer(o)} disabled={accepting === o.id} className="flex-1 h-11 font-semibold">
                       {accepting === o.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Accepting...</> : "Accept offer"}
                     </Button>
-                    <Button variant="outline" size="icon" className="h-11 w-11" onClick={() => openChat(o)}>
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
+                    <JobContactActions request={request} recipientId={o.driver_id} />
                   </div>
                 </div>
               ))}
@@ -518,10 +513,10 @@ export default function RequestDetail() {
             <Button variant="outline" className="h-11" onClick={() => openChat()}>
               <MessageCircle className="w-4 h-4 mr-2" /> Message
             </Button>
-            {driverPhone ? (
-              <a href={`tel:${driverPhone}`} className="inline-flex items-center justify-center h-11 rounded-xl border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground text-sm font-medium">
+            {(request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status)) ? (
+              <button type="button" onClick={() => requestJobCall(request.id)} className="inline-flex items-center justify-center h-11 rounded-xl border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground text-sm font-medium">
                 <Phone className="w-4 h-4 mr-2" /> Call
-              </a>
+              </button>
             ) : (
               <Button variant="outline" className="h-11" disabled>
                 <Phone className="w-4 h-4 mr-2" /> Call

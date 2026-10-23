@@ -1,3 +1,4 @@
+import EmailConfirmationHelp from "@/components/EmailConfirmationHelp";
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -254,6 +255,7 @@ export default function Login() {
           </Button>
         </form>
       )}
+    {accountType === "driver" && <EmailConfirmationHelp email={email} />}
     </AuthLayout>
   );
 }
