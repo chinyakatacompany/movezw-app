@@ -1,3 +1,5 @@
+import JobContactActions from '@/components/JobContactActions';
+import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -53,7 +55,6 @@ export default function DriverJobDetail() {
   const request = useUnexpiredRequests(storedRequest ? [storedRequest] : [])[0] || null;
   const [profile, setProfile] = useState(null);
   const [myOffer, setMyOffer] = useState(null);
-  const [customerPhone, setCustomerPhone] = useState(null);
   const [loading, setLoading] = useState(true);
   const [price, setPrice] = useState("");
   const [eta, setEta] = useState("");
@@ -172,10 +173,6 @@ export default function DriverJobDetail() {
     setMyOffer(offers?.[0] || null);
     setLoading(false);
 
-    if (req?.customer_id) {
-      const { data: phone } = await supabase.rpc("fn_get_trip_contact_phone", { p_request_id: req.id });
-      setCustomerPhone(phone || null);
-    }
   };
 
   useEffect(() => { if (user?.id) load();   }, [id, user?.id]);
@@ -292,7 +289,7 @@ export default function DriverJobDetail() {
         setSubmitting(false);
         return;
       }
-      const { data: newOffer, error } = await supabase
+      const { error } = await supabase
         .from("offers")
         .insert({
           request_id: request.id,
@@ -314,8 +311,6 @@ export default function DriverJobDetail() {
         .select()
         .single();
       if (error) throw error;
-      await createNotification(request.customer_id, "new_offer", "New offer received 💬", `A driver quoted ${formatMoney(price)} for your ${request.cargo_type} request.`, `/customer/request/${request.id}`);
-      try { await supabase.functions.invoke("notify-offer-push", { body: { offerId: newOffer.id } }); } catch (e) { console.error("Failed to send push alert:", e); }
       toast({ title: "Quote submitted!", description: "We'll notify you when the customer responds." });
       load();
     } catch (e) {
@@ -346,8 +341,6 @@ export default function DriverJobDetail() {
         .update({ price: Number(price), eta_minutes: eta ? Number(eta) : null, note })
         .eq("id", myOffer.id);
       if (error) throw error;
-      await createNotification(request.customer_id, "new_offer", "Updated offer 💬", `The driver revised their quote to ${formatMoney(price)} for your ${request.cargo_type} request.`, `/customer/request/${request.id}`);
-      try { await supabase.functions.invoke("notify-offer-push", { body: { offerId: myOffer.id } }); } catch (e) { console.error("Failed to send push alert:", e); }
       toast({ title: "Quote updated!", description: "The customer has been notified of your new price." });
       setEditingOffer(false);
       load();
@@ -595,10 +588,10 @@ export default function DriverJobDetail() {
           <button onClick={() => setShowJobDetails(true)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
             <Package className="w-5 h-5 text-primary" /> View offer
           </button>
-          {customerPhone && (
-            <a href={`tel:${customerPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+          {request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status) && (
+            <button type="button" onClick={() => requestJobCall(request.id)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
               <Phone className="w-5 h-5 text-primary" /> Call
-            </a>
+            </button>
           )}
           <button onClick={openChat} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
             <MessageCircle className="w-5 h-5 text-primary" /> Message
@@ -681,10 +674,10 @@ export default function DriverJobDetail() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-xl font-bold flex-1">Job details</h1>
-        {isMyJob && customerPhone && (
-          <a href={`tel:${customerPhone}`} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors shrink-0">
+        {isMyJob && (request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status)) && (
+          <button type="button" onClick={() => requestJobCall(request.id)} aria-label="Call customer" className="w-9 h-9 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors shrink-0">
             <Phone className="w-4 h-4 text-primary" />
-          </a>
+          </button>
         )}
       </div>
 
@@ -985,6 +978,7 @@ export default function DriverJobDetail() {
             <Loader2 className="w-6 h-6 text-amber-500" />
           </div>
           <h2 className="text-sm font-semibold">Quote sent — waiting for customer</h2>
+          <JobContactActions request={request} recipientId={request.customer_id} />
           <p className="text-sm text-muted-foreground mt-1">You offered <span className="font-semibold text-foreground">{formatMoney(myOffer.price)}</span> for this job.</p>
           <button
             type="button"
@@ -1063,10 +1057,10 @@ export default function DriverJobDetail() {
               <button onClick={openChat} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
                 <MessageCircle className="w-4 h-4 text-primary" /> Message
               </button>
-              {customerPhone && (
-                <a href={`tel:${customerPhone}`} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
+              {request.accepted_driver_id && ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered", "completed"].includes(request.status) && (
+                <button type="button" onClick={() => requestJobCall(request.id)} className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border hover:bg-muted text-sm font-medium">
                   <Phone className="w-4 h-4 text-primary" /> Call
-                </a>
+                </button>
               )}
             </div>
           </div>

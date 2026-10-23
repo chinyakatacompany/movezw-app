@@ -1,3 +1,4 @@
+import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -178,7 +179,7 @@ export default function Chat() {
   if (loading) {
     return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
   }
-  if (!conversation) return <div className="p-8 text-center text-muted-foreground">Conversation not found.</div>;
+  if (!conversation) return <div className="p-8 text-center text-muted-foreground">Chat is unavailable. Job chat unlocks after acceptance.</div>;
 
   const driverCanSeeCustomer = !conversation.request_id
     || requestCustomer?.accepted_driver_id === conversation.driver_id;
@@ -205,6 +206,7 @@ export default function Chat() {
             <p className="text-sm font-semibold truncate">{otherName || "Chat"}</p>
             <p className="text-[11px] text-muted-foreground truncate">{conversation.request_label}</p>
           </div>
+          {conversation.request_id && user?.role !== "admin" && <button className="rounded-lg border px-3 py-2 text-sm" onClick={() => requestJobCall(conversation.request_id)}>Call</button>}
           {markingRead && <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />}
         </div>
       </div>

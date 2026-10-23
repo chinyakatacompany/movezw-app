@@ -1,3 +1,4 @@
+import EmailConfirmationHelp from "@/components/EmailConfirmationHelp";
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -165,6 +166,7 @@ export default function Register() {
     return (
       <AuthLayout icon={Mail} title="Check your email" subtitle={`We sent a confirmation link to ${email}`}>
         <div className="space-y-4">
+          <EmailConfirmationHelp email={email} />
           <p className="text-sm text-muted-foreground text-center">
             Click the link in that email to activate your account, then come back and log in.
           </p>

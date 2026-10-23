@@ -35,17 +35,21 @@ export default function AdminVerification() {
   // EXISTS since both tables are small at this app's scale.
   const loadNoProfile = async () => {
     const [{ data: driverAccounts, error: accErr }, { data: withProfile, error: dpErr }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, phone, created_at").eq("role", "driver").order("created_at", { ascending: false }),
+      supabase.rpc("admin_user_directory"),
       supabase.from("driver_profiles").select("user_id"),
     ]);
     if (accErr) console.error("Failed to load driver accounts:", accErr);
     if (dpErr) console.error("Failed to load driver profiles:", dpErr);
     const withProfileIds = new Set((withProfile || []).map((p) => p.user_id));
-    setNoProfileDrivers((driverAccounts || []).filter((d) => !withProfileIds.has(d.id)));
+    setNoProfileDrivers((driverAccounts || []).filter((d) => d.role === "driver" && !withProfileIds.has(d.id)));
   };
 
   useEffect(() => { load();   }, [filter]);
-  useEffect(() => { loadNoProfile(); }, []);
+  useEffect(() => {
+    void loadNoProfile();
+    const timer = setInterval(() => void loadNoProfile(), 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   const decide = async (profile, decision) => {
     setActing(profile.id);

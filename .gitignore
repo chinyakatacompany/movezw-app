@@ -36,3 +36,6 @@ dev-dist
 *.keystore
 android/local.properties
 android/key.properties
+
+# Supabase CLI machine-local cache
+supabase/.temp/

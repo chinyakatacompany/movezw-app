@@ -28,16 +28,19 @@ export default function AdminUsers() {
 
   const load = () => {
     supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false })
+      .rpc("admin_user_directory")
       .then(({ data, error }) => {
-        if (error) console.error("Failed to load users:", error);
+        if (error) { console.error("Failed to load users:", error); return; }
         setUsers(data || []);
       });
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const channel=supabase.channel("admin-user-directory").on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications"},load).subscribe();
+    const timer=setInterval(load,15000);
+    return()=>{clearInterval(timer);void supabase.removeChannel(channel);};
+  }, []);
 
   const toggleSuspend = async (u) => {
     try {
@@ -190,6 +193,7 @@ export default function AdminUsers() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold truncate">{u.full_name || "Unnamed"}</p>
+                      {u.role === "driver" && <p className="text-xs text-muted-foreground break-all">{u.email} · {u.email_confirmed_at ? "Email confirmed" : "Email pending"}</p>}
                       <span className={cn(
                         "text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0",
                         u.role === "admin" ? "bg-purple-100 text-purple-700" : u.role === "driver" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
@@ -229,14 +233,14 @@ export default function AdminUsers() {
                         size="sm"
                         variant="outline"
                         onClick={() => setConfirmEmailTarget(u)}
-                        disabled={confirmingEmailId === u.id}
+                        disabled={confirmingEmailId === u.id || Boolean(u.email_confirmed_at)}
                         className="text-emerald-700 border-emerald-300 hover:bg-emerald-50"
-                        title="Manually confirm this driver's email"
+                        title={u.email_confirmed_at ? "Driver email already confirmed" : "Confirm this driver’s email"}
                       >
                         {confirmingEmailId === u.id
                           ? <Loader2 className="w-4 h-4 mr-1 animate-spin" />
                           : <CheckCircle2 className="w-4 h-4 mr-1" />}
-                        Confirm email
+                        {u.email_confirmed_at ? "Email confirmed" : "Confirm email"}
                       </Button>
                     )}
                     <Button
