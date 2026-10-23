@@ -51,6 +51,7 @@ import ComingSoon from '@/pages/ComingSoon';
 import ReturnMarketplace from '@/pages/ReturnMarketplace';
 import BookReturnLoad from '@/pages/BookReturnLoad';
 import DriverReturnLoads from '@/pages/DriverReturnLoads';
+import DriverLocationNotice from '@/components/DriverLocationNotice';
 import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
 import ReturnDeliveryNavigation from '@/components/ReturnDeliveryNavigation';
@@ -99,6 +100,7 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <>
+    <DriverLocationNotice />
     <DriverLocationPing />
     <NativePushRegistration />
     <ReturnDeliveryNavigation />

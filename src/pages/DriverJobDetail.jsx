@@ -14,7 +14,8 @@ import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/li
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { geolocationUnavailableReason, geocodeAddress, locationErrorMessage } from "@/lib/geo";
+import { geolocationUnavailableReason, geocodeAddress, locationErrorMessage, requestCurrentLocation } from "@/lib/geo";
+import { setLocationTrackingEnabled } from "@/lib/devicePreferences";
 import ReturnLoadPrompt from "@/components/ReturnLoadPrompt";
 import ImageLightbox from "@/components/ImageLightbox";
 
@@ -427,6 +428,12 @@ export default function DriverJobDetail() {
     const persistedStatus = newStatus === "collected" ? "in_transit" : newStatus;
     setUpdating(true);
     try {
+      if (["en_route_pickup", "in_transit", "collected"].includes(persistedStatus)) {
+        const position = await requestCurrentLocation();
+        setDriverPos({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setLocationError(null);
+        setLocationTrackingEnabled(true);
+      }
       // Commission is reserved at acceptance now (fn_accept_offer), not
       // collection — nothing to charge or gate here anymore.
       const { data: changed, error: statusErr } = await supabase.from("transport_requests")
