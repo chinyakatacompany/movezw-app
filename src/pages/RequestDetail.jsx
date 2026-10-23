@@ -1,14 +1,14 @@
-import JobContactActions from '@/components/JobContactActions';
+import DriverBidCard from '@/components/DriverBidCard';
 import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
-import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, User as UserIcon, Eye } from "lucide-react";
+import { ArrowLeft, Star, Check, Loader2, Truck, MessageCircle, Phone, MapPin, Navigation, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge, StarRating, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, VEHICLE_ICONS, createNotification, EmptyState, getPaymentTerms } from "@/lib/movezw";
+import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDate, createNotification, EmptyState, getPaymentTerms } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { acceptOffer as acceptOfferRpc, cancelTransportRequest } from "@/lib/payments";
 import { toast } from "@/components/ui/use-toast";
@@ -113,7 +113,6 @@ export default function RequestDetail() {
       // Throws if the driver's balance is below the low-balance threshold.
       await acceptOfferRpc({ offerId: offer.id });
 
-      await createNotification(offer.driver_id, "offer_accepted", "Offer accepted! 🎉", `Your offer for ${request.cargo_type} from ${request.pickup_location} was accepted.`, `/driver/job/${request.id}`);
       toast({ title: "Driver booked", description: `${offer.driver_name} has been notified.` });
       navigate("/customer");
     } catch (e) {
@@ -121,6 +120,17 @@ export default function RequestDetail() {
     } finally {
       setAccepting(null);
     }
+  };
+
+  const declineOffer = async (offer) => {
+    setAccepting(offer.id);
+    try {
+      const { error } = await supabase.rpc('decline_job_bid', { p_offer: offer.id });
+      if (error) throw error;
+      toast({ title: 'Offer declined' });
+      await load();
+    } catch (error) { toast({ title: 'Could not decline offer', description: error.message, variant: 'destructive' }); }
+    finally { setAccepting(null); }
   };
 
   const submitRating = async () => {
@@ -444,37 +454,7 @@ export default function RequestDetail() {
           ) : (
             <div className="space-y-3">
               {pendingOffers.slice().sort((a, b) => sortBy === "rating" ? (b.driver_rating || 0) - (a.driver_rating || 0) : a.price - b.price).map((o) => (
-                <div key={o.id} className="bg-card rounded-2xl border-2 border-border p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
-                        {o.driver_photo_url ? (
-                          <img src={o.driver_photo_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <UserIcon className="w-5 h-5 text-primary" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{o.driver_name}</p>
-                        <StarRating value={o.driver_rating || 0} />
-                      </div>
-                    </div>
-                    <p className="text-lg font-bold text-primary">{formatMoney(o.price)}</p>
-                  </div>
-                  {(o.vehicle_name || o.vehicle_type || o.license_plate) && (
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {VEHICLE_ICONS[o.vehicle_type] ? `${VEHICLE_ICONS[o.vehicle_type]} ` : ""}
-                      {[o.vehicle_name, o.vehicle_type].filter(Boolean).join(" ")}
-                      {o.license_plate ? ` · ${o.license_plate}` : ""}
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <Button onClick={() => acceptOffer(o)} disabled={accepting === o.id} className="flex-1 h-11 font-semibold">
-                      {accepting === o.id ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Accepting...</> : "Accept offer"}
-                    </Button>
-                    <JobContactActions request={request} recipientId={o.driver_id} />
-                  </div>
-                </div>
+                <DriverBidCard key={o.id} offer={o} request={request} initialExpanded={new URLSearchParams(window.location.search).get("offer") === o.id} busy={Boolean(accepting)} onAccept={() => acceptOffer(o)} onDecline={() => declineOffer(o)} />
               ))}
             </div>
           )}

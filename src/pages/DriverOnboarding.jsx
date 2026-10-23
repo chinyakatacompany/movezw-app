@@ -1,3 +1,4 @@
+import { useDriverProfileRefresh } from '@/hooks/useDriverProfileRefresh';
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -10,6 +11,7 @@ export default function DriverOnboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [existing, setExisting] = useState(null);
+  useDriverProfileRefresh(user?.id, setExisting);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,6 +28,10 @@ export default function DriverOnboarding() {
       })
       .finally(() => setLoading(false));
   }, [user?.id]);
+
+  useEffect(() => {
+    if (existing?.verification_status === "approved" && !new URLSearchParams(window.location.search).has("edit")) navigate("/driver/profile", { replace: true });
+  }, [existing?.verification_status, navigate]);
 
   if (loading) {
     return <LoadingScreen />;

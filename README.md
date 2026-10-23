@@ -262,3 +262,37 @@ supabase/tests/registration-private-calls.test.mjs`. The database test runs the
 migration in PGlite with cron/net stubs and checks unconfirmed directory access,
 transactional notifications, ring cooldown, RLS, participant-only signaling, and
 cancellation. No real user is called or notified by the tests.
+
+
+### Verified profiles, bid cards and admin groups (Android 1.0.24 / code 25)
+
+Driver approval now refreshes across onboarding, dashboard and profile using
+Realtime, a five-second fallback poll, and resume. Approval of a driver profile
+(not email confirmation alone) unlocks the verified state. Approved onboarding
+opens the verified profile; explicit profile editing remains available.
+
+Customers see separate MoveZW bid cards with vehicle type/model, plate, payload
+in tonnes, rating, ETA, price, View offer, Accept and Decline. Payload is captured
+from the driver profile by a server trigger. Legacy truck categories supply known
+tonnage; unknown legacy payloads are labelled instead of guessed. Profile forms
+collect rated payload for new/edited vehicles. Accept/decline recheck server state;
+acceptance serializes competing requests and creates a durable driver alert.
+
+Attention Ring and unanswered job calls last up to three minutes. A recipient can
+stop an attention ring immediately; its sender also has Stop ringing. Repeat
+chimes run while the app is open; a background OS notification is not an
+indefinitely ringing native telephone call.
+
+Admin → Group Calls invites up to five selected drivers OR five selected customers,
+plus the admin host (six participants). Invitees choose Join or Decline; no
+microphone is opened before Join. Rooms use audio-only WebRTC mesh with private
+membership and pair-specific signaling. Groups do not mix customers and drivers.
+Leaving/ending as host closes the room; a lost host heartbeat closes access after
+45 seconds. Invitations expire after three minutes, rooms after one hour, and
+signaling is cleaned up after room expiry plus one day. No recording is added.
+
+TURN secrets and separate-network device tests are still required for dependable
+mobile audio, as described above. No TURN service has been provisioned and no
+signed APK has been generated. Rebuild/sign/distribute 1.0.24 (25) for native users.
+Additional checks: `node --test src/hooks/*.test.mjs src/lib/groupAudio.test.mjs
+src/lib/bidPresentation.test.mjs supabase/tests/admin-groups-bids.test.mjs`.

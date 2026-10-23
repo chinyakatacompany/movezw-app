@@ -72,6 +72,7 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
     location_area: "",
     vehicle_type: "Pickup",
     vehicle_name: "",
+    capacity_tonnes: "",
     license_plate: "",
     national_id_url: "",
     driver_licence_url: "",
@@ -89,6 +90,7 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
         location_area: existing.location_area || "",
         vehicle_type: existing.vehicle_type || "Pickup",
         vehicle_name: existing.vehicle_name || "",
+        capacity_tonnes: String(existing.capacity_tonnes || String(existing.vehicle_type || "").match(/([0-9.]+)\s*ton/i)?.[1] || ""),
         license_plate: existing.license_plate || "",
         national_id_url: existing.national_id_url || "",
         driver_licence_url: existing.driver_licence_url || "",
@@ -124,6 +126,7 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
         location_area: form.location_area,
         vehicle_type: form.vehicle_type,
         vehicle_name: form.vehicle_name,
+        capacity_tonnes: form.capacity_tonnes ? Number(form.capacity_tonnes) : Number(String(form.vehicle_type).match(/([0-9.]+)\s*ton/i)?.[1]) || null,
         license_plate: form.license_plate,
         national_id_url: form.national_id_url,
         driver_licence_url: form.driver_licence_url,
@@ -210,7 +213,7 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
             <button
               key={v}
               type="button"
-              onClick={() => set("vehicle_type", v)}
+              onClick={() => { set("vehicle_type", v); set("capacity_tonnes", v.match(/([0-9.]+)\s*ton/i)?.[1] || ""); }}
               className={cn(
                 "flex items-center gap-2 rounded-xl border-2 px-3 py-3 transition-all text-left",
                 form.vehicle_type === v ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
@@ -223,6 +226,9 @@ export default function DriverProfileForm({ userId, prefill, existing, autoAppro
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
+            <label htmlFor="capacity" className="text-sm font-medium">Load capacity (tonnes) *</label>
+            <input className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" id="capacity" type="number" min="0.01" max="1000" step="0.01" placeholder="e.g. 3" value={form.capacity_tonnes} onChange={(e) => set("capacity_tonnes", e.target.value)} required />
+            <p className="mb-3 text-xs text-muted-foreground">Use the vehicle’s rated payload. 1 tonne = 1,000 kg.</p>
             <Label htmlFor="vname">Vehicle make/model *</Label>
             <Input id="vname" placeholder="e.g. Toyota Hilux" value={form.vehicle_name} onChange={(e) => set("vehicle_name", e.target.value)} required />
           </div>

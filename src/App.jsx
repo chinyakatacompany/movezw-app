@@ -1,3 +1,5 @@
+import AdminGroupCallPanel from '@/components/AdminGroupCallPanel';
+import AdminGroupCalls from '@/pages/AdminGroupCalls';
 import AttentionInbox from '@/components/AttentionInbox';
 import JobCallPanel from '@/components/JobCallPanel';
 import { useEffect } from 'react';
@@ -110,6 +112,7 @@ const AuthenticatedApp = () => {
     <DriverJobInbox />
     <AttentionInbox />
     <JobCallPanel />
+    <AdminGroupCallPanel />
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />
@@ -213,6 +216,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/finance" element={<AdminFinance />} />
           <Route path="/admin/content" element={<AdminContent />} />
+          <Route path="/admin/calls" element={<AdminGroupCalls />} />
           <Route path="/admin/messages" element={<Messages />} />
         </Route>
       </Route>
