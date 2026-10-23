@@ -157,6 +157,17 @@
   </head>
   <body>
     <div id="root">
+      <div id="startup-screen" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#0b2d68;color:white;text-align:center;font-family:system-ui,sans-serif">
+        <strong style="font-size:24px">MoveZW</strong>
+        <p id="startup-status" role="status">Opening MoveZW…</p>
+        <button type="button" onclick="window.location.reload()" style="padding:12px 20px;border-radius:8px;border:0">Reload app</button>
+      </div>
+      <script>
+        setTimeout(function () {
+          var status = document.getElementById('startup-status');
+          if (status) status.textContent = 'MoveZW is taking longer to open. Try reloading. If this continues, update MoveZW and Android System WebView.';
+        }, 20000);
+      </script>
       <!-- Static fallback for crawlers that don't execute JavaScript (most
            AI/LLM bots — GPTBot, ClaudeBot, PerplexityBot, etc — unlike
            Googlebot, which does render JS). Hidden from real browsers via

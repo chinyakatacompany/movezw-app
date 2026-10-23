@@ -1,2 +1,6 @@
 [functions.driver-location-background]
 verify_jwt = false
+
+# Database/cron supplies an exact server key; the handler verifies it itself.
+[functions.notify-drivers-push]
+verify_jwt = false

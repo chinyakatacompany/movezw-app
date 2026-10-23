@@ -55,6 +55,7 @@ import DriverLocationPing from '@/components/DriverLocationPing';
 import NativePushRegistration from '@/components/NativePushRegistration';
 import ReturnDeliveryNavigation from '@/components/ReturnDeliveryNavigation';
 import ReturnDeliveryProgress from '@/pages/ReturnDeliveryProgress';
+import DriverJobInbox from '@/components/DriverJobInbox';
 import CustomerOfferInbox from '@/components/CustomerOfferInbox';
 import NativeAppBridge from '@/components/NativeAppBridge';
 import ThemeLoader from '@/components/ThemeLoader';
@@ -102,6 +103,7 @@ const AuthenticatedApp = () => {
     <NativePushRegistration />
     <ReturnDeliveryNavigation />
     <CustomerOfferInbox />
+    <DriverJobInbox />
     <Routes>
       <Route path="/landing" element={<Landing />} />
       <Route path="/terms" element={<Terms />} />

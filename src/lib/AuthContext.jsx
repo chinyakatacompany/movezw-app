@@ -199,6 +199,7 @@ export const AuthProvider = ({ children }) => {
           // Customer bids have a persistent queue above the router. Do not
           // replace them with transient toasts or navigate away from forms.
           if (user.role === 'customer' && n.type === 'new_offer') return;
+          if (user.role === 'driver' && n.type === 'job_assigned') return;
           playNotificationChime();
           sonnerToast(n.title, {
             id: 'notification-popup',
