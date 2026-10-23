@@ -61,7 +61,7 @@ import ThemeLoader from '@/components/ThemeLoader';
 import LoadingScreen from '@/components/LoadingScreen';
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, checkUserAuth, navigateToLogin, autoNavigateLink, clearAutoNavigate } = useAuth();
   const navigate = useNavigate();
 
   // Follow urgent notifications from AuthContext. Customer bids use the
@@ -86,6 +86,13 @@ const AuthenticatedApp = () => {
       navigateToLogin();
       return null;
     }
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+        <h1 className="text-xl font-semibold">Unable to load your account</h1>
+        <p className="text-sm text-muted-foreground">Check your internet connection and try again.</p>
+        <button type="button" onClick={() => { void checkUserAuth(); }} className="rounded-md bg-primary px-4 py-2 text-primary-foreground">Try again</button>
+      </div>
+    );
   }
 
   // Render the main app
