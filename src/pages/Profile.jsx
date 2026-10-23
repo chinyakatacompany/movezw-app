@@ -164,6 +164,7 @@ export default function Profile({ role }) {
         <Shield className="mb-2 h-8 w-8 text-emerald-600" /><h2 className="text-xl font-bold">You’re a verified MoveZW driver</h2>
         <p className="mt-1 text-sm">Admin has approved your driver profile. You can now receive jobs.</p>
         <button className="mt-4 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white" onClick={() => navigate('/driver')}>Go to driver dashboard</button>
+        <button className="ml-3 mt-4 text-sm font-semibold underline" onClick={() => navigate('/driver/onboarding?edit=1')}>Edit driver profile</button>
       </section>}
       <div className="bg-card rounded-2xl border border-border divide-y divide-border">
         {user?.email && (

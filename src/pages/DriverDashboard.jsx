@@ -290,6 +290,7 @@ export default function DriverDashboard() {
           <p className="text-sm text-white/70">Good {timeOfDayGreeting()}</p>
           <h1 className="text-2xl font-bold tracking-tight text-white">{user?.full_name?.split(" ")[0] || "Driver"} 👋</h1>
           <p className="text-sm text-white/70">{profile.vehicle_type} · {profile.location_area || "Zimbabwe"}</p>
+          <Link to="/driver/profile" className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-3 py-1.5 text-xs font-bold text-emerald-100"><Shield className="h-3.5 w-3.5" />Verified MoveZW driver · View profile</Link>
           {myJobs?.length > 0 && (
             <Link
               to={`/driver/job/${myJobs[0].id}`}
