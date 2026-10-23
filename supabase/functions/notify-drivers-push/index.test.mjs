@@ -11,7 +11,11 @@ function worker({ expired = false, nativeFailure = false, approved = true } = {}
   let handler;
   const state = { completed: 0, pushed: [], claims: 0 };
   const client = {
-    rpc: async () => { state.claims++; return { data: [{ request_id: 'job', attempts: 1 }] }; },
+    rpc(name) {
+      if (name === 'authorize_driver_job_push') return Promise.resolve({ data: true });
+      if (name === 'claim_driver_job_push_batch') { state.claims++; return Promise.resolve({ data: [{ request_id: 'job', attempts: 1 }] }); }
+      return this.from('recipients');
+    },
     from(table) {
       let update = false;
       const query = {
@@ -20,7 +24,7 @@ function worker({ expired = false, nativeFailure = false, approved = true } = {}
         async single() { return { data: { id: 'job', status: 'open', expired_at: expired ? new Date().toISOString() : null, created_at: new Date().toISOString(), pickup_location: 'Harare', destination: 'Gweru', cargo_type: 'Boxes' } }; },
         then(resolve, reject) {
           if (table === 'driver_job_push_outbox' && update) state.completed++;
-          const data = table === 'notifications' ? [{ user_id: 'driver' }, { user_id: 'driver' }]
+          const data = table === 'recipients' ? (approved ? [{ user_id: 'driver' }, { user_id: 'driver' }] : [])
             : table === 'driver_profiles' ? (approved ? [{ user_id: 'driver' }] : [])
             : table === 'profiles' ? [{ id: 'driver', is_suspended: false }] : [];
           return Promise.resolve({ data }).then(resolve, reject);
@@ -34,12 +38,13 @@ function worker({ expired = false, nativeFailure = false, approved = true } = {}
     createClient: () => client, corsHeaders: {}, initWebPush: () => ({ publicKey: 'public', privateKey: 'private' }),
     getServiceRoleKey: () => 'server-secret',
     sendPushToUsers: async (_client, ids) => { state.pushed.push(...ids); return ids.length; },
+    verifyNativePushConfiguration: async () => true,
     sendNativePushToUsers: async () => { if (nativeFailure) throw new Error('FCM unavailable'); return 1; },
     Response, Date, Set, console: { error() {} },
   });
   return { handler, state };
 }
-const request = (token = 'server-secret') => new Request('https://example.test', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+const request = (token = 'dedicated-worker-credential-32-characters') => new Request('https://example.test', { method: 'POST', headers: { 'x-movezw-job-token': token } });
 
 test('only a server-authorized request may claim job pushes', async () => {
   const { handler, state } = worker();
@@ -67,5 +72,13 @@ test('expired jobs are completed without sending stale pushes', async () => {
 test('a driver who lost approval is excluded at delivery time', async () => {
   const { handler, state } = worker({ approved: false });
   await handler(request());
+  assert.equal(state.pushed.length, 0);
+});
+
+test('authenticated health check verifies providers without claiming or sending jobs', async () => {
+  const { handler, state } = worker();
+  const req = new Request('https://example.test', { method: 'POST', headers: { 'x-movezw-job-token': 'dedicated-worker-credential-32-characters' }, body: JSON.stringify({ health: true }) });
+  assert.deepEqual(await (await handler(req)).json(), { database: true, webConfigured: true, androidAuthenticated: true });
+  assert.equal(state.claims, 0);
   assert.equal(state.pushed.length, 0);
 });

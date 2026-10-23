@@ -1,6 +1,6 @@
 [functions.driver-location-background]
 verify_jwt = false
 
-# Database/cron supplies an exact server key; the handler verifies it itself.
+# Database/cron supplies a dedicated worker token; a service-only RPC verifies it.
 [functions.notify-drivers-push]
 verify_jwt = false

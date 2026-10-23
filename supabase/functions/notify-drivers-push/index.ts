@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders, initWebPush, getServiceRoleKey, sendPushToUsers } from "../_shared/push.ts";
-import { sendNativePushToUsers } from "../_shared/nativePush.ts";
+import { sendNativePushToUsers, verifyNativePushConfiguration } from "../_shared/nativePush.ts";
 
 const { publicKey, privateKey } = initWebPush();
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -15,10 +15,17 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return respond({ error: "Method not allowed" }, 405);
   if (!SERVICE_ROLE_KEY) return respond({ error: "Server push is not configured" }, 503);
-  if (req.headers.get("Authorization") !== `Bearer ${SERVICE_ROLE_KEY}`) return respond({ error: "Unauthorized" }, 401);
+  const workerToken = req.headers.get("x-movezw-job-token");
+  if (!workerToken || workerToken.length < 32) return respond({ error: "Unauthorized" }, 401);
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   try {
+    const { data: authorized, error: authorizationError } = await supabase.rpc("authorize_driver_job_push", { p_token: workerToken });
+    if (authorizationError || authorized !== true) return respond({ error: "Unauthorized" }, 401);
+    const body = await req.json().catch(() => ({}));
+    if (body.health === true) {
+      return respond({ database: true, webConfigured: Boolean(publicKey && privateKey), androidAuthenticated: await verifyNativePushConfiguration() });
+    }
     const { data: jobs, error } = await supabase.rpc("claim_driver_job_push_batch");
     if (error) throw error;
     let completed = 0;
@@ -32,8 +39,7 @@ Deno.serve(async (req) => {
         if (request.status === "open" && !request.accepted_driver_id && !expired) {
           const recipients: string[] = [];
           for (let offset = 0; ; offset += 500) {
-            const { data, error: recipientsError } = await supabase.from("notifications").select("user_id")
-              .eq("type", "job_assigned").eq("link", `/driver/job/${request.id}`)
+            const { data, error: recipientsError } = await supabase.rpc("driver_job_push_recipients", { p_request: request.id })
               .order("user_id").range(offset, offset + 499);
             if (recipientsError) throw recipientsError;
             recipients.push(...(data ?? []).map((n: { user_id: string }) => n.user_id));
@@ -48,12 +54,9 @@ Deno.serve(async (req) => {
           });
           for (let start = 0; start < uniqueIds.length; start += 100) {
             const ids = uniqueIds.slice(start, start + 100);
-            // Recheck current approval/suspension before device delivery.
-            const { data: drivers, error: driverError } = await supabase.from("driver_profiles").select("user_id").in("user_id", ids).eq("verification_status", "approved");
-            const { data: profiles, error: profileError } = await supabase.from("profiles").select("id,is_suspended").in("id", ids);
-            if (driverError || profileError) throw driverError || profileError;
-            const approved = new Set((drivers ?? []).map((d: { user_id: string }) => d.user_id));
-            const eligible = (profiles ?? []).filter((p: { id: string; is_suspended: boolean }) => approved.has(p.id) && !p.is_suspended).map((p: { id: string }) => p.id);
+            // The RPC rechecks approval, suspension and availability/route
+            // eligibility for each attempt, including after a retry.
+            const eligible = ids;
             if (!eligible.length) continue;
             if (!publicKey || !privateKey) {
               const { count, error: configError } = await supabase.from("push_subscriptions").select("id", { count: "exact", head: true }).in("user_id", eligible);

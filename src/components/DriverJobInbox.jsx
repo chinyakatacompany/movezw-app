@@ -43,7 +43,7 @@ function Inbox({ userId }) {
         const requests = [];
         for (let start = 0; active && start < ids.length; start += 100) {
           const { data, error } = await withTimeout(supabase.from('transport_requests')
-            .select('id,status,accepted_driver_id,timing,scheduled_date,created_at,expired_at')
+            .select('id,status,accepted_driver_id,timing,scheduled_date,created_at')
             .in('id', ids.slice(start, start + 100)));
           if (error) throw error;
           requests.push(...data);

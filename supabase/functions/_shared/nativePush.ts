@@ -131,3 +131,11 @@ export async function sendNativePushToUsers(
   if (results.some((r) => r.status === "rejected")) throw new Error("Some Android alerts failed; retry required");
   return sent;
 }
+
+// Verifies configuration without sending a notification or returning credentials.
+export async function verifyNativePushConfiguration(): Promise<boolean> {
+  const account = getServiceAccount();
+  if (!account) return false;
+  await getFirebaseAccessToken(account);
+  return true;
+}
