@@ -128,3 +128,49 @@ operational history when required. Deploy changes to this flow with:
 ```bash
 npx supabase functions deploy delete-account
 ```
+
+## Reliable new-job alerts and Android recovery
+
+New open transport requests create an in-app notification for approved,
+unsuspended online drivers. Busy/offline drivers receive alerts only when both
+pickup and destination match an active delivery or an open return-route listing.
+Matching follows the existing case-insensitive place-name comparison and direction. Each load in a multi-load
+booking is a separate job. A database outbox sends web/Android push independently
+of the customer's app, retries failures, and stops alerting for closed/expired
+jobs. The driver popup queue recovers unread jobs on login/resume and every
+15 seconds if realtime is unavailable. It excludes closed/expired jobs and shows
+one job at a time; dismissing a popup does not reject the job.
+
+Release requirements (the source changes alone do not enable hosted delivery):
+
+1. Set `FIREBASE_SERVICE_ACCOUNT_JSON` for the Firebase project in
+   `android/app/google-services.json`; retain the existing VAPID secrets for web.
+2. Deploy `notify-drivers-push` with `--no-verify-jwt`. The handler accepts only
+   a dedicated worker credential stored in Vault, validated through a service-only
+   RPC; it is no longer a client-callable broadcast endpoint.
+3. Ensure Vault has `movezw_project_url` for this project, then apply
+   `supabase/migrations/20261023000100_reliable_driver_job_alerts.sql`.
+   The migration generates its own random `movezw_job_push_token` in Vault.
+4. Publish the web build and rebuild Android using `npm run android:prepare` with
+   the production Supabase environment values configured. This command rejects
+   missing configuration before syncing the native bundle. Build/sign/distribute
+   the updated APK/AAB (version 1.0.21, code 22) through the normal Android release process.
+5. Verify with approved online, busy and offline drivers (matching/nonmatching routes), an unapproved driver,
+   and a suspended driver. Post multiple loads, close the customer app, and
+   confirm one unread notification/popup per job for eligible drivers. Verify busy/offline drivers without matching routes get none. Background
+   the Android app and verify system notifications and tap navigation. Interrupt
+   FCM temporarily and confirm the outbox is retried by the cron job.
+
+In Supabase Cron History check `movezw-driver-job-push`. Inspect
+`driver_job_push_outbox` for rows with no `delivered_at`, their attempts, and Edge
+Function logs. Delivery is at least once: a partial push failure can retry a
+message; a stable per-job tag replaces the same system notification and the
+popup queue deduplicates by job. `delivered_at` means push providers accepted the
+attempt (or no subscribed devices remained), not that a phone displayed it.
+Android notification permission, channel settings, connectivity and force-stop
+state still govern OS notification visibility. User push opt-outs are preserved.
+
+Startup/import failures and React render failures now show recovery UI rather
+than a blank screen. The native bundle does not register a PWA service worker.
+The affected device's original blank-screen exception has not been reproduced;
+verify the new build on that device and collect Android/WebView logs if it persists.

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
+import LoadingScreen from "@/components/LoadingScreen";
 import { useAuth } from "@/lib/AuthContext";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import DriverProfileForm from "@/components/DriverProfileForm";
 
 export default function DriverOnboarding() {
@@ -27,7 +28,7 @@ export default function DriverOnboarding() {
   }, [user?.id]);
 
   if (loading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+    return <LoadingScreen />;
   }
 
   return (

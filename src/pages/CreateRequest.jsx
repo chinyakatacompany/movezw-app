@@ -10,7 +10,7 @@ import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Pa
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
 import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, PAYMENT_TERMS, formatMoney, normalizePaymentSplit } from "@/lib/movezw";
-import { notifyMatchingDriversForRequest, notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
+import { notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { geolocationUnavailableReason, formatReverseAddress } from "@/lib/geo";
@@ -189,9 +189,7 @@ export default function CreateRequest() {
 
       await Promise.all(
         data.map(async (row) => {
-          try { await notifyMatchingDriversForRequest(row); } catch (e) { console.error("Failed to notify drivers:", e); }
           try { await notifyMatchingReturnLoadDriversForRequest(row); } catch (e) { console.error("Failed to notify return-load drivers:", e); }
-          try { await supabase.functions.invoke("notify-drivers-push", { body: { requestId: row.id } }); } catch (e) { console.error("Failed to send push alerts:", e); }
         })
       );
 

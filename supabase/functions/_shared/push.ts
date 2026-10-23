@@ -51,22 +51,27 @@ export async function sendPushToUsers(
 ): Promise<number> {
   if (userIds.length === 0) return 0;
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id, notification_vibration")
     .in("id", userIds);
+  if (profileError) throw profileError;
   const vibrationByUser: Record<string, string> = Object.fromEntries(
     // deno-lint-ignore no-explicit-any
     (profiles ?? []).map((p: any) => [p.id, p.notification_vibration])
   );
 
-  const { data: subs } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .in("user_id", userIds);
+  const subs: PushSub[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("push_subscriptions").select("*")
+      .in("user_id", userIds).order("id").range(offset, offset + 499);
+    if (error) throw error;
+    subs.push(...(data ?? []));
+    if (!data || data.length < 500) break;
+  }
 
   let sent = 0;
-  await Promise.all(
+  const results = await Promise.allSettled(
     ((subs ?? []) as PushSub[]).map(async (s) => {
       try {
         await webpush.sendNotification(
@@ -74,17 +79,22 @@ export async function sendPushToUsers(
           // Long buzz by default for anyone who hasn't picked a preference
           // yet in NotificationSettings.jsx — easier to feel/notice than
           // the short double-buzz "default" pattern was.
-          buildPayload(s.user_id, vibrationByUser[s.user_id] || "long")
+          buildPayload(s.user_id, vibrationByUser[s.user_id] || "long"),
+          { timeout: 10000 }
         );
         sent++;
       } catch (err) {
         // 410/404 = subscription is gone (uninstalled, expired) — clean it up.
         const statusCode = (err as { statusCode?: number })?.statusCode;
         if (statusCode === 410 || statusCode === 404) {
-          await supabase.from("push_subscriptions").delete().eq("id", s.id);
+          const { error } = await supabase.from("push_subscriptions").delete().eq("id", s.id);
+          if (error) throw error;
+        } else {
+          throw err;
         }
       }
     })
   );
+  if (results.some((r) => r.status === "rejected")) throw new Error("Some web alerts failed; retry required");
   return sent;
 }

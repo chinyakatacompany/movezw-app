@@ -51,6 +51,7 @@ async function getFirebaseAccessToken(account: FirebaseServiceAccount): Promise<
   const response = await fetch(account.token_uri || "https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    signal: AbortSignal.timeout(10000),
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion,
@@ -73,23 +74,26 @@ export async function sendNativePushToUsers(
   buildPayload: (userId: string) => NativePushPayload,
 ): Promise<number> {
   if (userIds.length === 0) return 0;
-  const account = getServiceAccount();
-  if (!account) return 0;
-
-  const { data: rows } = await supabase
-    .from("device_push_tokens")
-    .select("id, user_id, token")
-    .in("user_id", userIds)
-    .eq("platform", "android");
-  const tokens = (rows ?? []) as DeviceToken[];
+  const tokens: DeviceToken[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from("device_push_tokens")
+      .select("id, user_id, token").in("user_id", userIds).eq("platform", "android")
+      .order("id").range(offset, offset + 499);
+    if (error) throw error;
+    tokens.push(...(data ?? []));
+    if (!data || data.length < 500) break;
+  }
   if (tokens.length === 0) return 0;
+  const account = getServiceAccount();
+  if (!account) throw new Error("Firebase service account is missing or invalid");
 
   const accessToken = await getFirebaseAccessToken(account);
   let sent = 0;
-  await Promise.all(tokens.map(async (device) => {
+  const results = await Promise.allSettled(tokens.map(async (device) => {
     const payload = buildPayload(device.user_id);
     const response = await fetch(`https://fcm.googleapis.com/v1/projects/${account.project_id}/messages:send`, {
       method: "POST",
+      signal: AbortSignal.timeout(10000),
       headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         message: {
@@ -116,10 +120,22 @@ export async function sendNativePushToUsers(
     }
 
     const error = await response.json().catch(() => ({}));
-    const status = error?.error?.status;
-    if (status === "UNREGISTERED" || response.status === 404) {
-      await supabase.from("device_push_tokens").delete().eq("id", device.id);
+    const unregistered = error?.error?.details?.some((detail: { errorCode?: string }) => detail.errorCode === "UNREGISTERED");
+    if (unregistered) {
+      const { error: deleteError } = await supabase.from("device_push_tokens").delete().eq("id", device.id);
+      if (deleteError) throw deleteError;
+    } else {
+      throw new Error(`Firebase delivery failed (${response.status})`);
     }
   }));
+  if (results.some((r) => r.status === "rejected")) throw new Error("Some Android alerts failed; retry required");
   return sent;
+}
+
+// Verifies configuration without sending a notification or returning credentials.
+export async function verifyNativePushConfiguration(): Promise<boolean> {
+  const account = getServiceAccount();
+  if (!account) return false;
+  await getFirebaseAccessToken(account);
+  return true;
 }
