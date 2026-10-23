@@ -93,11 +93,6 @@ export default function DriverDashboard() {
     }
   };
 
-  const disableLocation = () => {
-    setLocationTrackingEnabled(false);
-    setLocationEnabled(false);
-    toast({ title: "MoveZW location turned off", description: "You can enable it again before going online or starting a delivery." });
-  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -198,7 +193,7 @@ export default function DriverDashboard() {
   const verified = profile?.verification_status === "approved";
 
   const updateAvailability = async (status) => {
-    if (status === "online" && (!locationEnabled || locationPermission !== "granted")) {
+    if (status === "online") {
       const coords = await enableLocation({ quiet: true });
       if (!coords) {
         toast({
@@ -326,10 +321,10 @@ export default function DriverDashboard() {
           {locationReady ? (
             <button
               type="button"
-              onClick={disableLocation}
+              onClick={() => void enableLocation()}
               className="rounded-xl border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-800"
             >
-              Turn off
+              Check GPS
             </button>
           ) : (
             <button

@@ -3,9 +3,11 @@ import { Capacitor } from "@capacitor/core";
 import { BackgroundGeolocation } from "@capgo/background-geolocation";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { isLocationTrackingEnabled, LOCATION_PREFERENCE_EVENT } from "@/lib/devicePreferences";
+import { driverLocationRequired, reportDriverLocationStatus } from "@/lib/driverLocationStatus";
+import { withTimeout } from "@/lib/withTimeout";
+import { isLocationTrackingEnabled, setLocationTrackingEnabled, LOCATION_PREFERENCE_EVENT } from "@/lib/devicePreferences";
 
-const PROFILE_REPORT_INTERVAL_MS = 10 * 60 * 1000;
+const PROFILE_REPORT_INTERVAL_MS = 60 * 1000;
 const TRIP_REPORT_INTERVAL_MS = 10 * 1000;
 const ACTIVE_TRIP_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit"];
 const BACKGROUND_FUNCTION = "driver-location-background";
@@ -28,6 +30,10 @@ export default function DriverLocationPing() {
     let cancelled = false;
     let watchId = null;
     let lastProfileReportAt = 0;
+    let savingProfile = false;
+    profileIdRef.current = null;
+    activeRequestIdRef.current = null;
+    availabilityRef.current = "offline";
     let lastTripReportAt = 0;
     let nativeRequestId = null;
     let nativeTargetId = null;
@@ -41,16 +47,20 @@ export default function DriverLocationPing() {
 
     const saveProfilePosition = (lat, lng) => {
       const now = Date.now();
-      if (!profileIdRef.current || now - lastProfileReportAt < PROFILE_REPORT_INTERVAL_MS) return;
-      lastProfileReportAt = now;
+      if (!profileIdRef.current || savingProfile || now - lastProfileReportAt < PROFILE_REPORT_INTERVAL_MS) return;
+      savingProfile = true;
       supabase.from("driver_profiles")
         .update({ latitude: lat, longitude: lng })
         .eq("id", profileIdRef.current)
-        .then(({ error }) => { if (error) console.error("Failed to save driver location:", error); });
+        .then(({ error }) => {
+          if (error) console.error("Failed to save driver location:", error);
+          else lastProfileReportAt = now;
+        }).catch((error) => console.error("Failed to save driver location:", error)).finally(() => { savingProfile = false; });
     };
 
     const reportBrowserPosition = (pos) => {
-      if (cancelled || !isLocationTrackingEnabled()) return;
+      if (cancelled || (!isLocationTrackingEnabled() && !driverLocationRequired(availabilityRef.current, activeRequestIdRef.current))) return;
+      reportDriverLocationStatus(true);
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       saveProfilePosition(lat, lng);
@@ -75,7 +85,7 @@ export default function DriverLocationPing() {
 
     const configureNativeTracking = async (requestId) => {
       if (!isNativeAndroid) return;
-      const targetId = requestId && isLocationTrackingEnabled() ? requestId : null;
+      const targetId = requestId ? requestId : null;
       if (nativeInitialised && nativeTargetId === targetId) return;
 
       const generation = ++nativeGeneration;
@@ -101,6 +111,7 @@ export default function DriverLocationPing() {
           nativeInitialised = false;
         }
         console.error("Failed to authorise background trip tracking:", error || data?.error);
+        reportDriverLocationStatus(false, "Delivery tracking could not start. Check your connection and location permission.");
         return;
       }
       if (cancelled || generation !== nativeGeneration) {
@@ -129,9 +140,10 @@ export default function DriverLocationPing() {
           (position, backgroundError) => {
             if (backgroundError) {
               console.error("Background location error:", backgroundError);
+              reportDriverLocationStatus(false, "Keep GPS on and allow MoveZW location access in Android settings.");
               return;
             }
-            if (position) saveProfilePosition(position.latitude, position.longitude);
+            if (position) { reportDriverLocationStatus(true); saveProfilePosition(position.latitude, position.longitude); }
           },
         );
         if (cancelled || generation !== nativeGeneration) {
@@ -147,11 +159,16 @@ export default function DriverLocationPing() {
         }
         revokeNativeSession(targetId);
         console.error("Could not start MoveZW background tracking:", backgroundError);
+        reportDriverLocationStatus(false, "Allow location for MoveZW and turn on your phone’s GPS, then retry.");
       }
     };
 
     const configureTracking = () => {
       clearWatch();
+      if (driverLocationRequired(availabilityRef.current, activeRequestIdRef.current) && !isLocationTrackingEnabled()) {
+        setLocationTrackingEnabled(true);
+        return; // The synchronous preference event reconfigures tracking once.
+      }
       if (!isLocationTrackingEnabled()) {
         void configureNativeTracking(null);
         return;
@@ -163,13 +180,13 @@ export default function DriverLocationPing() {
 
       void configureNativeTracking(null);
       if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(reportBrowserPosition, () => {}, {
+      navigator.geolocation.getCurrentPosition(reportBrowserPosition, (error) => { if (!cancelled) reportDriverLocationStatus(false, error.code === 1 ? "Allow location for MoveZW in your phone settings." : "Turn on GPS and retry location. Keep location enabled while working."); }, {
         enableHighAccuracy: true,
         timeout: 20000,
         maximumAge: 10000,
       });
       if (availabilityRef.current === "online" || activeRequestIdRef.current) {
-        watchId = navigator.geolocation.watchPosition(reportBrowserPosition, () => {}, {
+        watchId = navigator.geolocation.watchPosition(reportBrowserPosition, (error) => { if (!cancelled) reportDriverLocationStatus(false, error.code === 1 ? "Allow location for MoveZW in your phone settings." : "Turn on GPS and retry location. Keep location enabled while working."); }, {
           enableHighAccuracy: true,
           timeout: 20000,
           maximumAge: 10000,
@@ -178,14 +195,14 @@ export default function DriverLocationPing() {
     };
 
     const refreshActiveTrip = async () => {
-      const { data } = await supabase.from("transport_requests")
+      const { data, error } = await supabase.from("transport_requests")
         .select("id")
         .eq("accepted_driver_id", user.id)
         .in("status", ACTIVE_TRIP_STATUSES)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (cancelled) return;
+      if (cancelled || error) return;
       const nextId = data?.id || null;
       if (activeRequestIdRef.current !== nextId) {
         activeRequestIdRef.current = nextId;
@@ -195,7 +212,7 @@ export default function DriverLocationPing() {
     };
 
     const initialise = async () => {
-      const [{ data: profiles }, { data: activeTrip }] = await Promise.all([
+      const [profileResult, tripResult] = await withTimeout(Promise.all([
         supabase.from("driver_profiles")
           .select("id, availability_status")
           .eq("user_id", user.id)
@@ -208,8 +225,11 @@ export default function DriverLocationPing() {
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle(),
-      ]);
+      ]));
       if (cancelled) return;
+      if (profileResult.error || tripResult.error) throw profileResult.error || tripResult.error;
+      const profiles = profileResult.data;
+      const activeTrip = tripResult.data;
       profileIdRef.current = profiles?.[0]?.id || null;
       availabilityRef.current = profiles?.[0]?.availability_status || "offline";
       activeRequestIdRef.current = activeTrip?.id || null;
@@ -236,23 +256,24 @@ export default function DriverLocationPing() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "transport_requests", filter: `accepted_driver_id=eq.${user.id}` },
-        () => { void refreshActiveTrip(); },
+        () => { void refreshActiveTrip().catch(console.error); },
       )
       .subscribe();
 
     const onPreference = () => configureTracking();
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        void refreshActiveTrip();
-        configureTracking();
+        void initialise().catch((error) => reportDriverLocationStatus(false, error.message));
       }
     };
     window.addEventListener(LOCATION_PREFERENCE_EVENT, onPreference);
     document.addEventListener("visibilitychange", onVisible);
-    void initialise();
+    void initialise().catch((error) => reportDriverLocationStatus(false, error.message));
+    const retryTimer = setInterval(onVisible, 30000);
 
     return () => {
       cancelled = true;
+      clearInterval(retryTimer);
       nativeGeneration += 1;
       clearWatch();
       if (isNativeAndroid) {

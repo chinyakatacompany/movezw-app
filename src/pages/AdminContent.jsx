@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { TERMS_SECTIONS } from "@/pages/Terms";
 import { PRIVACY_SECTIONS } from "@/pages/Privacy";
 import { THEMES, DEFAULT_THEME, applyTheme } from "@/lib/theme";
+import { clearGoogleMapsSettings } from "@/lib/googleMaps";
 import { cn } from "@/lib/utils";
 
 const THEME_KEY = "site.theme";
@@ -19,6 +20,8 @@ const THEME_KEY = "site.theme";
 // so a rendering-side wording tweak not mirrored here is cosmetic at worst,
 // not a functional bug.
 const FIELDS = [
+  { group: "Google Maps", key: "maps.google.browser_key", label: "Google Maps browser API key (restricted to MoveZW websites)", fallback: "" },
+  { group: "Google Maps", key: "maps.google.map_id", label: "Google Maps JavaScript map ID", fallback: "DEMO_MAP_ID" },
   { group: "Landing page", key: "landing.hero.title_main", label: "Hero title — first line", fallback: "Move Anything." },
   { group: "Landing page", key: "landing.hero.title_highlight", label: "Hero title — highlighted line", fallback: "Anywhere in Zimbabwe." },
   { group: "Landing page", key: "landing.hero.subtitle", label: "Hero subtitle", fallback: "Quickly find trusted, verified transport providers for your goods. Post a request in minutes, compare offers from local drivers, and track your delivery every step of the way.", multiline: true },
@@ -59,6 +62,10 @@ export default function AdminContent() {
   const save = async () => {
     setSaving(true);
     try {
+      const mapKey = String(values["maps.google.browser_key"] || "").trim();
+      if (mapKey && !/^AIza[0-9A-Za-z_-]{25,}$/.test(mapKey)) {
+        throw new Error("Enter a Google Maps browser API key beginning with AIza, or leave it empty. Server keys must not be entered here.");
+      }
       const rows = [
         ...FIELDS.map((f) => ({ key: f.key, value: values[f.key], updated_at: new Date().toISOString() })),
         { key: THEME_KEY, value: values[THEME_KEY], updated_at: new Date().toISOString() },
@@ -66,6 +73,7 @@ export default function AdminContent() {
       const { error } = await supabase.from("site_content").upsert(rows, { onConflict: "key" });
       if (error) throw error;
       applyTheme(values[THEME_KEY]);
+      clearGoogleMapsSettings();
       toast({ title: "Content updated", description: "Changes are live immediately — no rebuild needed." });
     } catch (e) {
       toast({ title: "Could not save", description: e.message, variant: "destructive" });
@@ -116,6 +124,8 @@ export default function AdminContent() {
           ))}
         </div>
       </div>
+
+      <p className="mb-6 text-sm text-muted-foreground">To enable Google Maps, enable billing and the Maps JavaScript API in Google Cloud, then enter your website-restricted browser key below. Leave the key empty to keep the current maps. Never enter a server or service-account key. Reload map screens after changing a key.</p>
 
       {GROUPS.map((group) => (
         <div key={group} className="mb-8">

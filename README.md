@@ -18,9 +18,11 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_VAPID_PUBLIC_KEY=your_web_push_vapid_public_key
 ```
 
-The website, PWA, admin dashboard, and installed Android app all use MapLibre
-with OpenStreetMap tiles and OSRM routes. No Google Maps API key or Google Cloud
-billing account is required.
+Maps can use interactive Google Maps on web, PWA, admin and the Android WebView.
+Until a Google browser key is configured, the existing MapLibre maps remain
+available. Road routes, distance estimates and pin reverse-address labels still
+use the existing OSRM/OpenStreetMap services; this change replaces the basemap,
+not the booking-distance provider.
 
 ## Android active-delivery background tracking
 
@@ -154,7 +156,7 @@ Release requirements (the source changes alone do not enable hosted delivery):
 4. Publish the web build and rebuild Android using `npm run android:prepare` with
    the production Supabase environment values configured. This command rejects
    missing configuration before syncing the native bundle. Build/sign/distribute
-   the updated APK/AAB (version 1.0.21, code 22) through the normal Android release process.
+   the updated APK/AAB (version 1.0.22, code 23) through the normal Android release process.
 5. Verify with approved online, busy and offline drivers (matching/nonmatching routes), an unapproved driver,
    and a suspended driver. Post multiple loads, close the customer app, and
    confirm one unread notification/popup per job for eligible drivers. Verify busy/offline drivers without matching routes get none. Background
@@ -174,3 +176,48 @@ Startup/import failures and React render failures now show recovery UI rather
 than a blank screen. The native bundle does not register a PWA service worker.
 The affected device's original blank-screen exception has not been reproduced;
 verify the new build on that device and collect Android/WebView logs if it persists.
+
+
+## Google Maps activation
+
+1. In Google Cloud, create/select a project, link a billing account and enable
+   **Maps JavaScript API**. This integration does not require enabling Google's
+   Routes/Places APIs: existing routing and address services remain in use.
+2. Create an API key with **Website** restrictions and **Maps JavaScript API**
+   as the only allowed API. Authorize `https://www.movezw.co.zw/*` and
+   `https://movezw.co.zw/*`. For the current Capacitor WebView, test a separate
+   browser key restricted to `https://localhost/*` on the physical Android build.
+   WebViews can omit referrers; if the restriction cannot be verified there,
+   use a native Maps SDK integration with its own Android-restricted key rather
+   than removing key restrictions. Do not put a service-account key here.
+3. Create a **JavaScript map ID**. `DEMO_MAP_ID` works for initial testing;
+   use your production map ID before release. Advanced markers require a map ID.
+4. Open **Admin → Site content → Google Maps**. Save the browser key and map ID,
+   then reload the app. These are public client configuration values, protected
+   by Google API/website restrictions, not server secrets. Only admins may edit
+   site content. Alternatively set `VITE_GOOGLE_MAPS_BROWSER_KEY` and
+   `VITE_GOOGLE_MAPS_MAP_ID` in the build environment (these override admin fields).
+5. Test map pan/zoom, satellite view, markers, pin selection, route lines and live
+   driver movement on web and physical Android. Nearby-driver coordinates stay
+   rounded by the existing server RPC. A map failure is isolated from delivery
+   controls. Google authorization failures and network timeouts offer retry UI.
+
+Google Cloud billing/key setup must be completed by the account owner before
+Google Maps can be activated. No Google map request is made while no key is set.
+
+## Driver location requirements
+
+Driver location defaults on. Online drivers and assigned active deliveries
+cannot disable MoveZW tracking through a stale app preference. The dashboard
+checks a fresh GPS fix every time a driver goes online; starting movement also
+requires a fix. Permission/GPS failures show an actionable banner, and tracking
+is rechecked on resume and every 30 seconds while the app is visible. Successful
+profile coordinates are saved at most once per minute; failed saves can retry.
+
+Android still controls the GPS switch and runtime permission. On the phone,
+open Settings → Apps → MoveZW → Permissions → Location, allow location while
+using the app (precise if offered), and keep the system Location switch on.
+Native active-delivery tracking retains its visible foreground-service
+notification; this does not introduce covert 24-hour/background tracking while
+an offline driver has no active delivery. Version 1.0.22 (23) must be built,
+signed and installed for these changes to reach existing native users.
