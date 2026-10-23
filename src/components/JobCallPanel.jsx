@@ -30,6 +30,7 @@ function CallPanel({ userId }) {
       } finally { refreshing = false; }
     };
     const start = async (event) => {
+      if (document.documentElement.dataset.movezwGroupAudio === 'joined') { setMessage('Leave the group call first.'); return; }
       if (current.current) { setMessage('Finish the current call first.'); return; }
       setMessage('');
       setBusy(true);
@@ -46,6 +47,11 @@ function CallPanel({ userId }) {
     window.addEventListener('movezw:start-call', start);
     return () => { alive = false; clearInterval(timer); window.removeEventListener('movezw:start-call', start); supabase.removeChannel(channel); };
   }, [userId]);
+  useEffect(() => {
+    if (!call?.expires_at) return;
+    const timer = setTimeout(() => setCall(null), Math.max(0, Date.parse(call.expires_at) - Date.now()));
+    return () => clearTimeout(timer);
+  }, [call?.id, call?.expires_at]);
   const incoming = call?.callee_id === userId;
   const ready = call && (!incoming || call.status === 'connecting');
   useEffect(() => {

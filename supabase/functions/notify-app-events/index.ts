@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   try {
    const {data:n,error}=await db.from('notifications').select('*').eq('id',job.notification_id).single();
    if(error) throw error;
-   const expired=['job_ring','in_app_call'].includes(n.type)&&Date.now()-Date.parse(n.created_at)>(n.type==='in_app_call'?45000:60000);
+   const expired=['job_ring','in_app_call','admin_group_call'].includes(n.type)&&(n.is_read||Date.now()-Date.parse(n.created_at)>180000);
    if(!expired) {
     const payload=()=>({title:n.title,body:n.message,url:n.link,tag:`movezw-event-${n.id}`});
     const ids=[n.user_id];

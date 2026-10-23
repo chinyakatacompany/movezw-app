@@ -1,9 +1,11 @@
+import DriverBidCard from '@/components/DriverBidCard';
+import { acceptOffer as acceptOfferRpc } from '@/lib/payments';
+import { toast } from '@/components/ui/use-toast';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { playNotificationChime } from '@/lib/sound';
-import { formatMoney } from '@/lib/movezw';
 import { offerRevision, pendingOfferQueue } from '@/lib/offerInbox';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
@@ -24,6 +26,7 @@ function OfferInbox({ userId }) {
   const [reviewed, setReviewed] = useState(() => readReviewed(storageKey));
   const [snapshot, setSnapshot] = useState({ offers: [], requests: [] });
   const [minimized, setMinimized] = useState(false);
+  const [acting, setActing] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -90,17 +93,19 @@ function OfferInbox({ userId }) {
 
   const queue = pendingOfferQueue(snapshot.offers, snapshot.requests, reviewed);
   const offer = queue[0];
-  const acknowledge = (view) => {
-    if (!offer) return;
-    const next = { ...reviewed, [offer.id]: offerRevision(offer) };
-    setReviewed(next);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* session state still works */ }
-    if (view) {
-      // Let the customer inspect the chosen offer without the next one
-      // covering the request page. Remaining offers stay in the inbox.
-      setMinimized(true);
-      navigate(`/customer/request/${offer.request_id}`);
-    }
+  const decide = async (item, accept) => {
+    setActing(item.id);
+    try {
+      if (accept) await acceptOfferRpc({ offerId: item.id });
+      else { const { error } = await supabase.rpc('decline_job_bid', { p_offer: item.id }); if (error) throw error; }
+      const next = { ...reviewed, [item.id]: offerRevision(item) };
+      setReviewed(next);
+      try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* session state remains */ }
+      setSnapshot(current => ({ ...current, offers: current.offers.filter(o => accept ? o.request_id !== item.request_id : o.id !== item.id) }));
+      toast({ title: accept ? 'Driver booked' : 'Offer declined' });
+      if (accept) { setMinimized(true); navigate(`/customer/request/${item.request_id}`); }
+    } catch (error) { toast({ title: 'Could not update offer', description: error.message, variant: 'destructive' }); }
+    finally { setActing(null); }
   };
   if (!offer) return null;
   return <>
@@ -109,19 +114,15 @@ function OfferInbox({ userId }) {
       {queue.length} unreviewed offer{queue.length === 1 ? '' : 's'}
     </button>}
     <Dialog open={!minimized} onOpenChange={(open) => { if (!open) setMinimized(true); }}>
-      <DialogContent className="max-w-sm max-h-[85dvh] overflow-y-auto rounded-2xl p-6" onPointerDownOutside={(event) => event.preventDefault()}>
-        <DialogTitle>New driver offer</DialogTitle>
+      <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl p-6" onPointerDownOutside={(event) => event.preventDefault()}>
+        <DialogTitle>MoveZW · Driver offers</DialogTitle>
         <DialogDescription>{queue.length} offer{queue.length === 1 ? '' : 's'} waiting for your review</DialogDescription>
-        <div className="space-y-2">
-          <p className="font-semibold text-lg">{offer.driver_name || 'Driver'}</p>
-          <p className="text-3xl font-bold text-primary">{formatMoney(offer.price)}</p>
-          <p className="text-sm">{offer.vehicle_type}{offer.eta_minutes ? ` · ${offer.eta_minutes} min to pickup` : ''}</p>
-          <p className="text-sm text-muted-foreground">{offer.request.cargo_type} · {offer.request.pickup_location} → {offer.request.destination}</p>
-          {offer.note && <p className="text-sm break-words">{offer.note}</p>}
+        <div className="max-h-[65dvh] space-y-3 overflow-y-auto -mx-2 px-1 pb-2">
+          {queue.map(item => <DriverBidCard key={item.id} offer={item} request={item.request} busy={Boolean(acting)}
+            onView={() => { setMinimized(true); navigate(`/customer/request/${item.request_id}?offer=${item.id}`); }}
+            onAccept={() => void decide(item, true)} onDecline={() => void decide(item, false)} />)}
         </div>
-        <button className="rounded-xl bg-primary text-primary-foreground py-3 font-semibold" onClick={() => acknowledge(true)}>View offer</button>
-        <button className="rounded-xl border py-3 font-medium" onClick={() => acknowledge(false)}>Dismiss notification</button>
-        <p className="text-xs text-muted-foreground">Dismissing this notification does not reject the bid. It stays on your request page.</p>
+        <button className="rounded-xl border py-3 font-medium" onClick={() => setMinimized(true)}>Review later</button>
       </DialogContent>
     </Dialog>
   </>;

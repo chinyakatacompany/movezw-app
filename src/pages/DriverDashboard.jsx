@@ -1,3 +1,4 @@
+import { useDriverProfileRefresh } from '@/hooks/useDriverProfileRefresh';
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -30,6 +31,7 @@ function timeOfDayGreeting() {
 export default function DriverDashboard() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
+  useDriverProfileRefresh(user?.id, setProfile);
   const [profileLoading, setProfileLoading] = useState(true);
   const [allOpenRequests, setOpenRequests] = useState(null);
   const openRequests = useUnexpiredRequests(allOpenRequests);

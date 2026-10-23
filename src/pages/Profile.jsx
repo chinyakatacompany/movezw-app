@@ -1,3 +1,4 @@
+import { useDriverProfileRefresh } from '@/hooks/useDriverProfileRefresh';
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -15,6 +16,7 @@ export default function Profile({ role }) {
   const { user, logout, checkUserAuth } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
+  useDriverProfileRefresh(role === "driver" ? user?.id : null, setProfile);
   const [editingPhone, setEditingPhone] = useState(false);
   const [phoneInput, setPhoneInput] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
@@ -158,6 +160,11 @@ export default function Profile({ role }) {
         )}
       </div>
 
+      {role === "driver" && status === "approved" && <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950">
+        <Shield className="mb-2 h-8 w-8 text-emerald-600" /><h2 className="text-xl font-bold">You’re a verified MoveZW driver</h2>
+        <p className="mt-1 text-sm">Admin has approved your driver profile. You can now receive jobs.</p>
+        <button className="mt-4 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white" onClick={() => navigate('/driver')}>Go to driver dashboard</button>
+      </section>}
       <div className="bg-card rounded-2xl border border-border divide-y divide-border">
         {user?.email && (
           <div className="flex items-center gap-3 p-4">

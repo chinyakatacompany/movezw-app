@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { privateCallDatabase } from './helpers/private-call-db.mjs';
+const migration = new URL('../migrations/20261023135951_verified_profiles_bid_cards_admin_groups.sql', import.meta.url);
+
+test('admin groups enforce invitation, role, consent, isolation, audio and host lifecycle', async () => {
+ const db=await privateCallDatabase();
+ try {
+  let sql=await readFile(migration,'utf8');
+  sql=sql.replace(/do \$\$ begin\s*if not exists\(select 1 from pg_publication_tables[\s\S]*?end \$\$;/,'');
+  await db.exec(sql);
+  const ids=Array.from({length:8},(_,i)=>`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`);
+  const [admin,driver,driver2,customer,stranger,admin2]=ids;
+  for(const [i,id] of ids.entries()) {
+   const role=i===0||i===5?'admin':i===1||i===2?'driver':'customer';
+   await db.query('insert into profiles(id,full_name,role) values($1,$2,$3)',[id,`Person ${i}`,role]);
+  }
+  const asUser=async id=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
+  const scalar=async(query,args=[])=>Object.values((await db.query(query,args)).rows[0])[0];
+  await asUser(driver);
+  await assert.rejects(db.query("select start_admin_group($1,'driver')",[[driver2]]),/administrator/);
+  await asUser(admin);
+  await assert.rejects(db.query("select start_admin_group($1,'driver')",[[driver,customer]]),/selected role/);
+  await assert.rejects(db.query("select start_admin_group($1,'customer')",[ids.slice(1,7)]),/one to five/);
+  const room=await scalar("select start_admin_group($1,'driver')",[[driver,driver2]]);
+  assert.equal(await scalar('select count(*)::int from admin_call_members where room_id=$1',[room]),3);
+  await assert.rejects(db.query("select send_admin_group_signal($1,$2,'ice','{}')",[room,driver]),/Joined group/);
+  await asUser(stranger);
+  assert.equal(await scalar('select count(*)::int from admin_call_rooms'),0);
+  await assert.rejects(db.query("select respond_admin_group($1,'join')",[room]),/Not invited/);
+  await asUser(admin2); assert.equal(await scalar('select count(*)::int from admin_call_rooms'),0,'another admin cannot eavesdrop');
+  await asUser(admin); await db.query("select respond_admin_group($1,'join')",[room]);
+  await asUser(driver); await db.query("select respond_admin_group($1,'join')",[room]);
+  await assert.rejects(db.query("select send_admin_group_signal($1,$2,'offer',$3)",[room,admin,{sdp:'m=audio'}]),/direction/);
+  await asUser(admin);
+  await assert.rejects(db.query("select send_admin_group_signal($1,$2,'offer',$3)",[room,driver,{sdp:'m=audio\nm=video'}]),/Audio only/);
+  await db.query("select send_admin_group_signal($1,$2,'offer',$3)",[room,driver,{type:'offer',sdp:'m=audio 9'}]);
+  await asUser(driver2);
+  assert.equal(await scalar('select count(*)::int from admin_call_signals'),0,'invited third member cannot read pair signals');
+  await db.query("select respond_admin_group($1,'decline')",[room]);
+  await assert.rejects(db.query("select respond_admin_group($1,'join')",[room]),/expired/);
+  await asUser(driver);
+  assert.equal(await scalar('select count(*)::int from admin_call_signals'),1);
+  await assert.rejects(db.query("insert into admin_call_signals(room_id,sender_id,recipient_id,kind,payload) values($1,$2,$3,'ice','{}')",[room,driver,admin]),/permission denied/);
+  await asUser(admin); await db.query("select respond_admin_group($1,'leave')",[room]);
+  await asUser(driver);
+  assert.equal(await scalar('select admin_group_access($1)',[room]),false);
+  await assert.rejects(db.query("select send_admin_group_signal($1,$2,'ice','{}')",[room,admin]),/Joined group/);
+  await asUser(admin);
+  const customerRoom=await scalar("select start_admin_group($1,'customer')",[[customer]]);
+  await db.query("select respond_admin_group($1,'join')",[customerRoom]);
+  await db.exec('reset role'); await db.query("update admin_call_rooms set last_seen_at=now()-interval '1 minute' where id=$1",[customerRoom]);
+  await asUser(customer); assert.equal(await scalar('select admin_group_access($1)',[customerRoom]),false,'host disconnect closes access');
+  await db.exec('reset role');
+  await db.query("insert into driver_profiles(user_id,verification_status,vehicle_type,capacity_tonnes) values($1,'approved','3 Ton Truck',3)",[driver]);
+  const job=ids[6];
+  await db.query("insert into transport_requests values($1,$2,null,'open')",[job,customer]);
+  const offer=await scalar("insert into offers(request_id,driver_id,status,price,capacity_tonnes) values($1,$2,'pending',25,999) returning id",[job,driver]);
+  assert.equal(Number(await scalar('select capacity_tonnes from offers where id=$1',[offer])),3,'capacity comes from driver profile, not forged bid');
+  await asUser(stranger); await assert.rejects(db.query('select decline_job_bid($1)',[offer]),/job owner/);
+  await asUser(driver); const ring=await scalar('select ring_job_party($1,$2)',[job,customer]);
+  assert.equal(await scalar('select job_ring_active($1)',[ring]),true);
+  await asUser(stranger); await assert.rejects(db.query('select stop_job_ring($1)',[ring]),/Not authorized/);
+  await asUser(driver); await db.query('select stop_job_ring($1)',[ring]);
+  assert.equal(await scalar('select job_ring_active($1)',[ring]),false);
+  await asUser(customer); await db.query('select decline_job_bid($1)',[offer]);
+  await assert.rejects(db.query('select fn_accept_offer($1)',[offer]),/no longer available/);
+  await db.exec('reset role'); assert.equal(await scalar('select status from offers where id=$1',[offer]),'rejected');
+  const replacement=await scalar("insert into offers(request_id,driver_id,status,price) values($1,$2,'pending',30) returning id",[job,driver]);
+  await asUser(customer); await db.query('select fn_accept_offer($1)',[replacement]);
+  await assert.rejects(db.query('select decline_job_bid($1)',[replacement]),/job owner/);
+  await db.exec('reset role'); assert.equal(await scalar('select status from offers where id=$1',[replacement]),'accepted');
+ } finally { await db.close(); }
+});

@@ -198,7 +198,7 @@ export const AuthProvider = ({ children }) => {
           const n = payload.new;
           // Customer bids have a persistent queue above the router. Do not
           // replace them with transient toasts or navigate away from forms.
-          if (['driver_registered', 'job_ring', 'in_app_call'].includes(n.type)) return;
+          if (['driver_registered', 'job_ring', 'in_app_call', 'admin_group_call'].includes(n.type)) return;
           if (user.role === 'customer' && n.type === 'new_offer') return;
           if (user.role === 'driver' && n.type === 'job_assigned') return;
           playNotificationChime();

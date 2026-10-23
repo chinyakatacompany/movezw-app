@@ -10,7 +10,7 @@ function worker({failure=false,expired=false}={}) {
  const state={claims:0,sent:0,completed:0};
  const client={
   async rpc(name,args){ if(name==='authorize_driver_job_push')return {data:args.p_token==='worker-secret'}; state.claims++;return {data:[{notification_id:'event',attempts:1}]}; },
-  from(table){return {select(){return this;},eq(){return this;},update(){return this;},async single(){return {data:{id:'event',user_id:'customer',type:expired?'job_ring':'new_offer',created_at:new Date(Date.now()-(expired?120000:0)).toISOString(),title:'Alert',message:'Fixed alert',link:'/customer/request/job'}};},then(resolve){if(table==='app_push_outbox')state.completed++;return Promise.resolve({data:[]}).then(resolve);}};}
+  from(table){return {select(){return this;},eq(){return this;},update(){return this;},async single(){return {data:{id:'event',user_id:'customer',type:expired?'job_ring':'new_offer',created_at:new Date(Date.now()-(expired?240000:0)).toISOString(),title:'Alert',message:'Fixed alert',link:'/customer/request/job'}};},then(resolve){if(table==='app_push_outbox')state.completed++;return Promise.resolve({data:[]}).then(resolve);}};}
  };
  vm.runInNewContext(code,{createClient:()=>client,getServiceRoleKey:()=>'',initWebPush:()=>({publicKey:'web',privateKey:'private'}),sendPushToUsers:async()=>{state.sent++;},sendNativePushToUsers:async()=>{if(failure)throw Error('Provider down');},verifyNativePushConfiguration:async()=>true,Deno:{serve:f=>{handler=f;},env:{get:()=>undefined}},Response,Date,console:{error(){}}});
  return {state,run:(token='worker-secret',body={})=>handler(new Request('https://example.test',{method:'POST',headers:{'x-movezw-job-token':token},body:JSON.stringify(body)}))};
