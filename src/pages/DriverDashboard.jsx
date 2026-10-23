@@ -4,6 +4,7 @@ import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useUnexpiredRequests } from "@/lib/useUnexpiredRequests";
 import { Package, Shield, AlertCircle, Truck, ChevronRight, Wifi, Briefcase, Route as RouteIcon, Target, Loader2, MapPin, CheckCircle2 } from "lucide-react";
+import LoadingScreen from "@/components/LoadingScreen";
 import RequestCard from "@/components/RequestCard";
 import DriverDeliveryPanel from "@/components/DriverDeliveryPanel";
 import { EmptyState, formatMoney } from "@/lib/movezw";
@@ -236,7 +237,7 @@ export default function DriverDashboard() {
   };
 
   if (profileLoading) {
-    return <div className="p-8 flex justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+    return <LoadingScreen />;
   }
 
   if (!profile) {
