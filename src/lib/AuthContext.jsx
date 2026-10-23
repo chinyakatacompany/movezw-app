@@ -3,6 +3,7 @@ import { toast as sonnerToast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/api/supabaseClient';
+import { withTimeout } from '@/lib/withTimeout';
 import { playNotificationChime, unlockAudioOnFirstGesture } from '@/lib/sound';
 
 const AuthContext = createContext();
@@ -46,18 +47,18 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserProfile = async (authUser) => {
     try {
-      let { data: profile, error } = await supabase
+      let { data: profile, error } = await withTimeout(supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .single());
 
       // Signup normally creates this row through handle_new_user(). If an
       // older/broken trigger ever left a valid Auth account without its app
       // profile, repair only the currently authenticated user's own row from
       // the trusted auth metadata instead of leaving them unable to log in.
       if (error?.code === 'PGRST116') {
-        const repaired = await supabase.rpc('ensure_my_profile');
+        const repaired = await withTimeout(supabase.rpc('ensure_my_profile'));
         profile = repaired.data;
         error = repaired.error;
       }
@@ -70,10 +71,10 @@ export const AuthProvider = ({ children }) => {
       let phone = profile?.phone || '';
       const pendingPhone = sessionStorage.getItem('movzw_signup_phone');
       if (pendingPhone && !phone) {
-        const { error: phoneErr } = await supabase
+        const { error: phoneErr } = await withTimeout(supabase
           .from('profiles')
           .update({ phone: pendingPhone })
-          .eq('id', authUser.id);
+          .eq('id', authUser.id));
         if (!phoneErr) phone = pendingPhone;
         sessionStorage.removeItem('movzw_signup_phone');
       }
@@ -88,10 +89,10 @@ export const AuthProvider = ({ children }) => {
       const pendingRole = sessionStorage.getItem('movzw_signup_role');
       const pendingRoleOwner = sessionStorage.getItem('movzw_signup_user_id');
       if (pendingRole === 'driver' && pendingRoleOwner === authUser.id && role === 'customer') {
-        const { error: roleErr } = await supabase
+        const { error: roleErr } = await withTimeout(supabase
           .from('profiles')
           .update({ role: 'driver' })
-          .eq('id', authUser.id);
+          .eq('id', authUser.id));
         if (!roleErr) role = 'driver';
       }
 
@@ -106,10 +107,10 @@ export const AuthProvider = ({ children }) => {
       const pendingTerms = sessionStorage.getItem('movzw_signup_terms_accepted');
       if (pendingTerms === '1' && pendingRoleOwner === authUser.id && !termsAcceptedAt) {
         const now = new Date().toISOString();
-        const { error: termsErr } = await supabase
+        const { error: termsErr } = await withTimeout(supabase
           .from('profiles')
           .update({ terms_accepted_at: now })
-          .eq('id', authUser.id);
+          .eq('id', authUser.id));
         if (!termsErr) termsAcceptedAt = now;
       }
 
@@ -160,7 +161,7 @@ export const AuthProvider = ({ children }) => {
   const checkUserAuth = async () => {
     setIsLoadingAuth(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withTimeout(supabase.auth.getSession());
       if (session?.user) {
         await loadUserProfile(session.user);
       } else {
