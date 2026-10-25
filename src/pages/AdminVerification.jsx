@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createNotification } from "@/lib/movezw";
 import { getVerificationDocSignedUrl } from "@/lib/documents";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 export default function AdminVerification() {
@@ -15,6 +16,7 @@ export default function AdminVerification() {
   const [filter, setFilter] = useState("pending");
   const [selected, setSelected] = useState(null);
   const [note, setNote] = useState("");
+  const [reviewed, setReviewed] = useState(false);
   const [acting, setActing] = useState(null);
   const [noProfileDrivers, setNoProfileDrivers] = useState(null);
   const [unapproveTarget, setUnapproveTarget] = useState(null);
@@ -51,21 +53,46 @@ export default function AdminVerification() {
     return () => clearInterval(timer);
   }, []);
 
-  const decide = async (profile, decision) => {
+  const documentFields = ["national_id_url", "driver_licence_url", "vehicle_registration_url"];
+  const documentsPresent = (profile) => documentFields.every((field) => Boolean(profile?.[field]));
+  const closeReview = () => { setSelected(null); setNote(""); setReviewed(false); };
+  const reviewAgain = async (profile) => {
     setActing(profile.id);
     try {
-      const { error } = await supabase
-        .from("driver_profiles")
-        .update({
-          verification_status: decision,
-          verification_note: note || (decision === "approved" ? "Documents verified." : "Please re-upload clear documents."),
-        })
-        .eq("id", profile.id);
+      const { data, error } = await supabase.from("driver_profiles").select("*").eq("id", profile.id).single();
       if (error) throw error;
-      await createNotification(profile.user_id, "verification", decision === "approved" ? "You're verified! ✅" : "Verification update", decision === "approved" ? "Your driver account is approved. You can now receive jobs." : "Your documents need attention. Please re-upload.", "/driver");
-      toast({ title: decision === "approved" ? "Driver approved" : "Driver rejected" });
-      setSelected(null);
+      if (data.verification_status !== "rejected") {
+        toast({ title: "Driver status changed", description: "Refresh the list to see the latest verification status." });
+        load();
+        return;
+      }
+      setSelected(data);
       setNote("");
+      setReviewed(false);
+    } catch (error) { toast({ title: "Could not open review", description: error.message, variant: "destructive" }); }
+    finally { setActing(null); }
+  };
+
+  const decide = async (profile, decision) => {
+    const reapproving = profile.verification_status === "rejected" && decision === "approved";
+    if (reapproving && (!reviewed || !documentsPresent(profile))) return;
+    setActing(profile.id);
+    try {
+      let update = supabase.from("driver_profiles").update({
+        verification_status: decision,
+        verification_note: (reapproving ? note.trim() : "") || (decision === "approved"
+          ? reapproving ? "Documents reviewed again and approved." : "Documents verified."
+          : "Please re-upload clear documents."),
+      }).eq("id", profile.id).eq("verification_status", profile.verification_status);
+      // Approve only the document versions the admin actually reviewed.
+      if (reapproving) documentFields.forEach((field) => { update = update.eq(field, profile[field]); });
+      const { data, error } = await update.select("id,verification_status").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Driver status or documents changed. Reopen the review before approving.");
+      if (data.verification_status !== decision) throw new Error("The verification decision was not saved. Check administrator access and try again.");
+      await createNotification(profile.user_id, "verification", decision === "approved" ? "You're verified! ✅" : "Verification update", decision === "approved" ? "Your driver account is approved. You can now receive jobs." : "Your documents need attention. Please re-upload.", "/driver");
+      toast({ title: reapproving ? "Driver reapproved" : decision === "approved" ? "Driver approved" : "Driver rejected" });
+      closeReview();
       load();
     } catch (e) {
       toast({ title: "Action failed", description: e.message, variant: "destructive" });
@@ -201,6 +228,11 @@ export default function AdminVerification() {
                   </Button>
                 </div>
               )}
+              {p.verification_status === "rejected" && (
+                <button type="button" className="flex w-full mt-3 min-h-9 items-center justify-center rounded-md border border-emerald-300 px-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50" disabled={Boolean(acting)} onClick={() => void reviewAgain(p)}>
+                  {acting === p.id ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <FileText className="w-4 h-4 mr-1.5" />} Review again
+                </button>
+              )}
               {p.verification_status === "approved" && (
                 <Button
                   size="sm"
@@ -219,6 +251,28 @@ export default function AdminVerification() {
           ))}
         </div>
       )}
+
+      <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open && !acting) closeReview(); }}>
+        <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl">
+          <DialogTitle>Review {selected?.full_name || "driver"} again</DialogTitle>
+          <DialogDescription>Review the current documents before reapproving this rejected driver.</DialogDescription>
+          {selected?.verification_note && <p className="rounded-xl bg-muted p-3 text-sm"><span className="font-semibold">Previous decision: </span>{selected.verification_note}</p>}
+          <div className="grid grid-cols-3 gap-2">
+            {selected?.national_id_url && <DocLink label="National ID" url={selected.national_id_url} />}
+            {selected?.driver_licence_url && <DocLink label="Licence" url={selected.driver_licence_url} />}
+            {selected?.vehicle_registration_url && <DocLink label="Registration" url={selected.vehicle_registration_url} />}
+          </div>
+          {!documentsPresent(selected) && <div className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">All three documents are required before reapproval. <Link className="font-semibold underline" to={`/admin/verification/${selected?.user_id}/onboard`}>Upload or replace documents</Link></div>}
+          <label className="space-y-2 text-sm font-medium">Review note (optional)
+            <textarea className="block min-h-20 w-full rounded-xl border bg-background p-3 font-normal" maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} disabled={Boolean(acting)} placeholder="Summarize the document review" />
+          </label>
+          <label className="flex items-start gap-3 text-sm"><input type="checkbox" className="mt-1" checked={reviewed} onChange={(event) => setReviewed(event.target.checked)} disabled={Boolean(acting) || !documentsPresent(selected)} />I have reviewed the current ID, driving licence and vehicle registration and confirm they are acceptable.</label>
+          <button type="button" className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50" disabled={Boolean(acting) || !reviewed || !documentsPresent(selected)} onClick={() => selected && void decide(selected, "approved")}>
+            {acting === selected?.id ? "Reapproving…" : "Reapprove driver"}
+          </button>
+          <button type="button" className="rounded-xl border px-4 py-3 text-sm" disabled={Boolean(acting)} onClick={closeReview}>Cancel</button>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={Boolean(unapproveTarget)}
