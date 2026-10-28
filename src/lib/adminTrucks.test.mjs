@@ -33,6 +33,18 @@ test('bar chart groups equal capacities, sorts numerically and separates unknown
   assert.deepEqual(truckTonnageCounts([
     {capacity_tonnes: 20}, {capacity_tonnes: '3'}, {vehicle_type: '3 Ton Truck'},
     {capacity_tonnes: 0.5}, {vehicle_type: 'Pickup'}, {capacity_tonnes: -2},
-  ]), [{tonnage: '0.5 t', trucks: 1}, {tonnage: '3 t', trucks: 2}, {tonnage: '20 t', trucks: 1}, {tonnage: 'Not provided', trucks: 2}]);
-  assert.deepEqual(truckTonnageCounts([]), []);
+  ]), [{tonnage: '0.5 t', trucks: 1}, {tonnage: '3 t', trucks: 2}, {tonnage: '20 t', trucks: 1}, {tonnage: '30 t', trucks: 0}, {tonnage: 'Not provided', trucks: 1}, {tonnage: 'Pickup', trucks: 1}, {tonnage: 'Articulated Truck', trucks: 0}, {tonnage: 'Cargo Van', trucks: 0}]);
+  assert.deepEqual(truckTonnageCounts([]), [{tonnage: '30 t', trucks: 0}, {tonnage: 'Pickup', trucks: 0}, {tonnage: 'Articulated Truck', trucks: 0}, {tonnage: 'Cargo Van', trucks: 0}]);
+});
+
+test('named vehicle categories remain separate even with recorded tonnage and count each vehicle once', () => {
+  const rows = [{vehicle_type: 'Pickup', capacity_tonnes: 1}, {vehicle_type: 'Articulated Truck', capacity_tonnes: 30}, {vehicle_type: ' cargo van ', capacity_tonnes: 3}, {vehicle_type: '3 Ton Truck', capacity_tonnes: 3}];
+  const chart = truckTonnageCounts(rows);
+  assert.deepEqual(chart, [{tonnage: '3 t', trucks: 1}, {tonnage: '30 t', trucks: 0}, {tonnage: 'Pickup', trucks: 1}, {tonnage: 'Articulated Truck', trucks: 1}, {tonnage: 'Cargo Van', trucks: 1}]);
+  assert.equal(chart.reduce((total, row) => total + row.trucks, 0), rows.length);
+});
+
+test('30 tonne trucks have a dedicated capacity group', () => {
+  const chart = truckTonnageCounts([{vehicle_type: '30 Ton Truck'}, {capacity_tonnes: 30, vehicle_type: '30 Ton Truck'}]);
+  assert.equal(chart.find((row) => row.tonnage === '30 t').trucks, 2);
 });

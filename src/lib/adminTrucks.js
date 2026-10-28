@@ -13,8 +13,16 @@ export function truckMatches(truck, search) {
 }
 
 export function truckTonnageCounts(trucks) {
-  const counts = new Map();
+  const categories = ["Pickup", "Articulated Truck", "Cargo Van"];
+  const categoryCounts = new Map(categories.map((type) => [type, 0]));
+  const counts = new Map([[30, 0]]);
   for (const truck of trucks) {
+    const type = String(truck.vehicle_type || "").trim().toLowerCase();
+    const category = categories.find((name) => name.toLowerCase() === type);
+    if (category) {
+      categoryCounts.set(category, categoryCounts.get(category) + 1);
+      continue;
+    }
     const recorded = Number(truck.capacity_tonnes);
     const legacy = String(truck.vehicle_type || '').match(/(\d+(?:\.\d+)?)\s*ton/i);
     const capacity = Number.isFinite(recorded) && recorded > 0 ? recorded : Number(legacy?.[1]);
@@ -22,5 +30,6 @@ export function truckTonnageCounts(trucks) {
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   return [...counts.entries()].sort(([a], [b]) => a === null ? 1 : b === null ? -1 : a - b)
-    .map(([tonnes, trucks]) => ({ tonnage: tonnes === null ? 'Not provided' : `${tonnes} t`, trucks }));
+    .map(([tonnes, trucks]) => ({ tonnage: tonnes === null ? 'Not provided' : `${tonnes} t`, trucks }))
+    .concat(categories.map((type) => ({ tonnage: type, trucks: categoryCounts.get(type) })));
 }
