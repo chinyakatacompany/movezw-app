@@ -112,17 +112,17 @@ export default function AdminTrucks() {
       <p className="text-xs text-muted-foreground mb-5">Available means approved, online, account active and no active assigned job. {updatedAt && `Last refreshed ${updatedAt.toLocaleTimeString()}.`}</p>
       {trucks === null && !error ? <div role="status" className="flex justify-center gap-2 py-16"><Loader2 className="h-5 w-5 animate-spin" />Loading trucks…</div> : trucks !== null && <>
         <section aria-labelledby="truck-capacity-chart" className="bg-card border border-border rounded-2xl p-4 sm:p-5 mb-6">
-          <h2 id="truck-capacity-chart" className="font-bold text-lg">Trucks by tonnage</h2>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">Number of registered vehicles at each payload capacity. Uses the search and filters above.</p>
-          {tonnageCounts.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">No trucks match these filters.</p> : <>
-            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Truck count by tonnage bar chart; scroll horizontally if needed">
-              <div style={{ minWidth: Math.max(480, tonnageCounts.length * 72), height: 300 }}>
+          <h2 id="truck-capacity-chart" className="font-bold text-lg">Trucks by tonnage and vehicle type</h2>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">Vehicle counts by payload capacity, with separate Pickup, Articulated Truck and Cargo Van categories. Uses the search and filters above.</p>
+          {visible.length === 0 ? <p className="text-sm text-muted-foreground py-8 text-center">No trucks match these filters.</p> : <>
+            <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Truck count by tonnage and vehicle type bar chart; scroll horizontally if needed">
+              <div style={{ minWidth: Math.max(600, tonnageCounts.length * 125), height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={tonnageCounts} margin={{ top: 24, right: 24, bottom: 25, left: 12 }} accessibilityLayer>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                    <XAxis dataKey="tonnage" interval={0} height={55} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} label={{ value: "Tonnage (tonnes)", position: "insideBottom", offset: -8, fill: "hsl(var(--foreground))" }} />
+                    <XAxis dataKey="tonnage" interval={0} height={55} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} label={{ value: "Tonnage (tonnes) / vehicle type", position: "insideBottom", offset: -8, fill: "hsl(var(--foreground))" }} />
                     <YAxis allowDecimals={false} width={54} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} label={{ value: "Number of trucks", angle: -90, position: "insideLeft", fill: "hsl(var(--foreground))", style: { textAnchor: "middle" } }} />
-                    <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: 12 }} formatter={(value) => [value, "Trucks"]} labelFormatter={(label) => label === "Not provided" ? "Tonnage not provided" : `${label} payload`} />
+                    <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: 12 }} formatter={(value) => [value, "Trucks"]} labelFormatter={(label) => label === "Not provided" ? "Tonnage not provided" : / t$/.test(String(label)) ? `${label} payload` : label} />
                     <Bar dataKey="trucks" name="Trucks" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={64} isAnimationActive={false}>
                       <LabelList dataKey="trucks" position="top" fill="hsl(var(--foreground))" fontSize={12} />
                     </Bar>
@@ -130,8 +130,8 @@ export default function AdminTrucks() {
                 </ResponsiveContainer>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 sm:hidden">Scroll the chart sideways to see every tonnage.</p>
-            <table className="sr-only"><caption>Truck counts by payload capacity for current filters</caption><thead><tr><th scope="col">Tonnage</th><th scope="col">Number of trucks</th></tr></thead><tbody>{tonnageCounts.map((row) => <tr key={row.tonnage}><th scope="row">{row.tonnage}</th><td>{row.trucks}</td></tr>)}</tbody></table>
+            <p className="text-xs text-muted-foreground mt-1 sm:hidden">Scroll the chart sideways to see every tonnage and vehicle category.</p>
+            <table className="sr-only"><caption>Truck counts by payload capacity and vehicle type for current filters</caption><thead><tr><th scope="col">Tonnage / vehicle type</th><th scope="col">Number of trucks</th></tr></thead><tbody>{tonnageCounts.map((row) => <tr key={row.tonnage}><th scope="row">{row.tonnage}</th><td>{row.trucks}</td></tr>)}</tbody></table>
           </>}
         </section>
         <p className="text-sm text-muted-foreground mb-3">Showing {visible.length} of {trucks.length} registered vehicles{error ? " · Last successful refresh" : ""}</p>
