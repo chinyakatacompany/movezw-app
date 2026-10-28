@@ -1,3 +1,4 @@
+import AdminTrucks from "@/pages/AdminTrucks";
 import AdminGroupCallPanel from '@/components/AdminGroupCallPanel';
 import AdminGroupCalls from '@/pages/AdminGroupCalls';
 import AttentionInbox from '@/components/AttentionInbox';
@@ -212,6 +213,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/verification/:userId/onboard" element={<AdminAssistedOnboarding />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/jobs" element={<AdminJobs />} />
+          <Route path="/admin/trucks" element={<AdminTrucks />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/finance" element={<AdminFinance />} />

@@ -13,6 +13,7 @@ const nav = [
   { to: "/admin/verification", label: "Driver Verification", icon: BadgeCheck },
   { to: "/admin/users", label: "User Management", icon: Users },
   { to: "/admin/jobs", label: "Job Management", icon: Package },
+  { to: "/admin/trucks", label: "Truck Management", icon: Truck },
   { to: "/admin/calls", label: "Group Calls", icon: Phone },
   { to: "/admin/messages", label: "Messages", icon: MessageCircle },
   { to: "/admin/finance", label: "Finance", icon: Wallet },
