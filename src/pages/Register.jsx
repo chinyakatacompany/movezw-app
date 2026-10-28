@@ -1,3 +1,6 @@
+import PlayStoreLink from "@/components/PlayStoreLink";
+import { useReferralSettings } from "@/hooks/useReferralSettings";
+import { normalizeReferralCode } from "@/lib/referrals";
 import EmailConfirmationHelp from "@/components/EmailConfirmationHelp";
 import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
@@ -21,7 +24,9 @@ export default function Register() {
   // "Become a Driver" / "Book Transport" land pre-selected instead of
   // requiring a second click.
   const roleParam = searchParams.get("role");
-  const [accountType, setAccountType] = useState(roleParam === "driver" ? "driver" : "customer");
+  const [accountType, setAccountType] = useState((roleParam === "driver" || searchParams.has("ref")) ? "driver" : "customer");
+  const [referralCode, setReferralCode] = useState(normalizeReferralCode(searchParams.get("ref")));
+  const referralsEnabled = useReferralSettings();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -59,6 +64,14 @@ export default function Register() {
     // ways), but not two of the same. Checked server-side (fn_phone_has_account)
     // since profiles RLS blocks looking up anyone else's row from the client.
     setLoading(true);
+    if (accountType === "driver" && referralCode && referralsEnabled !== false) {
+      const { data: valid, error: referralError } = await supabase.rpc("valid_driver_referral_code", { p_code: normalizeReferralCode(referralCode) });
+      if (referralError || !valid) {
+        setLoading(false);
+        setError(referralError ? "Could not check the referral code. Retry, or remove it to register without a referral." : "This referral code is invalid or referrals are paused. Check the code or remove it to continue.");
+        return;
+      }
+    }
     const { data: hasAccount, error: checkErr } = await supabase.rpc("fn_phone_has_account", {
       p_phone: phone,
       p_role: accountType,
@@ -108,7 +121,7 @@ export default function Register() {
       // email confirmation reliably, since that link is often opened in a
       // different tab/app.
       options: {
-        data: { full_name: fullName, phone, role: "driver" },
+        data: { full_name: fullName, phone, role: "driver", ...(referralCode && referralsEnabled !== false ? { driver_referral_code: normalizeReferralCode(referralCode) } : {}) },
         // Hardcoded, not window.location.origin — inside the native
         // Android app that's https://localhost (Capacitor's WebView
         // origin), not the real site, which would send a confirmation
@@ -225,6 +238,9 @@ export default function Register() {
 
       {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
 
+      {accountType === "driver" && searchParams.has("ref") && <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 mb-5"><h2 className="font-bold">You’re invited to drive with MoveZW</h2><p className="text-sm text-muted-foreground mt-2">Register here, or download the Android app below. After installing, return to this link or enter referral code <strong className="text-foreground select-all">{normalizeReferralCode(searchParams.get("ref"))}</strong> before signing up.</p><PlayStoreLink className="bg-primary text-primary-foreground rounded-xl px-4 py-3 mt-3 text-sm font-semibold">Download MoveZW for Android</PlayStoreLink></div>}
+      {accountType === "driver" && referralsEnabled === false && <p role="status" className="text-sm bg-amber-50 text-amber-900 border border-amber-200 rounded-xl p-3 mb-4">Referrals are paused. You can still register, but no referral reward will be issued for this signup.</p>}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full name</Label>
@@ -236,6 +252,7 @@ export default function Register() {
         </div>
         {accountType === "driver" && (
           <>
+            <div className="space-y-2"><label htmlFor="referral-code" className="text-sm font-medium">Driver referral code (optional)</label><input id="referral-code" value={referralCode} onChange={(event) => setReferralCode(normalizeReferralCode(event.target.value))} maxLength={15} placeholder="MZW…" disabled={referralsEnabled === false} className="w-full border border-input bg-background rounded-md px-3 h-12 uppercase disabled:opacity-50" /><p className="text-xs text-muted-foreground">The driver who invited you earns $0.50 commission credit after your email, documents and admin verification are complete. Add the code before creating your account.</p></div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">

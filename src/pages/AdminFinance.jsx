@@ -85,7 +85,7 @@ export default function AdminFinance() {
         supabase.from("refund_requests").select("*").order("requested_at", { ascending: false }).limit(200),
         supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(200),
         getCommissionConfig(),
-        supabase.from("transactions").select("*").eq("type", "topup").order("created_at", { ascending: false }).limit(200),
+        supabase.from("transactions").select("*").eq("type", "topup").or("gateway.is.null,gateway.neq.referral_program,referral_credit_amount.eq.0").order("created_at", { ascending: false }).limit(200),
       ]);
       setJobs(allJobs || []);
       setRefunds(allRefunds || []);

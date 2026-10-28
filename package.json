@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "android:prepare": "node scripts/prepare-android.mjs"
+    "android:prepare": "node scripts/prepare-android.mjs",
+    "test:referrals": "node scripts/test-driver-referrals.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

@@ -296,3 +296,35 @@ mobile audio, as described above. No TURN service has been provisioned and no
 signed APK has been generated. Rebuild/sign/distribute 1.0.24 (25) for native users.
 Additional checks: `node --test src/hooks/*.test.mjs src/lib/groupAudio.test.mjs
 src/lib/bidPresentation.test.mjs supabase/tests/admin-groups-bids.test.mjs`.
+
+## Driver referral rewards
+
+Drivers can open **Profile → Refer drivers** or **Wallet → Refer drivers** to
+copy/share a code and registration/download link. Signup captures the code once
+on account creation; existing accounts cannot add or change their referrer.
+The download button uses the existing Google Play listing. For a fresh install,
+return to the invitation link or enter the displayed code before signing up;
+deferred install attribution is not automatic. Native App Links retain `ref`
+when Android opens the registration URL in an installed compatible build.
+
+Each distinct referred driver earns the referrer $0.50 after email confirmation,
+admin approval and all three document paths are present. There is no referral
+limit. Reapproval never repeats the reward. Referrals are unique per account
+and normalized signup phone; same-phone self-referrals are excluded. Approval
+is still a human document-review decision, not an automatic identity guarantee.
+
+**Admin → Referrals** pauses new attribution and rewards across the app. Existing
+credit and pending referrals remain; resuming releases eligible pending rewards.
+The database enforces the switch, independent of client refreshes.
+
+Referral credit is included in the commission balance, consumed first for fees,
+and excluded from withdrawals. Cancellation and approved commission refunds
+restore the promotional portion as fee-only credit. Rewards do not increase
+job earnings or count as cash top-ups in the admin finance queue. Existing
+minimum wallet-balance rules still apply.
+
+Apply the `driver_referral_rewards` migration before deploying this frontend.
+Run `npm run test:referrals` for isolated Postgres integration checks using
+PGlite, including authorization, pause/resume and wallet/refund rules. These
+checks create no real users or wallet entries. Native installations need a new
+signed Android build to receive the referral UI.
