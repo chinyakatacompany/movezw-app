@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon, Lock, AlertTriangle, Trash2, X } from "lucide-react";
+import { Gift, LogOut, User as UserIcon, Mail, Phone, Shield, ChevronRight, Receipt, LifeBuoy, Car, FileText, Wallet as WalletIcon, History, Repeat, Pencil, Check, Loader2, Sun, Moon, Lock, AlertTriangle, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -295,6 +295,8 @@ export default function Profile({ role }) {
           <ChevronRight className="w-5 h-5 text-muted-foreground" />
         </button>
       )}
+
+      {role === "driver" && <Link to="/driver/referrals" className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4"><Gift className="w-5 h-5 text-primary" /><span className="text-sm font-medium flex-1 text-left">Refer drivers · Earn wallet credit</span><ChevronRight className="w-5 h-5 text-muted-foreground" /></Link>}
 
       <button onClick={() => navigate("/wallet")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <WalletIcon className="w-5 h-5 text-primary" />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -72,7 +72,15 @@ export default function Wallet() {
     setLoading(false);
   };
 
-  useEffect(() => { load();   }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id) return;
+    void load();
+    const channel = supabase.channel(`wallet-referrals-${user.id}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => { void load(); }).subscribe();
+    const refresh = () => { if (document.visibilityState === "visible") void load(); };
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); void supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   const submitTopUp = async (e) => {
     e.preventDefault();
@@ -186,6 +194,8 @@ export default function Wallet() {
         </Button>
       )}
 
+      {isDriver && <div className="bg-card rounded-2xl border border-primary/20 p-4 mb-5"><p className="font-semibold">Referral credit: {formatMoney(wallet.referral_credit || 0)}</p><p className="text-xs text-muted-foreground mt-1">Included in your commission balance. Used first for MoveZW deductions; cannot be withdrawn.</p><Link to="/driver/referrals" className="inline-block text-sm font-semibold text-primary mt-3">Refer drivers · Earn wallet credit →</Link></div>}
+
       {/* Payment methods */}
       <div className="bg-card rounded-2xl border border-border p-4 mb-5">
         <h2 className="text-sm font-semibold mb-1">Payment methods</h2>
@@ -223,7 +233,7 @@ export default function Wallet() {
       ) : (
         <div className="space-y-2 mb-6">
           {transactions.map((t) => {
-            const meta = TYPE_META[t.type] || { label: t.type, in: t.direction === "in" };
+            const meta = (t.gateway === "referral_program" && t.referral_credit_amount > 0 ? { label: "Driver referral reward", in: true } : TYPE_META[t.type]) || { label: t.type, in: t.direction === "in" };
             const isIn = t.direction === "in";
             const StatusIcon = t.status === "completed" ? CheckCircle2 : t.status === "pending" ? Clock : X;
             return (

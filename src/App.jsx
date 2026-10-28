@@ -1,3 +1,5 @@
+import DriverReferrals from "@/pages/DriverReferrals";
+import AdminReferrals from "@/pages/AdminReferrals";
 import AdminTrucks from "@/pages/AdminTrucks";
 import AdminGroupCallPanel from '@/components/AdminGroupCallPanel';
 import AdminGroupCalls from '@/pages/AdminGroupCalls';
@@ -162,6 +164,7 @@ const AuthenticatedApp = () => {
           <Route path="/driver/history" element={<DriverHistory />} />
           <Route path="/driver/notifications" element={<Notifications />} />
           <Route path="/driver/profile" element={<Profile role="driver" />} />
+          <Route path="/driver/referrals" element={<DriverReferrals />} />
           <Route path="/vehicle-management" element={<VehicleManagement />} />
         </Route>
       </Route>
@@ -214,6 +217,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/jobs" element={<AdminJobs />} />
           <Route path="/admin/trucks" element={<AdminTrucks />} />
+          <Route path="/admin/referrals" element={<AdminReferrals />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/finance" element={<AdminFinance />} />
