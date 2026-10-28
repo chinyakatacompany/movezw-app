@@ -40,7 +40,7 @@ export default function DriverReferrals() {
   return <div className="p-4 pb-8 max-w-2xl mx-auto">
     <Link to="/driver/profile" className="text-sm text-primary">← Driver profile</Link>
     <div className="flex justify-between items-center gap-3 mt-4 mb-5"><h1 className="text-2xl font-bold">Refer drivers, earn credit</h1><button disabled={busy} onClick={load} aria-label="Refresh referrals" className="p-2 rounded-xl border disabled:opacity-50"><RefreshCw className={`w-5 h-5 ${busy ? 'animate-spin' : ''}`} /></button></div>
-    <div className="rounded-2xl bg-primary text-primary-foreground p-5 mb-5"><Gift className="h-8 w-8 mb-3" /><p className="text-3xl font-extrabold">$0.50 per verified driver</p><p className="text-sm mt-2 opacity-90">Keep referring drivers—there is no limit. Each new driver earns you one reward after email confirmation, complete documents and admin approval.</p></div>
+    <div className="rounded-2xl bg-primary text-primary-foreground p-5 mb-5"><Gift className="h-8 w-8 mb-3" /><p className="text-3xl font-extrabold">{summary ? formatMoney(summary.reward_amount) : 'Wallet credit'} per verified driver</p><p className="text-sm mt-2 opacity-90">Keep referring drivers—there is no limit. Each new driver earns you one reward after full verification and admin approval of the reward.</p></div>
     {error && <p role="alert" className="text-sm text-destructive mb-4">{error}</p>}
     {!summary && !error && <p role="status">Loading your referral link…</p>}
     {summary && <>
@@ -55,7 +55,7 @@ export default function DriverReferrals() {
         {notice && <p role="status" className="text-sm text-primary">{notice}</p>}
       </div>
       <div className="grid grid-cols-3 gap-2 my-5">{[['Registered', summary.registered], ['Rewarded', summary.rewarded], ['Credit earned', formatMoney(summary.earned)]].map(([label, value]) => <div key={label} className="bg-card border rounded-xl p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="font-bold text-xl mt-1">{value}</p></div>)}</div>
-      <p className="text-sm text-muted-foreground">{summary.registered-summary.rewarded} referral(s) awaiting full verification or eligibility. Referral credit pays MoveZW commissions automatically and cannot be withdrawn. Normal wallet minimum-balance rules still apply.</p>
+      <p className="text-sm text-muted-foreground">{summary.registered-summary.rewarded} referral(s) awaiting full verification or admin reward approval. Referral credit pays MoveZW commissions automatically and cannot be withdrawn. Normal wallet minimum-balance rules still apply.</p>
       <Link to="/wallet" className="inline-block mt-4 text-primary font-semibold">View wallet and reward transactions →</Link>
     </>}
   </div>;

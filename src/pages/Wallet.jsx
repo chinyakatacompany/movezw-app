@@ -194,7 +194,7 @@ export default function Wallet() {
         </Button>
       )}
 
-      {isDriver && <div className="bg-card rounded-2xl border border-primary/20 p-4 mb-5"><p className="font-semibold">Referral credit: {formatMoney(wallet.referral_credit || 0)}</p><p className="text-xs text-muted-foreground mt-1">Included in your commission balance. Used first for MoveZW deductions; cannot be withdrawn.</p><Link to="/driver/referrals" className="inline-block text-sm font-semibold text-primary mt-3">Refer drivers · Earn $0.50 each →</Link></div>}
+      {isDriver && <div className="bg-card rounded-2xl border border-primary/20 p-4 mb-5"><p className="font-semibold">Referral credit: {formatMoney(wallet.referral_credit || 0)}</p><p className="text-xs text-muted-foreground mt-1">Included in your commission balance. Used first for MoveZW deductions; cannot be withdrawn.</p><Link to="/driver/referrals" className="inline-block text-sm font-semibold text-primary mt-3">Refer drivers · Earn wallet credit →</Link></div>}
 
       {/* Payment methods */}
       <div className="bg-card rounded-2xl border border-border p-4 mb-5">

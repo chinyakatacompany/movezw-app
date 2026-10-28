@@ -4,13 +4,13 @@ grant usage on schema private to anon, authenticated;
 alter table public.wallets add column referral_credit numeric(14,2) not null default 0 check (referral_credit >= 0 and referral_credit <= greatest(coalesce(balance,0),0));
 alter table public.transactions add column referral_credit_amount numeric(14,2) not null default 0 check (referral_credit_amount >= 0);
 create table public.driver_referral_settings (
- id boolean primary key default true check(id), enabled boolean not null default true,
+ id boolean primary key default true check(id), enabled boolean not null default true, reward_amount numeric(10,2) not null default 0.50 check(reward_amount>0),
  updated_at timestamptz not null default now(), updated_by uuid references public.profiles(id) on delete set null
 );
 insert into public.driver_referral_settings(id) values(true);
 alter table public.driver_referral_settings enable row level security;
 revoke all on public.driver_referral_settings from public,anon,authenticated;
-grant select(enabled) on public.driver_referral_settings to anon,authenticated;
+grant select(enabled,reward_amount) on public.driver_referral_settings to anon,authenticated;
 create policy referral_settings_read on public.driver_referral_settings for select to anon,authenticated using(true);
 create table public.driver_referral_codes (
  user_id uuid primary key references public.profiles(id) on delete cascade,
@@ -25,9 +25,10 @@ create table public.driver_referrals (
  referrer_id uuid references public.profiles(id) on delete set null,
  referred_id uuid unique references public.profiles(id) on delete set null,
  signup_phone_hash text not null unique,
- reward_amount numeric(4,2) not null default 0.50 check(reward_amount=0.50),
+ reward_amount numeric(10,2) not null default 0.50 check(reward_amount>0),
  reward_transaction_id uuid unique references public.transactions(id) on delete set null,
  created_at timestamptz not null default now(), rewarded_at timestamptz,
+ admin_approved_at timestamptz, admin_approved_by uuid references public.profiles(id) on delete set null, ready_notified_at timestamptz,
  check(referrer_id is null or referred_id is null or referrer_id<>referred_id)
 );
 create index driver_referrals_referrer_idx on public.driver_referrals(referrer_id,created_at desc);
@@ -53,24 +54,41 @@ grant execute on function private.valid_driver_referral_code(text) to anon,authe
 create function public.valid_driver_referral_code(p_code text) returns boolean language sql security invoker set search_path='' as $$ select private.valid_driver_referral_code(p_code); $$;
 revoke all on function public.valid_driver_referral_code(text) from public,anon,authenticated;
 grant execute on function public.valid_driver_referral_code(text) to anon,authenticated;
+create function private.referral_is_eligible(p_referred uuid) returns boolean language sql stable security invoker set search_path='' as $$
+ select exists(select 1 from public.driver_referrals r
+ join public.profiles p on p.id=r.referred_id join auth.users u on u.id=p.id
+ join public.profiles a on a.id=r.referrer_id
+ where r.referred_id=p_referred and p.role='driver' and not coalesce(p.is_suspended,false) and p.deleted_at is null
+ and u.email_confirmed_at is not null and a.role='driver' and not coalesce(a.is_suspended,false) and a.deleted_at is null
+ and private.referral_phone(a.phone)<>private.referral_phone(p.phone)
+ and exists(select 1 from public.driver_profiles d where d.user_id=p_referred and d.verification_status='approved'
+ and nullif(trim(d.national_id_url),'') is not null and nullif(trim(d.driver_licence_url),'') is not null and nullif(trim(d.vehicle_registration_url),'') is not null));
+$$;
+revoke all on function private.referral_is_eligible(uuid) from public,anon,authenticated;
 create function private.award_driver_referral(p_referred uuid) returns void language plpgsql security definer set search_path='' as $$
 declare r public.driver_referrals; w public.wallets; tx uuid;
 begin
  if not coalesce((select enabled from public.driver_referral_settings where id for share),false) then return; end if;
  select * into r from public.driver_referrals where referred_id=p_referred for update;
  if r.id is null or r.rewarded_at is not null or r.referrer_id is null then return; end if;
- if not exists(select 1 from public.profiles p join auth.users u on u.id=p.id where p.id=p_referred and p.role='driver' and not coalesce(p.is_suspended,false) and p.deleted_at is null and u.email_confirmed_at is not null) then return; end if;
- if not exists(select 1 from public.profiles p where p.id=r.referrer_id and p.role='driver' and not coalesce(p.is_suspended,false) and p.deleted_at is null) then return; end if;
- if not exists(select 1 from public.driver_profiles d where d.user_id=p_referred and d.verification_status='approved' and nullif(trim(d.national_id_url),'') is not null and nullif(trim(d.driver_licence_url),'') is not null and nullif(trim(d.vehicle_registration_url),'') is not null) then return; end if;
- if exists(select 1 from public.profiles a join public.profiles b on b.id=p_referred where a.id=r.referrer_id and private.referral_phone(a.phone)=private.referral_phone(b.phone)) then return; end if;
+ if not private.referral_is_eligible(p_referred) then return; end if;
+ if r.admin_approved_at is null then
+  if r.ready_notified_at is null then
+   update public.driver_referrals set ready_notified_at=now() where id=r.id;
+   insert into public.notifications(user_id,type,title,message,link)
+   select id,'referral_review','Referral reward ready for approval','A referred driver is fully verified. Review and approve their referral wallet top-up.','/admin/referrals'
+   from public.profiles where role='admin' and not coalesce(is_suspended,false) and deleted_at is null;
+  end if;
+  return;
+ end if;
  insert into public.wallets(user_id,balance,pending,currency,total_earned,total_commission,total_paid_out)
  values(r.referrer_id,0,0,'USD',0,0,0) on conflict(user_id) do nothing;
  select * into w from public.wallets where user_id=r.referrer_id for update;
  insert into public.transactions(wallet_id,user_id,type,amount,direction,status,method,gateway,reference,note,referral_credit_amount)
- values(w.id,r.referrer_id,'topup',0.50,'in','completed','referral','referral_program','REF-'||r.id,'Driver referral reward: $0.50 commission credit. Not withdrawable.',0.50) returning id into tx;
- update public.wallets set balance=round(coalesce(balance,0)+0.50,2),referral_credit=least(referral_credit+0.50,greatest(round(coalesce(balance,0)+0.50,2),0)) where id=w.id;
+ values(w.id,r.referrer_id,'topup',r.reward_amount,'in','completed','referral','referral_program','REF-'||r.id,'Driver referral reward: commission credit, not withdrawable.',r.reward_amount) returning id into tx;
+ update public.wallets set balance=round(coalesce(balance,0)+r.reward_amount,2),referral_credit=least(referral_credit+r.reward_amount,greatest(round(coalesce(balance,0)+r.reward_amount,2),0)) where id=w.id;
  update public.driver_referrals set reward_transaction_id=tx,rewarded_at=now() where id=r.id;
- insert into public.notifications(user_id,type,title,message,link) values(r.referrer_id,'referral_reward','Referral reward: +$0.50','Your referred driver is fully verified. $0.50 was added to your commission balance for MoveZW deductions.','/driver/referrals');
+ insert into public.notifications(user_id,type,title,message,link) values(r.referrer_id,'referral_reward','Referral reward: +$'||to_char(r.reward_amount,'FM999999990.00'),'Admin approved your referral reward. $'||to_char(r.reward_amount,'FM999999990.00')||' was added to your commission balance for MoveZW deductions.','/driver/referrals');
 end $$;
 revoke all on function private.award_driver_referral(uuid) from public,anon,authenticated;
 create function private.capture_driver_referral() returns trigger language plpgsql security definer set search_path='' as $$
@@ -105,7 +123,7 @@ begin
  insert into public.driver_referral_codes(user_id,code) values(uid,'MZW'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,12))) on conflict(user_id) do nothing;
  select c.code into code from public.driver_referral_codes c where c.user_id=uid;
  for target in select referred_id from public.driver_referrals where referrer_id=uid and rewarded_at is null and referred_id is not null loop perform private.award_driver_referral(target.referred_id); end loop;
- return jsonb_build_object('code',code,'enabled',(select enabled from public.driver_referral_settings where id),
+ return jsonb_build_object('code',code,'enabled',(select enabled from public.driver_referral_settings where id),'reward_amount',(select reward_amount from public.driver_referral_settings where id),
  'registered',(select count(*) from public.driver_referrals where referrer_id=uid),
  'rewarded',(select count(*) from public.driver_referrals where referrer_id=uid and rewarded_at is not null),
  'earned',(select coalesce(sum(reward_amount),0) from public.driver_referrals where referrer_id=uid and rewarded_at is not null));
@@ -115,27 +133,43 @@ grant execute on function private.my_driver_referrals() to authenticated;
 create function public.my_driver_referrals() returns jsonb language sql security invoker set search_path='' as $$ select private.my_driver_referrals(); $$;
 revoke all on function public.my_driver_referrals() from public,anon,authenticated;
 grant execute on function public.my_driver_referrals() to authenticated;
-create function private.admin_driver_referrals(p_enabled boolean default null) returns jsonb language plpgsql security definer set search_path='' as $$
-declare target record;
+create function private.admin_driver_referrals(p_enabled boolean default null,p_referral_id uuid default null,p_amount numeric default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare target record; selected_referral public.driver_referrals; current_amount numeric;
 begin
  if auth.uid() is null or not exists(select 1 from public.profiles where id=auth.uid() and role='admin' and not coalesce(is_suspended,false) and deleted_at is null) then raise exception 'Administrator access required'; end if;
+ if p_amount is not null and p_referral_id is null then
+  if p_amount::text in ('NaN','Infinity','-Infinity') or p_amount<=0 or p_amount>99999999.99 or round(p_amount,2)<>p_amount then raise exception 'Enter a positive referral amount with at most two decimal places'; end if;
+  update public.driver_referral_settings set reward_amount=p_amount,updated_at=now(),updated_by=auth.uid() where id;
+ end if;
  if p_enabled is not null then
   update public.driver_referral_settings set enabled=p_enabled,updated_at=now(),updated_by=auth.uid() where id;
   if p_enabled then for target in select referred_id from public.driver_referrals where rewarded_at is null and referred_id is not null loop perform private.award_driver_referral(target.referred_id); end loop; end if;
  end if;
- return jsonb_build_object('enabled',(select enabled from public.driver_referral_settings where id),
+ if p_referral_id is not null then
+  if not coalesce((select enabled from public.driver_referral_settings where id for share),false) then raise exception 'Referrals are paused'; end if;
+  select reward_amount into current_amount from public.driver_referral_settings where id;
+  if p_amount is distinct from current_amount then raise exception 'Referral amount changed. Refresh before approving this wallet top-up'; end if;
+  select * into selected_referral from public.driver_referrals where id=p_referral_id for update;
+  if selected_referral.id is null then raise exception 'Referral not found'; end if;
+  if selected_referral.rewarded_at is null then
+   if not private.referral_is_eligible(selected_referral.referred_id) then raise exception 'Driver email and all documents must be fully verified before approving this reward'; end if;
+   update public.driver_referrals set admin_approved_at=now(),admin_approved_by=auth.uid(),reward_amount=current_amount where id=selected_referral.id;
+   perform private.award_driver_referral(selected_referral.referred_id);
+  end if;
+ end if;
+ return jsonb_build_object('enabled',(select enabled from public.driver_referral_settings where id),'reward_amount',(select reward_amount from public.driver_referral_settings where id),
  'registered',(select count(*) from public.driver_referrals),'rewarded',(select count(*) from public.driver_referrals where rewarded_at is not null),
  'earned',(select coalesce(sum(reward_amount),0) from public.driver_referrals where rewarded_at is not null),
- 'recent',(select coalesce(jsonb_agg(row_data order by created_at desc),'[]'::jsonb) from (
- select r.created_at,jsonb_build_object('id',r.id,'referrer',coalesce(a.full_name,'Deleted account'),'driver',coalesce(b.full_name,'Deleted account'),'created_at',r.created_at,'rewarded_at',r.rewarded_at,'amount',r.reward_amount) as row_data
- from public.driver_referrals r left join public.profiles a on a.id=r.referrer_id left join public.profiles b on b.id=r.referred_id order by r.created_at desc limit 200) recent));
+ 'recent',(select coalesce(jsonb_agg(row_data order by ready desc,created_at desc),'[]'::jsonb) from (
+ select r.created_at,(r.rewarded_at is null and private.referral_is_eligible(r.referred_id)) as ready,jsonb_build_object('id',r.id,'referrer',coalesce(a.full_name,'Deleted account'),'driver',coalesce(b.full_name,'Deleted account'),'created_at',r.created_at,'rewarded_at',r.rewarded_at,'amount',case when r.rewarded_at is not null then r.reward_amount else (select reward_amount from public.driver_referral_settings where id) end,'eligible',private.referral_is_eligible(r.referred_id)) as row_data
+ from public.driver_referrals r left join public.profiles a on a.id=r.referrer_id left join public.profiles b on b.id=r.referred_id order by (r.rewarded_at is null and private.referral_is_eligible(r.referred_id)) desc,r.created_at desc limit 200) recent));
 end $$;
-revoke all on function private.admin_driver_referrals(boolean) from public,anon,authenticated;
-grant execute on function private.admin_driver_referrals(boolean) to authenticated;
-create function public.admin_driver_referrals(p_enabled boolean default null) returns jsonb language sql security invoker set search_path='' as $$ select private.admin_driver_referrals(p_enabled); $$;
-revoke all on function public.admin_driver_referrals(boolean) from public,anon,authenticated;
-grant execute on function public.admin_driver_referrals(boolean) to authenticated;
-create policy referral_alerts_server_only on public.notifications as restrictive for insert to authenticated with check(type<>'referral_reward');
+revoke all on function private.admin_driver_referrals(boolean,uuid,numeric) from public,anon,authenticated;
+grant execute on function private.admin_driver_referrals(boolean,uuid,numeric) to authenticated;
+create function public.admin_driver_referrals(p_enabled boolean default null,p_referral_id uuid default null,p_amount numeric default null) returns jsonb language sql security invoker set search_path='' as $$ select private.admin_driver_referrals(p_enabled,p_referral_id,p_amount); $$;
+revoke all on function public.admin_driver_referrals(boolean,uuid,numeric) from public,anon,authenticated;
+grant execute on function public.admin_driver_referrals(boolean,uuid,numeric) to authenticated;
+create policy referral_alerts_server_only on public.notifications as restrictive for insert to authenticated with check(type not in ('referral_reward','referral_review'));
 
 -- Consume referral credit first for fees; preserve its restriction on refunds.
 CREATE OR REPLACE FUNCTION public.fn_accept_offer(p_offer_id uuid)

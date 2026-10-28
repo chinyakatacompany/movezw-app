@@ -296,7 +296,7 @@ export default function Profile({ role }) {
         </button>
       )}
 
-      {role === "driver" && <Link to="/driver/referrals" className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4"><Gift className="w-5 h-5 text-primary" /><span className="text-sm font-medium flex-1 text-left">Refer drivers · Earn $0.50 each</span><ChevronRight className="w-5 h-5 text-muted-foreground" /></Link>}
+      {role === "driver" && <Link to="/driver/referrals" className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4"><Gift className="w-5 h-5 text-primary" /><span className="text-sm font-medium flex-1 text-left">Refer drivers · Earn wallet credit</span><ChevronRight className="w-5 h-5 text-muted-foreground" /></Link>}
 
       <button onClick={() => navigate("/wallet")} className="w-full flex items-center gap-3 bg-card rounded-2xl border border-border p-4">
         <WalletIcon className="w-5 h-5 text-primary" />

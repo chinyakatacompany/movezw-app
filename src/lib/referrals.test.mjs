@@ -9,3 +9,7 @@ test('referral link uses public MoveZW host and preserves driver signup code', (
   assert.equal(url.searchParams.get('ref'),'MZWABCDEF123456');
   assert.equal(normalizeReferralCode(null),'');
 });
+
+test('each personal referral code produces a different registration link', () => {
+  assert.notEqual(driverReferralLink('MZWAAAAAAAAAAAA'),driverReferralLink('MZWBBBBBBBBBBBB'));
+});

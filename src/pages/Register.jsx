@@ -252,7 +252,7 @@ export default function Register() {
         </div>
         {accountType === "driver" && (
           <>
-            <div className="space-y-2"><label htmlFor="referral-code" className="text-sm font-medium">Driver referral code (optional)</label><input id="referral-code" value={referralCode} onChange={(event) => setReferralCode(normalizeReferralCode(event.target.value))} maxLength={15} placeholder="MZW…" disabled={referralsEnabled === false} className="w-full border border-input bg-background rounded-md px-3 h-12 uppercase disabled:opacity-50" /><p className="text-xs text-muted-foreground">The driver who invited you earns $0.50 commission credit after your email, documents and admin verification are complete. Add the code before creating your account.</p></div>
+            <div className="space-y-2"><label htmlFor="referral-code" className="text-sm font-medium">Driver referral code (optional)</label><input id="referral-code" value={referralCode} onChange={(event) => setReferralCode(normalizeReferralCode(event.target.value))} maxLength={15} placeholder="MZW…" disabled={referralsEnabled === false} className="w-full border border-input bg-background rounded-md px-3 h-12 uppercase disabled:opacity-50" /><p className="text-xs text-muted-foreground">The driver who invited you earns referral commission credit after you are fully verified and admin approves the reward. Add the code before creating your account.</p></div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">

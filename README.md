@@ -307,15 +307,15 @@ return to the invitation link or enter the displayed code before signing up;
 deferred install attribution is not automatic. Native App Links retain `ref`
 when Android opens the registration URL in an installed compatible build.
 
-Each distinct referred driver earns the referrer $0.50 after email confirmation,
-admin approval and all three document paths are present. There is no referral
+Each distinct referred driver earns the referrer commission credit (default $0.50) after email confirmation,
+admin document approval and all three document paths are present, followed by explicit admin approval of the referral reward. There is no referral
 limit. Reapproval never repeats the reward. Referrals are unique per account
 and normalized signup phone; same-phone self-referrals are excluded. Approval
 is still a human document-review decision, not an automatic identity guarantee.
 
 **Admin → Referrals** pauses new attribution and rewards across the app. Existing
-credit and pending referrals remain; resuming releases eligible pending rewards.
-The database enforces the switch, independent of client refreshes.
+credit and pending referrals remain; resuming allows eligible pending rewards to be reviewed and approved.
+The database enforces the switch, independent of client refreshes. Admin can change the reward amount; the current amount is captured on reward approval, without changing previously credited rewards. Approval rejects a stale amount if another admin changed the setting.
 
 Referral credit is included in the commission balance, consumed first for fees,
 and excluded from withdrawals. Cancellation and approved commission refunds
