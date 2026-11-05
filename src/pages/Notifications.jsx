@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
@@ -10,7 +10,7 @@ export default function Notifications() {
   const { user } = useAuth();
   const [items, setItems] = useState(null);
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!user?.id) return;
     supabase
       .from("notifications")
@@ -22,9 +22,23 @@ export default function Notifications() {
         if (error) console.error("Failed to load notifications:", error);
         setItems(data || []);
       });
-  };
+  }, [user?.id]);
 
-  useEffect(() => { load(); }, [user?.id]);
+  useEffect(() => {
+    if (!user?.id) return;
+    load();
+    const channel = supabase.channel(`notification-inbox-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, load)
+      .subscribe();
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    const timer = window.setInterval(onVisible, 15000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [user?.id, load]);
 
   const markRead = async (n) => {
     if (n.is_read) return;

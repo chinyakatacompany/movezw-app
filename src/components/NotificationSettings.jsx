@@ -68,12 +68,13 @@ export default function NotificationSettings({ description }) {
       supabase.from("profiles").select("notification_vibration").eq("id", user.id).single(),
     ]).then(async ([sub, { data: prof }]) => {
       if (!active) return;
+      // Rebind an existing subscription to the current signed-in account too.
       // Once granted, this should stay on until explicitly turned off — if
       // permission is still granted but the subscription itself silently
       // dropped (can happen after a long period, or a server key change),
       // re-subscribe automatically instead of surfacing as "off" and
       // waiting for the driver/customer to notice and re-enable it.
-      if (!sub && pushSupported() && Notification.permission === "granted") {
+      if (pushSupported() && Notification.permission === "granted") {
         try { sub = await subscribeToPush(user.id); } catch (_) { /* fall through to showing "off" */ }
       }
       if (!active) return;

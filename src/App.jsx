@@ -40,6 +40,7 @@ import AdminReports from '@/pages/AdminReports';
 import AdminAnalytics from '@/pages/AdminAnalytics';
 import AdminFinance from '@/pages/AdminFinance';
 import AdminContent from '@/pages/AdminContent';
+import NotificationSettings from '@/components/NotificationSettings';
 import Notifications from '@/pages/Notifications';
 import Profile from '@/pages/Profile';
 import PaymentHistory from '@/pages/PaymentHistory';
@@ -208,6 +209,10 @@ const AuthenticatedApp = () => {
           </RoleGuard>
         }>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/notifications" element={<>
+            <div className="p-4 pb-0"><NotificationSettings description="Receive every new job alert on this device, including jobs outside driver routes." /></div>
+            <Notifications />
+          </>} />
           <Route path="/admin/issues" element={<AdminIssues />} />
           <Route path="/admin/verification" element={<AdminVerification />} />
           <Route path="/admin/verification/:userId/onboard" element={<AdminAssistedOnboarding />} />

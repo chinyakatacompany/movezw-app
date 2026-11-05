@@ -296,3 +296,19 @@ mobile audio, as described above. No TURN service has been provisioned and no
 signed APK has been generated. Rebuild/sign/distribute 1.0.24 (25) for native users.
 Additional checks: `node --test src/hooks/*.test.mjs src/lib/groupAudio.test.mjs
 src/lib/bidPresentation.test.mjs supabase/tests/admin-groups-bids.test.mjs`.
+
+## Administrator job alerts
+
+Apply `supabase/migrations/20261105083456_admin_job_notifications.sql` to
+enable an `admin_new_job` inbox alert for every new open transport request for
+each active administrator. These alerts use `app_push_outbox` and the existing
+`notify-app-events` worker; driver availability and route rules are unchanged.
+No historical alerts are broadcast.
+
+The admin menu includes **Notifications**, an unread badge, and the same
+**Enable notifications** control used elsewhere. Each admin must grant device
+permission and register that browser or Android installation before background
+push can reach it. A drained queue does not prove a device displayed the alert.
+The inbox refreshes through realtime, on resume, and every 15 seconds.
+
+Validation: `node --test supabase/tests/admin-job-notifications.test.mjs`.
