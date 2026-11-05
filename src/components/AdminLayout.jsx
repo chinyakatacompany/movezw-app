@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, useLocation, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/lib/AuthContext";
-import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut, FileText, MessageCircle, Phone, AlertTriangle } from "lucide-react";
+import { Truck, LayoutDashboard, Users, BadgeCheck, Package, BarChart3, TrendingUp, Wallet, Menu, X, LogOut, FileText, MessageCircle, Phone, AlertTriangle, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/api/supabaseClient";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/admin/notifications", label: "Notifications", icon: Bell },
   { to: "/admin/issues", label: "Issues", icon: AlertTriangle },
   { to: "/admin/analytics", label: "Analytics", icon: TrendingUp },
   { to: "/admin/verification", label: "Driver Verification", icon: BadgeCheck },
@@ -25,8 +27,34 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      supabase.from("notifications").select("id", { count: "exact", head: true })
+        .eq("user_id", user.id).eq("is_read", false)
+        .then(({ count, error }) => {
+          if (!error && active) setUnread(count || 0);
+        });
+    };
+    refresh();
+    const channel = supabase.channel(`admin-unread-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, refresh)
+      .subscribe();
+    const timer = window.setInterval(refresh, 15000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [user?.id]);
 
   const isActive = (item) =>
     item.exact ? location.pathname === item.to : location.pathname.startsWith(item.to);
@@ -53,6 +81,11 @@ export default function AdminLayout() {
         >
           <Icon className="w-5 h-5" />
           {label}
+          {to === "/admin/notifications" && unread > 0 && (
+            <span className="ml-auto rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground" aria-label={`${unread} unread notifications`}>
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
         </Link>
       ))}
     </nav>
