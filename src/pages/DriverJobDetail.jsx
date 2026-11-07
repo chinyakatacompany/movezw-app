@@ -843,9 +843,21 @@ export default function DriverJobDetail() {
               )}
             </span>
             {!driverPos && !locatingRoute && (
-              <button type="button" onClick={fetchDriverLocation} className="text-xs font-semibold text-primary underline shrink-0">
-                Try again
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                <button type="button" onClick={fetchDriverLocation} className="text-xs font-semibold text-primary underline">
+                  Try again
+                </button>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.google.android.apps.maps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="text-[11px] font-semibold text-primary underline"
+                  aria-label="Get Google Maps from the Play Store"
+                >
+                  Get Maps
+                </a>
+              </div>
             )}
           </div>
         )}
@@ -871,11 +883,13 @@ export default function DriverJobDetail() {
             )}
           </>
         )}
-        {!isMyJob && effPickupLat != null && effPickupLng != null && (
+        {!isMyJob && request.pickup_location && request.destination && (
           <a
-            href={`https://www.google.com/maps/dir/?api=1&origin=${effPickupLat},${effPickupLng}&destination=${
-              effDestLat != null && effDestLng != null ? `${effDestLat},${effDestLng}` : encodeURIComponent(request.destination || "")
-            }&travelmode=driving`}
+            href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+              effPickupLat != null && effPickupLng != null ? `${effPickupLat},${effPickupLng}` : request.pickup_location
+            )}&destination=${encodeURIComponent(
+              effDestLat != null && effDestLng != null ? `${effDestLat},${effDestLng}` : request.destination
+            )}&travelmode=driving`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border text-sm font-medium mt-1 hover:bg-muted transition-colors"
