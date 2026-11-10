@@ -190,6 +190,20 @@ export default function DriverJobDetail() {
      
   }, [id, user?.id]);
 
+  const viewedJob = useRef(null);
+  useEffect(() => {
+    if (request?.id !== id || !user?.id || user.role !== "driver") return;
+    const key = user.id + "/" + id;
+    if (viewedJob.current === key) return;
+    viewedJob.current = key;
+    supabase.from("driver_job_views").insert({ request_id: id }).then(({ error }) => {
+      if (error) {
+        if (viewedJob.current === key) viewedJob.current = null;
+        console.warn("Could not record job view", error.code);
+      }
+    });
+  }, [id, request?.id, user?.id, user?.role]);
+
   // While this job is still open (pre-acceptance, the bidding stage), join
   // a presence channel so the customer can see a live "N drivers viewing"
   // count — pure social proof/urgency signal. Presence drops automatically

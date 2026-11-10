@@ -12,6 +12,61 @@ import AdminJobTracker from "@/components/admin/AdminJobTracker";
 
 const FILTERS = ["all", "active", "open", ...ADMIN_ACTIVE_STATUSES, "completed", "cancelled"];
 
+function MonthlyJobViewers({ jobId }) {
+  const [months, setMonths] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    supabase.rpc("job_monthly_viewers", { p_request: jobId }).then(({ data, error }) => {
+      if (active) { setFailed(Boolean(error)); setMonths(data || []); }
+    });
+    return () => { active = false; };
+  }, [jobId]);
+  const peak = Math.max(1, ...(months || []).map(row => Number(row.viewers)));
+  return <figure className="my-3 rounded-lg border p-3">
+    <figcaption className="text-sm font-semibold">Unique drivers per month</figcaption>
+    {failed ? <p>Could not load monthly counts.</p> : !months ? <p>Loading chart…</p> :
+      <ol className="mt-2 space-y-1">{months.map(row => (
+        <li key={row.month_start} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 text-xs">
+          <span>{new Date(row.month_start).toLocaleDateString("en-GB", {month:"short", year:"numeric", timeZone:"Africa/Harare"})}</span>
+          <span aria-hidden="true" className="h-2 rounded bg-muted"><span className="block h-full rounded bg-primary" style={{width: (100 * Number(row.viewers) / peak) + "%"}} /></span>
+          <span>{row.viewers}</span>
+        </li>
+      ))}</ol>}
+  </figure>;
+}
+
+function JobViewHistory({ jobId }) {
+  const [rows, setRows] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [page, setPage] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setRows(null);
+    setFailed(false);
+    supabase.from("driver_job_views").select("id, viewed_at, profiles(full_name)")
+      .eq("request_id", jobId).order("viewed_at", { ascending: false }).order("id", { ascending: false })
+      .range(page * 50, page * 50 + 50).then(({ data, error }) => {
+        if (active) { setFailed(Boolean(error)); setRows(data || []); }
+      });
+    return () => { active = false; };
+  }, [jobId, page]);
+
+  return <section className="mt-3 rounded-xl border p-3">
+    <h3 className="text-sm font-semibold">Driver view history</h3>
+    <p className="text-xs text-muted-foreground">Zimbabwe time</p>
+    <MonthlyJobViewers jobId={jobId} />
+    {failed ? <p>Could not load view history.</p> : rows === null ? <p>Loading views…</p> :
+      rows.length === 0 ? <p>No recorded views.</p> :
+        <ul>{rows.slice(0, 50).map(row => <li key={row.id} className="flex flex-wrap justify-between gap-2 py-1 text-sm">
+          <span>{row.profiles?.full_name || "Driver"}</span>
+          <time dateTime={row.viewed_at}>{new Date(row.viewed_at).toLocaleString("en-GB", { timeZone: "Africa/Harare" })}</time>
+        </li>)}</ul>}
+    {page > 0 && <button onClick={() => setPage(page - 1)}>Newer views</button>}
+    {rows?.length > 50 && <button onClick={() => setPage(page + 1)}>Older views</button>}
+  </section>;
+}
+
 function AdminJobViewers({ jobId, adminId }) {
   const [viewers, setViewers] = useState([]);
   const [connected, setConnected] = useState(false);
@@ -262,7 +317,7 @@ export default function AdminJobs() {
                     {j.status === "cancelled" && j.expired_at && (
                       <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 24 hours</p>
                     )}
-                    {j.status === "open" && (
+                    {(
                       <button
                         type="button"
                         onClick={() => setViewersJobId(viewersOpen ? null : j.id)}
@@ -270,7 +325,7 @@ export default function AdminJobs() {
                         aria-expanded={viewersOpen}
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        {viewersOpen ? "Hide live viewers" : "See drivers viewing"}
+                        {viewersOpen ? "Hide driver views" : "See driver views"}
                         {viewersOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
                     )}
@@ -304,9 +359,10 @@ export default function AdminJobs() {
                     />
                   </div>
                 )}
-                {viewersOpen && j.status === "open" && (
+                {viewersOpen && (
                   <div className="px-4 pb-4 sm:pl-[5.75rem]">
-                    <AdminJobViewers jobId={j.id} adminId={user?.id} />
+                    {j.status === "open" && <AdminJobViewers jobId={j.id} adminId={user?.id} />}
+                    <JobViewHistory key={j.id} jobId={j.id} />
                   </div>
                 )}
               </div>
