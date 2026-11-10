@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp, Eye, Users } from "lucide-react";
+import { Package, Loader2, Search, X, CheckCircle2, Ban, Navigation, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { StatusBadge, STATUS_LABELS, formatMoney, formatDate, notifyJobStatusChange, getPaymentTerms } from "@/lib/movezw";
 import { cancelTransportRequest, processJobCompletion } from "@/lib/payments";
 import { ADMIN_ACTIVE_STATUSES, advanceAdminJob } from "@/lib/adminJobs";
@@ -12,28 +12,32 @@ import AdminJobTracker from "@/components/admin/AdminJobTracker";
 
 const FILTERS = ["all", "active", "open", ...ADMIN_ACTIVE_STATUSES, "completed", "cancelled"];
 
-function MonthlyJobViewers({ jobId }) {
-  const [months, setMonths] = useState(null);
+function MonthlyJobsReport() {
+  const [month, setMonth] = useState(() => new Date(Date.now() + 7200000).toISOString().slice(0, 7));
+  const [counts, setCounts] = useState(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
-    supabase.rpc("job_monthly_viewers", { p_request: jobId }).then(({ data, error }) => {
-      if (active) { setFailed(Boolean(error)); setMonths(data || []); }
-    });
+    setCounts(null);
+    setFailed(false);
+    if (!month) return;
+    const [year, number] = month.split("-").map(Number);
+    const boundary = offset => new Date(Date.UTC(year, number - 1 + offset, 1, -2)).toISOString();
+    const count = (table, date) => supabase.from(table).select("id", {head:true, count:"exact"})
+      .gte(date, boundary(0)).lt(date, boundary(1));
+    Promise.all([count("transport_requests", "created_at"), count("driver_job_views", "viewed_at")])
+      .then(([jobs, views]) => {
+        if (!active) return;
+        if (jobs.error || views.error) setFailed(true);
+        else setCounts({jobs: jobs.count, views: views.count});
+      });
     return () => { active = false; };
-  }, [jobId]);
-  const peak = Math.max(1, ...(months || []).map(row => Number(row.viewers)));
-  return <figure className="my-3 rounded-lg border p-3">
-    <figcaption className="text-sm font-semibold">Unique drivers per month</figcaption>
-    {failed ? <p>Could not load monthly counts.</p> : !months ? <p>Loading chart…</p> :
-      <ol className="mt-2 space-y-1">{months.map(row => (
-        <li key={row.month_start} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 text-xs">
-          <span>{new Date(row.month_start).toLocaleDateString("en-GB", {month:"short", year:"numeric", timeZone:"Africa/Harare"})}</span>
-          <span aria-hidden="true" className="h-2 rounded bg-muted"><span className="block h-full rounded bg-primary" style={{width: (100 * Number(row.viewers) / peak) + "%"}} /></span>
-          <span>{row.viewers}</span>
-        </li>
-      ))}</ol>}
-  </figure>;
+  }, [month]);
+  return <section className="my-4 rounded-xl border p-3">
+    <label className="text-sm font-semibold">Report month <input type="month" value={month} onChange={e => setMonth(e.target.value)} /></label>
+    <p className="mt-2 text-sm">{failed ? "Could not load monthly report." : !month ? "Select a month." : !counts ? "Loading report…" :
+      `${counts.jobs} jobs posted · ${counts.views} driver views across all jobs`}</p>
+  </section>;
 }
 
 function JobViewHistory({ jobId }) {
@@ -55,7 +59,6 @@ function JobViewHistory({ jobId }) {
   return <section className="mt-3 rounded-xl border p-3">
     <h3 className="text-sm font-semibold">Driver view history</h3>
     <p className="text-xs text-muted-foreground">Zimbabwe time</p>
-    <MonthlyJobViewers jobId={jobId} />
     {failed ? <p>Could not load view history.</p> : rows === null ? <p>Loading views…</p> :
       rows.length === 0 ? <p>No recorded views.</p> :
         <ul>{rows.slice(0, 50).map(row => <li key={row.id} className="flex flex-wrap justify-between gap-2 py-1 text-sm">
@@ -67,81 +70,8 @@ function JobViewHistory({ jobId }) {
   </section>;
 }
 
-function AdminJobViewers({ jobId, adminId }) {
-  const [viewers, setViewers] = useState([]);
-  const [connected, setConnected] = useState(false);
-
-  useEffect(() => {
-    if (!jobId) return undefined;
-
-    const channel = supabase.channel(`job-presence-${jobId}`, {
-      config: { presence: { key: `admin-${adminId || "viewer"}` } },
-    });
-    const syncViewers = () => {
-      const unique = new Map();
-      Object.entries(channel.presenceState()).forEach(([presenceKey, presences]) => {
-        (presences || []).forEach((presence) => {
-          // Admins and customers join read-only and never publish driver data,
-          // so exclude any presence item that has no driver identity.
-          if (!presence.driver_id && !presence.driver_name) return;
-          const driverId = presence.driver_id || presenceKey;
-          unique.set(driverId, {
-            id: driverId,
-            name: presence.driver_name || "Driver",
-            vehicleType: presence.vehicle_type || null,
-          });
-        });
-      });
-      setViewers(Array.from(unique.values()));
-    };
-
-    channel
-      .on("presence", { event: "sync" }, syncViewers)
-      .on("presence", { event: "join" }, syncViewers)
-      .on("presence", { event: "leave" }, syncViewers)
-      .subscribe((status) => setConnected(status === "SUBSCRIBED"));
-
-    return () => {
-      setViewers([]);
-      setConnected(false);
-      supabase.removeChannel(channel);
-    };
-  }, [jobId, adminId]);
-
-  return (
-    <div className="rounded-xl border border-border bg-muted/30 p-3" aria-live="polite">
-      <div className="flex items-center gap-2 mb-2">
-        <Users className="w-4 h-4 text-primary" />
-        <p className="text-xs font-semibold">Drivers viewing now</p>
-        <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">{viewers.length}</span>
-      </div>
-      {!connected ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Connecting to live viewers…
-        </div>
-      ) : viewers.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No drivers are viewing this job right now.</p>
-      ) : (
-        <div className="space-y-2">
-          {viewers.map((driver) => (
-            <div key={driver.id} className="flex items-center gap-2 rounded-lg bg-card px-3 py-2 border border-border/70">
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold truncate">{driver.name}</p>
-                <p className="text-[11px] text-muted-foreground">{driver.vehicleType || "Vehicle not specified"} · viewing now</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function AdminJobs() {
+  const [reportOpen, setReportOpen] = useState(false);
   const { user } = useAuth();
   const [jobs, setJobs] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -254,6 +184,11 @@ export default function AdminJobs() {
       <h1 className="text-2xl font-bold tracking-tight mb-1">Job management</h1>
       <p className="text-sm text-muted-foreground mb-5">All transport requests on the platform.</p>
 
+      <button type="button" aria-expanded={reportOpen} className="mb-4 text-sm font-semibold text-primary" onClick={() => setReportOpen(!reportOpen)}>
+        {reportOpen ? "Hide monthly report" : "Monthly report for all jobs"}
+      </button>
+      {reportOpen && <MonthlyJobsReport />}
+
       <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
         {FILTERS.map((f) => (
           <button
@@ -361,7 +296,6 @@ export default function AdminJobs() {
                 )}
                 {viewersOpen && (
                   <div className="px-4 pb-4 sm:pl-[5.75rem]">
-                    {j.status === "open" && <AdminJobViewers jobId={j.id} adminId={user?.id} />}
                     <JobViewHistory key={j.id} jobId={j.id} />
                   </div>
                 )}
