@@ -1,3 +1,4 @@
+import LocationOnOpen from "@/components/LocationOnOpen";
 import AdminTrucks from "@/pages/AdminTrucks";
 import AdminGroupCallPanel from '@/components/AdminGroupCallPanel';
 import AdminGroupCalls from '@/pages/AdminGroupCalls';
@@ -244,6 +245,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <NativeAppBridge />
+          <LocationOnOpen />
           <AuthenticatedApp />
         </Router>
         <Toaster />
