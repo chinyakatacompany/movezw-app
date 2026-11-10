@@ -35,5 +35,7 @@ nativeReady.then(() => import('@/App.jsx')).then(({ default: App }) => {
 }).catch((error) => {
   console.error('MoveZW startup failed:', error);
   const startup = document.getElementById('startup-status');
+  const reload = document.getElementById('startup-reload');
+  if (reload) reload.hidden = false;
   if (startup) startup.textContent = 'MoveZW could not start. Close and reopen the app. If this continues, update MoveZW and Android System WebView.';
 });

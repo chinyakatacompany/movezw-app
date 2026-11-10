@@ -2,7 +2,7 @@
   "appId": "com.movezw.app",
   "appName": "MoveZW",
   "webDir": "dist",
-  "backgroundColor": "#0B2D68",
+  "backgroundColor": "#ffffff",
   "android": {
     "useLegacyBridge": true
   },

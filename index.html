@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b2d68" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="google-site-verification" content="f9oXHxTrM_x0Zn8Cv281yHJEBl9nxTjsEqgZQcZ7F6U" />
 
     <title>MoveZW — Move Anything, Anywhere in Zimbabwe | Trusted Transport Marketplace</title>
@@ -157,14 +157,17 @@
   </head>
   <body>
     <div id="root">
-      <div id="startup-screen" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#0b2d68;color:white;text-align:center;font-family:system-ui,sans-serif">
+      <div id="startup-screen" style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;background:#ffffff;color:#222;text-align:center;font-family:system-ui,sans-serif">
         <strong style="font-size:24px">MoveZW</strong>
         <p id="startup-status" role="status">Opening MoveZW…</p>
-        <button type="button" onclick="window.location.reload()" style="padding:12px 20px;border-radius:8px;border:0">Reload app</button>
+        <button id="startup-reload" hidden type="button" onclick="window.location.reload()" style="padding:12px 20px;border-radius:8px;border:0">Reload app</button>
       </div>
       <script>
         setTimeout(function () {
           var status = document.getElementById('startup-status');
+          var reload = document.getElementById('startup-reload');
+          if (!reload || !reload.hidden) return;
+          reload.hidden = false;
           if (status) status.textContent = 'MoveZW is taking longer to open. Try reloading. If this continues, update MoveZW and Android System WebView.';
         }, 20000);
       </script>
