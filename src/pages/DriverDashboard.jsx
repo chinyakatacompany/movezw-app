@@ -34,7 +34,10 @@ export default function DriverDashboard() {
   useDriverProfileRefresh(user?.id, setProfile);
   const [profileLoading, setProfileLoading] = useState(true);
   const [allOpenRequests, setOpenRequests] = useState(null);
-  const openRequests = useUnexpiredRequests(allOpenRequests);
+  const unexpired = useUnexpiredRequests(allOpenRequests);
+  const heavyVehicle = ["15 Ton Truck","20 Ton Truck","30 Ton Truck","40 Ton Truck","Articulated Truck"].includes(profile?.vehicle_type);
+  const openRequests = unexpired?.filter(job => !job.vehicle_category ||
+    (heavyVehicle === ["11–20 tonnes","20 tonnes and above"].includes(job.vehicle_category))) ?? null;
   const [myJobs, setMyJobs] = useState(null);
   const [driverPos, setDriverPos] = useState(null);
   const [locationPermission, setLocationPermission] = useState("checking");

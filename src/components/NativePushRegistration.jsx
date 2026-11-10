@@ -22,10 +22,18 @@ export async function enableNativePush() {
   return true;
 }
 
+async function removeThisDeviceToken(userId) {
+  const token = localStorage.getItem("movezw-native-push-token");
+  if (!token || !userId) return;
+  const { error } = await supabase.from("device_push_tokens").delete().eq("user_id", userId).eq("token", token);
+  if (error) throw error;
+  localStorage.removeItem("movezw-native-push-token");
+}
+
 export async function disableNativePush(userId) {
   if (isNativePushEnabled()) setNativePushPreference(false);
   await PushNotifications.unregister().catch(() => {});
-  if (userId) await supabase.from("device_push_tokens").delete().eq("user_id", userId);
+  await removeThisDeviceToken(userId);
 }
 
 // Web push (see push_subscriptions / sw.js) only survives while the browser
@@ -50,6 +58,7 @@ export default function NativePushRegistration() {
         { onConflict: "token" }
       );
       if (error) console.error("Could not save device push token:", error);
+      else localStorage.setItem("movezw-native-push-token", token.value);
     });
     const errorListener = PushNotifications.addListener("registrationError", (err) => {
       console.error("FCM registration failed:", err);
@@ -66,7 +75,7 @@ export default function NativePushRegistration() {
       if (cancelled) return;
       if (!isNativePushEnabled()) {
         await PushNotifications.unregister().catch(() => {});
-        await supabase.from("device_push_tokens").delete().eq("user_id", user.id);
+        await removeThisDeviceToken(user.id);
         return;
       }
       await enableNativePush();
