@@ -6,7 +6,7 @@ import { supabase } from '@/api/supabaseClient';
 import { withTimeout } from '@/lib/withTimeout';
 import { playNotificationChime, unlockAudioOnFirstGesture } from '@/lib/sound';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 // Retain navigation for urgent driver notifications. Customer new-offer
 // notifications are handled separately by CustomerOfferInbox below.

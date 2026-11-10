@@ -8,7 +8,7 @@ const tones = {
   amber: "bg-amber-50 text-amber-600",
 };
 
-export default function StatCard({ icon: Icon, label, value, sub, tone = "primary", loading }) {
+export default function StatCard({ icon: Icon, label, value, sub = undefined, tone = "primary", loading = undefined }) {
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 card-shadow animate-fade-in transition-transform hover:-translate-y-0.5">
       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3", tones[tone] || tones.primary)}>

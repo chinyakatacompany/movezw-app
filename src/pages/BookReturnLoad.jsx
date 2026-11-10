@@ -23,7 +23,7 @@ const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 function splitDateTime(iso) {
   if (!iso) return { date: "", time: "" };
   const d = new Date(iso);
-  const local = new Date(d - d.getTimezoneOffset() * 60000).toISOString();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }
 

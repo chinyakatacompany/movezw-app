@@ -94,7 +94,7 @@ export default function Wallet() {
   const claimRefundHandler = async (rr) => {
     setClaiming(rr.id);
     try {
-      await claimRefundFn({ refundRequestId: rr.id, userId: user.id });
+      await claimRefundFn({ refundRequestId: rr.id });
       toast({ title: "Refund claimed", description: `${formatMoney(rr.amount)} added to your commission balance` });
       load();
     } catch (err) {

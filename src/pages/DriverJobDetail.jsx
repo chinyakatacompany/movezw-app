@@ -451,7 +451,7 @@ export default function DriverJobDetail() {
         if (profErr) console.error("Failed to update completed_jobs:", profErr);
         // Future-ready payment: credit driver earnings, deduct platform commission, generate invoice.
         try {
-          await processJobCompletion({ driverId: user.id, request, acceptedPrice: request.accepted_price });
+          await processJobCompletion({ driverId: user.id, request });
         } catch (payErr) {
           // Payment module is best-effort; do not block job completion.
           console.warn("payment processing failed", payErr);

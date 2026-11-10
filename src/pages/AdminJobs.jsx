@@ -24,7 +24,9 @@ function AdminJobViewers({ jobId, adminId }) {
     });
     const syncViewers = () => {
       const unique = new Map();
-      Object.entries(channel.presenceState()).forEach(([presenceKey, presences]) => {
+      /** @type {Record<string, Array<{presence_ref: string, driver_id?: string, driver_name?: string, vehicle_type?: string}>>} */
+      const state = channel.presenceState();
+      Object.entries(state).forEach(([presenceKey, presences]) => {
         (presences || []).forEach((presence) => {
           // Admins and customers join read-only and never publish driver data,
           // so exclude any presence item that has no driver identity.
@@ -177,7 +179,7 @@ export default function AdminJobs() {
             const { error } = await supabase.from("transport_requests").update({ status: "completed" }).eq("id", j.id);
             if (error) throw error;
             if (j.accepted_driver_id) {
-              try { await processJobCompletion({ driverId: j.accepted_driver_id, request: j, acceptedPrice: j.accepted_price, actorId: user.id }); } catch { /* best-effort */ }
+              try { await processJobCompletion({ driverId: j.accepted_driver_id, request: j }); } catch { /* best-effort */ }
               try { await notifyJobStatusChange(j, "completed", user.id); } catch { /* best-effort */ }
             }
           }

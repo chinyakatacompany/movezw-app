@@ -26,7 +26,7 @@ export default function Messages() {
       // dedupe
       const seen = new Map();
       merged.forEach((c) => seen.set(c.id, c));
-      const sorted = [...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
+      const sorted = [...seen.values()].sort((a, b) => new Date(b.last_message_at || b.created_at).getTime() - new Date(a.last_message_at || a.created_at).getTime());
       setConversations(sorted);
 
       const requestIds = [...new Set(sorted.map((c) => c.request_id).filter(Boolean))];

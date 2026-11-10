@@ -16,7 +16,7 @@ function MiniStat({ icon: Icon, label, value, color }) {
 
 export default function AdminReports() {
   const [data, setData] = useState({
-    users: 0, drivers: 0, approvedDrivers: 0, jobs: 0, completed: 0, totalValue: 0, avgRating: 0,
+    users: 0, drivers: 0, approvedDrivers: 0, jobs: 0, completed: 0, totalValue: 0, avgRating: "0.0",
   });
 
   useEffect(() => {

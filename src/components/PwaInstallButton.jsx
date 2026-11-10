@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 import { cn } from "@/lib/utils";
 
-export default function PwaInstallButton({ className, children = "Install MoveZW", onClick }) {
+export default function PwaInstallButton({ className = undefined, children = "Install MoveZW", onClick = undefined }) {
   const { canInstall, promptInstall } = useInstallPrompt();
 
   if (!canInstall) return null;

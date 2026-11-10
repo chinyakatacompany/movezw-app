@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function PageHeader({ title, subtitle, icon: Icon, actions }) {
+export default function PageHeader({ title, subtitle = undefined, icon: Icon, actions = undefined }) {
   return (
     <div className="flex items-start justify-between gap-3 animate-page-enter">
       <div className="flex items-center gap-3 min-w-0">

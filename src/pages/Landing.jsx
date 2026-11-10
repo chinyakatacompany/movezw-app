@@ -21,7 +21,7 @@ function PWAInstallSection() {
     setIsIOS(/iPad|iPhone|iPod/.test(ua) ||
       (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1));
     setIsInstalled(Boolean(window.matchMedia?.("(display-mode: standalone)").matches ||
-      window.navigator.standalone === true));
+      ("standalone" in navigator && navigator.standalone === true)));
 
     const onPrompt = (event) => { event.preventDefault(); setDeferredPrompt(event); };
     const onInstalled = () => { setIsInstalled(true); setDeferredPrompt(null); setShowInstructions(false); };

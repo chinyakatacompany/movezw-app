@@ -2,11 +2,11 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { AlertCircle, Loader2 } from "lucide-react";
 
-export function Skeleton({ className }) {
+export function Skeleton({ className = undefined }) {
   return <div className={cn("skeleton rounded-lg", className)} />;
 }
 
-export function SkeletonCard({ lines = 3, className }) {
+export function SkeletonCard({ lines = 3, className = undefined }) {
   return (
     <div className={cn("bg-card rounded-2xl border border-border p-5 space-y-3", className)}>
       <Skeleton className="h-4 w-1/3" />
