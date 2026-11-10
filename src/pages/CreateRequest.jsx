@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, DollarSign, Clock, Calendar, Loader2, Package, Zap, LocateFixed, Minus, Plus, Layers, Map as MapIcon } from "lucide-react";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import PhotoUpload from "@/components/PhotoUpload";
 import AddressSearchInput from "@/components/AddressSearchInput";
-import { CARGO_TYPES, VEHICLE_TYPES, VEHICLE_ICONS, PAYMENT_TERMS, formatMoney, normalizePaymentSplit } from "@/lib/movezw";
+import { CARGO_TYPES, PAYMENT_TERMS, formatMoney, normalizePaymentSplit } from "@/lib/movezw";
 import { notifyMatchingReturnLoadDriversForRequest, fetchRoadDistanceKm } from "@/lib/matching";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,9 @@ const MAX_LOADS = 10;
 // across all vehicle types either overpays for a van or underpays for an
 // articulated truck. The selected vehicle and entered cargo weight also
 // determine which vehicle-capacity group receives the new-job alert.
+const VEHICLE_CATEGORIES = ['Cargo Van', 'Pickup', '1–4 tonnes', '5–10 tonnes', '11–20 tonnes', '20 tonnes and above'];
 const RATE_PER_KM = {
+  "1–4 tonnes": 1.5, "5–10 tonnes": 2, "11–20 tonnes": 2.5, "20 tonnes and above": 3,
   "Small Delivery Vehicle": 1,
   Pickup: 1.2,
   "Cargo Van": 1.2,
@@ -43,6 +46,7 @@ const RATE_PER_KM = {
 };
 
 export default function CreateRequest() {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const [form, setForm] = useState({
@@ -156,6 +160,7 @@ export default function CreateRequest() {
         destination_lat: destinationCoords?.lat ?? null,
         destination_lng: destinationCoords?.lng ?? null,
         cargo_type: form.cargo_type,
+        vehicle_category: form.vehicle_type,
         cargo_weight: form.cargo_weight || null,
         cargo_description: form.cargo_description,
         photos,
@@ -299,16 +304,22 @@ export default function CreateRequest() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="vehicle">Vehicle type needed</Label>
-              <select
-                id="vehicle"
-                value={form.vehicle_type}
-                onChange={(e) => set("vehicle_type", e.target.value)}
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm"
-              >
-                {VEHICLE_TYPES.map((t) => (
-                  <option key={t} value={t}>{VEHICLE_ICONS[t]} {t}</option>
-                ))}
-              </select>
+              <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+                <DialogTrigger asChild><button type="button" id="vehicle" className="w-full rounded-md border px-3 py-2 flex justify-between">{form.vehicle_type}<span aria-hidden="true">⌄</span></button></DialogTrigger>
+                <DialogContent className="max-h-[85dvh] overflow-auto">
+                  <DialogTitle>Choose your vehicle</DialogTitle>
+                  <div className="grid grid-cols-2 gap-2">
+                    {VEHICLE_CATEGORIES.map((category, index) => (
+                      <button type="button" key={category} aria-pressed={category === form.vehicle_type}
+                        className={cn("rounded-xl border bg-white p-2 text-sm font-semibold text-black", category === form.vehicle_type && "border-primary ring-1 ring-primary")}
+                        onClick={() => { set("vehicle_type", category); setPickerOpen(false); }}>
+                        <img src={`/vehicles/category-${index}.webp`} alt="" className="aspect-[2/1] w-full object-contain" />
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
           <div className="space-y-2">

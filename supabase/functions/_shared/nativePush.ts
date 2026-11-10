@@ -107,6 +107,7 @@ export async function sendNativePushToUsers(
               color: "#DC2626",
               default_sound: true,
               notification_count: 1,
+              notification_priority: "PRIORITY_MAX",
               tag: payload.tag,
             },
           },
