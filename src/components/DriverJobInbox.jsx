@@ -53,7 +53,11 @@ function Inbox({ userId }) {
         const unseen = queue.some((n) => !announced.has(n.id));
         queue.forEach((n) => announced.add(n.id));
         setSnapshot({ notifications, requests });
-        if (unseen) { setMinimized(false); void playNotificationChime().catch(console.error); }
+        if (unseen) {
+          setMinimized(false);
+          void playNotificationChime().catch(console.error);
+          if (document.visibilityState === "visible") navigator.vibrate?.([600, 200, 600]);
+        }
       } catch (error) {
         console.error('Could not refresh driver job alerts:', error);
       } finally {
