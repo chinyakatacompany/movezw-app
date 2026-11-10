@@ -10,7 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 function todayLocalDate() {
   const d = new Date();
   const tzOffsetMs = d.getTimezoneOffset() * 60000;
-  return new Date(d - tzOffsetMs).toISOString().slice(0, 10);
+  return new Date(d.getTime() - tzOffsetMs).toISOString().slice(0, 10);
 }
 
 // Shown right after a driver marks a job "Delivered" — that's the exact

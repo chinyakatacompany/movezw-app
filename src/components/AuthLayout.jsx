@@ -3,7 +3,7 @@ import { Truck } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import PlayStoreLink from "@/components/PlayStoreLink";
 
-export default function AuthLayout({ icon: Icon, title, subtitle, footer, children, showInstall }) {
+export default function AuthLayout({ icon: Icon, title, subtitle, footer = undefined, children, showInstall = undefined }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary/5 to-background px-4 py-10">
       <div className="w-full max-w-md">

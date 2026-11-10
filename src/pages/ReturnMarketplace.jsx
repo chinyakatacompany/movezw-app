@@ -85,7 +85,7 @@ export default function ReturnMarketplace() {
     arr.sort((a, b) => {
       if (sort === "price") return (a.price || 0) - (b.price || 0);
       if (sort === "capacity") return (b.available_capacity_kg || 0) - (a.available_capacity_kg || 0);
-      return new Date(a.departure_date) - new Date(b.departure_date);
+      return new Date(a.departure_date).getTime() - new Date(b.departure_date).getTime();
     });
     return arr;
   }, [loads, filters, sort]);

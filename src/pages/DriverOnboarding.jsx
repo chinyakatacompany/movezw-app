@@ -16,12 +16,12 @@ export default function DriverOnboarding() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
+    Promise.resolve(supabase
       .from("driver_profiles")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(1)
+      .limit(1))
       .then(({ data, error }) => {
         if (error) console.error("Failed to load driver profile:", error);
         setExisting(data?.[0] || null);

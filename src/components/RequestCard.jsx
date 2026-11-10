@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Navigation, Clock, DollarSign, Package, CalendarClock } from "lucide-react";
 import { StatusBadge, formatMoney, formatDateTime, timeAgo, VEHICLE_ICONS, getPaymentTerms } from "@/lib/movezw";
 
-export default function RequestCard({ request, to, showCustomer = false, rightSlot, distanceKm, tripDistanceKm }) {
+export default function RequestCard({ request, to, showCustomer = false, rightSlot = undefined, distanceKm = undefined, tripDistanceKm = undefined }) {
   return (
     <Link
       to={to}

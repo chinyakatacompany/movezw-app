@@ -10,7 +10,7 @@ const tones = {
   rose: "bg-rose-50 text-rose-600",
 };
 
-export default function KPICard({ icon: Icon, label, value, sub, trend, tone = "primary", loading }) {
+export default function KPICard({ icon: Icon, label, value, sub = undefined, trend = undefined, tone = "primary", loading = false }) {
   const up = (trend ?? 0) >= 0;
   return (
     <div className="bg-card rounded-2xl border border-border p-4 sm:p-5 card-shadow animate-fade-in transition-transform hover:-translate-y-0.5">

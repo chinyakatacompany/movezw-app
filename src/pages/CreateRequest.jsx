@@ -161,7 +161,7 @@ export default function CreateRequest() {
         destination_lng: destinationCoords?.lng ?? null,
         cargo_type: form.cargo_type,
         vehicle_category: form.vehicle_type,
-        cargo_weight: form.cargo_weight || null,
+        cargo_weight: form.cargo_weight.trim(),
         cargo_description: form.cargo_description,
         photos,
         timing: form.timing,
@@ -299,8 +299,8 @@ export default function CreateRequest() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight (optional)</Label>
-              <Input id="weight" placeholder="e.g. 500kg" value={form.cargo_weight} onChange={(e) => set("cargo_weight", e.target.value)} />
+              <Label htmlFor="weight">Cargo weight (required)</Label>
+              <Input id="weight" required pattern=".*\S.*" placeholder="e.g. 500kg" value={form.cargo_weight} onChange={(e) => set("cargo_weight", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="vehicle">Vehicle type needed</Label>

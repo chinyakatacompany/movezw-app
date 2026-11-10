@@ -23,7 +23,7 @@ export default function PaymentHistory() {
     const isDriver = user.role === "driver";
     let query = supabase.from("transport_requests").select("*").in("status", ["delivered", "completed"]).order("updated_at", { ascending: false }).limit(100);
     query = isDriver ? query.eq("accepted_driver_id", user.id) : query.eq("customer_id", user.id);
-    query.then(({ data, error }) => {
+    Promise.resolve(query).then(({ data, error }) => {
       if (error) console.error("Failed to load payment history:", error);
       setPayments(data || []);
     }).finally(() => setLoading(false));

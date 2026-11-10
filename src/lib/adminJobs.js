@@ -26,8 +26,6 @@ export async function advanceAdminJob(job, nextStatus, actorId) {
       await processJobCompletion({
         driverId: job.accepted_driver_id,
         request: job,
-        acceptedPrice: job.accepted_price,
-        actorId,
       });
     } catch (paymentError) {
       console.warn("Admin completion payment processing failed", paymentError);

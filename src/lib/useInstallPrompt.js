@@ -8,7 +8,7 @@ let prompting = false;
 const listeners = new Set();
 const standalone = window.matchMedia?.('(display-mode: standalone)');
 const isInstalled = () => accepted || Capacitor.isNativePlatform()
-  || !!standalone?.matches || window.navigator.standalone === true;
+  || !!standalone?.matches || ("standalone" in navigator && navigator.standalone === true);
 const emit = () => listeners.forEach((listener) => listener());
 window.addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault(); deferredPrompt = event; emit();

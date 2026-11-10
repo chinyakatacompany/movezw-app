@@ -65,7 +65,7 @@ function DocField({ label, value, onChange, required }) {
 // `userId` is whoever the resulting driver_profiles row belongs to — the
 // logged-in driver in the self-service case, or the selected driver in the
 // admin case — never assumed to be the current session's own id.
-export default function DriverProfileForm({ userId, prefill, existing, autoApprove, docsOptional, submitLabel, onSaved }) {
+export default function DriverProfileForm({ userId, prefill = undefined, existing = undefined, autoApprove = undefined, docsOptional = undefined, submitLabel = undefined, onSaved }) {
   const [form, setForm] = useState({
     full_name: prefill?.full_name || "",
     phone: prefill?.phone || "",

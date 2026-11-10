@@ -7,11 +7,11 @@ import { EmptyState } from "@/lib/movezw";
 export default function DataTable({
   columns,
   data = [],
-  loading,
+  loading = undefined,
   searchKeys = [],
   pageSize = 8,
   emptyTitle = "No records",
-  emptySubtitle,
+  emptySubtitle = undefined,
   emptyIcon = Inbox,
 }) {
   const [q, setQ] = useState("");
