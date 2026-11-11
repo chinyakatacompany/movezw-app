@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import { setImmediate } from 'node:timers';
 import { driverLocationRequired } from '../lib/driverLocationStatus.js';
 
-async function mount({ initiallyEnabled = true, activeTrip = true } = {}) {
+async function mount({ initiallyEnabled = true, activeTrip = true, availability = "online" } = {}) {
   let cleanup;
   let poll;
   let enabled = initiallyEnabled;
@@ -23,7 +23,7 @@ async function mount({ initiallyEnabled = true, activeTrip = true } = {}) {
         select() { return this; }, update() { updating = true; return this; }, eq() { return this; }, in() { return this; }, order() { return this; }, limit() { return this; }, maybeSingle() { return this; },
         then(resolve, reject) {
           const result = updating ? { error: null }
-            : table === 'driver_profiles' ? { data: [{ id: 'profile', availability_status: 'online' }] }
+            : table === 'driver_profiles' ? { data: [{ id: 'profile', availability_status: availability }] }
             : failTrip ? { data: null, error: new Error('Network unavailable') } : { data: activeTrip ? { id: 'trip' } : null };
           return Promise.resolve(result).then(resolve, reject);
         },
@@ -71,5 +71,15 @@ test('required driver tracking restores a stale disabled app preference once', a
   const app = await mount({ initiallyEnabled: false });
   assert.equal(app.enabled(), true);
   assert.equal(app.state.watches, 1);
+  app.cleanup();
+});
+
+test('an offline driver on an active job keeps one GPS watcher across refreshes', async () => {
+  const app = await mount({ availability: 'offline', initiallyEnabled: false });
+  assert.equal(app.enabled(), true);
+  app.poll();
+  await app.flush();
+  assert.equal(app.state.watches, 1);
+  assert.equal(app.state.cleared, 0);
   app.cleanup();
 });

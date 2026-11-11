@@ -20,7 +20,10 @@ export default function AttentionInbox() {
       const { data, error } = await supabase.from('notifications').select('*').eq('user_id', user.id).eq('is_read', false).in('type', ['driver_registered', 'job_ring']).order('created_at', { ascending: false }).limit(50);
       if (!active || error) return;
       const pending = (data || []).filter(n => !dismissed.current.has(n.id) && (n.type !== 'job_ring' || Date.now() - Date.parse(n.created_at) < 180000));
-      if (pending.some(n => !announced.has(n.id))) playNotificationChime();
+      if (pending.some(n => !announced.has(n.id))) {
+        if (pending.some(n => n.type === "job_ring" && !announced.has(n.id))) navigator.vibrate?.([250, 100, 250]);
+        void playNotificationChime();
+      }
       pending.forEach(n => announced.add(n.id));
       setItems(pending);
     };

@@ -29,6 +29,7 @@ export default function DriverLocationPing() {
     const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
     let cancelled = false;
     let watchId = null;
+    let browserTripId;
     let lastProfileReportAt = 0;
     let savingProfile = false;
     profileIdRef.current = null;
@@ -164,32 +165,37 @@ export default function DriverLocationPing() {
     };
 
     const configureTracking = () => {
-      clearWatch();
       if (driverLocationRequired(availabilityRef.current, activeRequestIdRef.current) && !isLocationTrackingEnabled()) {
         setLocationTrackingEnabled(true);
         return; // The synchronous preference event reconfigures tracking once.
       }
       if (!isLocationTrackingEnabled()) {
+        clearWatch();
         void configureNativeTracking(null);
         return;
       }
       if (isNativeAndroid && activeRequestIdRef.current) {
+        clearWatch();
         void configureNativeTracking(activeRequestIdRef.current);
         return;
       }
 
       void configureNativeTracking(null);
       if (!navigator.geolocation) return;
+      const shouldWatch = Boolean(activeRequestIdRef.current) || availabilityRef.current === "online";
+      if (shouldWatch && watchId != null && browserTripId === activeRequestIdRef.current) return;
+      clearWatch();
+      browserTripId = activeRequestIdRef.current;
       navigator.geolocation.getCurrentPosition(reportBrowserPosition, (error) => { if (!cancelled) reportDriverLocationStatus(false, error.code === 1 ? "Allow location for MoveZW in your phone settings." : "Turn on GPS and retry location. Keep location enabled while working."); }, {
         enableHighAccuracy: true,
         timeout: 20000,
-        maximumAge: 10000,
+        maximumAge: 0,
       });
-      if (availabilityRef.current === "online" || activeRequestIdRef.current) {
+      if (shouldWatch) {
         watchId = navigator.geolocation.watchPosition(reportBrowserPosition, (error) => { if (!cancelled) reportDriverLocationStatus(false, error.code === 1 ? "Allow location for MoveZW in your phone settings." : "Turn on GPS and retry location. Keep location enabled while working."); }, {
           enableHighAccuracy: true,
           timeout: 20000,
-          maximumAge: 10000,
+          maximumAge: 0,
         });
       }
     };

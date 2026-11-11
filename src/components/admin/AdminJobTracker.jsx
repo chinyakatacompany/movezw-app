@@ -31,13 +31,13 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
     lat: job.destination_lat ?? resolved.destination?.lat,
     lng: job.destination_lng ?? resolved.destination?.lng,
   };
-  const trackingTarget = job.status === "en_route_pickup"
+  const trackingTarget = ["confirmed", "en_route_pickup"].includes(job.status)
     ? { ...pickup, label: "Pickup" }
     : { ...destination, label: "Destination" };
   const hasDriverLocation = job.driver_lat != null && job.driver_lng != null;
   const hasTrackingTarget = trackingTarget.lat != null && trackingTarget.lng != null;
   const hasFullRoute = pickup.lat != null && pickup.lng != null && destination.lat != null && destination.lng != null;
-  const showLiveMap = hasDriverLocation && hasTrackingTarget && !["confirmed", "delivered"].includes(job.status);
+  const showLiveMap = hasDriverLocation && job.status !== "delivered";
   const showPlannedMap = !showLiveMap && hasFullRoute;
   const nextStatus = job.status === "delivered"
     ? "completed"
@@ -58,7 +58,7 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
         <React.Suspense fallback={<div className="h-[280px] rounded-xl bg-muted animate-pulse" />}>
           <TrackingMap
             from={{ lat: job.driver_lat, lng: job.driver_lng }}
-            to={{ lat: trackingTarget.lat, lng: trackingTarget.lng }}
+            to={hasTrackingTarget ? trackingTarget : undefined}
             fromLabel="Driver"
             toLabel={trackingTarget.label}
             fromColor="#ea580c"
@@ -88,7 +88,7 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
         <div className="rounded-xl bg-card border border-border p-3 text-sm text-muted-foreground">
           <p>
             {job.status === "confirmed"
-              ? "The driver has not started travelling yet. Live GPS will appear once the trip begins."
+              ? "Waiting for the assigned driver’s first GPS position."
               : job.status === "delivered"
                 ? "The delivery has arrived and is waiting to be completed."
                 : "No recent GPS position is available. Ask the driver to open the active job and enable location access."}
@@ -101,7 +101,7 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
 
       <p className="text-xs text-muted-foreground">
         {showLiveMap
-          ? `Showing the driver's current position and remaining road route to ${trackingTarget.label.toLowerCase()}.`
+          ? !hasTrackingTarget ? "Showing the driver’s last reported GPS position." : `Showing the driver's current position and remaining road route to ${trackingTarget.label.toLowerCase()}.`
           : showPlannedMap
             ? "Showing the planned pickup-to-destination route. The moving driver position appears once GPS sharing starts."
             : "Route mapping needs coordinates from the booking or the driver's current GPS position."}
