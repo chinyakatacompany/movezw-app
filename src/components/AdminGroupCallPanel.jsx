@@ -65,8 +65,12 @@ function GroupPanel({ userId }) {
   }, [room?.id, room?.host_id, joined, userId]);
   useEffect(() => {
     if (!room || joined || room.host_id === userId) return;
-    playNotificationChime();
-    const timer = setInterval(() => { playNotificationChime(); navigator.vibrate?.([200, 100, 200]); }, 2500);
+    const ring = () => {
+      navigator.vibrate?.([250, 100, 250]);
+      void playNotificationChime();
+    };
+    ring();
+    const timer = setInterval(ring, 2500);
     return () => { clearInterval(timer); navigator.vibrate?.(0); };
   }, [room?.id, room?.host_id, joined, userId]);
   const hostJoined = snapshot?.members.some(m => m.user_id === room?.host_id && m.state === 'joined');

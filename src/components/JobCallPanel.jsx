@@ -73,8 +73,12 @@ function CallPanel({ userId }) {
   }, [call?.id, Boolean(ready), userId]);
   useEffect(() => {
     if (!incoming || call?.status !== 'ringing') return;
-    playNotificationChime();
-    const timer = setInterval(() => { playNotificationChime(); navigator.vibrate?.([250, 100, 250]); }, 2500);
+    const ring = () => {
+      navigator.vibrate?.([250, 100, 250]);
+      void playNotificationChime();
+    };
+    ring();
+    const timer = setInterval(ring, 2500);
     return () => { clearInterval(timer); navigator.vibrate?.(0); };
   }, [incoming, call?.status]);
   const respond = async action => {

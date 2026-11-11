@@ -249,7 +249,7 @@ export default function DriverJobDetail() {
           .then(({ error }) => { if (error) console.error("Failed to report location:", error); });
       },
       (error) => setLocationError(locationErrorMessage(error)),
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
     return () => navigator.geolocation.clearWatch(watchId);
   }, [request?.accepted_driver_id, request?.status, request?.id, user?.id]);

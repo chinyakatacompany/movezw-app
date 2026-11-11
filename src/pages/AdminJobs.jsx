@@ -40,6 +40,29 @@ function MonthlyJobsReport() {
   </section>;
 }
 
+function JobBids({ jobId }) {
+  const [bids, setBids] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    supabase.from("offers").select("id, driver_id, driver_name, price, status")
+      .eq("request_id", jobId).order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (active) { setFailed(Boolean(error)); setBids(data || []); }
+      });
+    return () => { active = false; };
+  }, [jobId]);
+  return <section className="mx-4 mb-4 rounded-xl border p-3">
+    <h3 className="text-sm font-semibold">Drivers who sent bids</h3>
+    {failed ? <p>Could not load bids.</p> : !bids ? <p>Loading bids…</p> :
+      !bids.length ? <p>No bids sent for this job.</p> :
+      <ul>{bids.map(bid => <li key={bid.id} className="flex justify-between gap-3 py-1 text-sm">
+        <span>{bid.driver_name || bid.driver_id}</span>
+        <span>{formatMoney(bid.price)} · {bid.status}</span>
+      </li>)}</ul>}
+  </section>;
+}
+
 function JobViewHistory({ jobId }) {
   const [rows, setRows] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -81,6 +104,7 @@ export default function AdminJobs() {
   const [confirm, setConfirm] = useState(null);
   const [statusConfirm, setStatusConfirm] = useState(null);
   const [trackingJobId, setTrackingJobId] = useState(null);
+  const [bidJobId, setBidJobId] = useState(null);
   const [viewersJobId, setViewersJobId] = useState(null);
 
   const load = useCallback(async () => {
@@ -252,6 +276,10 @@ export default function AdminJobs() {
                     {j.status === "cancelled" && j.expired_at && (
                       <p className="mt-1 text-xs font-medium text-destructive">Automatically cancelled after 24 hours</p>
                     )}
+                    <button type="button" aria-expanded={bidJobId === j.id} className="mr-4 text-xs font-semibold text-primary"
+                      onClick={() => setBidJobId(bidJobId === j.id ? null : j.id)}>
+                      {bidJobId === j.id ? "Hide bids" : "See bids"}
+                    </button>
                     {(
                       <button
                         type="button"
@@ -294,6 +322,7 @@ export default function AdminJobs() {
                     />
                   </div>
                 )}
+                {bidJobId === j.id && <JobBids key={j.id} jobId={j.id} />}
                 {viewersOpen && (
                   <div className="px-4 pb-4 sm:pl-[5.75rem]">
                     <JobViewHistory key={j.id} jobId={j.id} />
