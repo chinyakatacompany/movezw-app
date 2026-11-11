@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarClock } from 'lucide-react';
-import { STATUS_FLOW, STATUS_LABELS, formatDateTime } from '@/lib/movezw';
+import { nextJobStep, STATUS_FLOW, STATUS_LABELS, formatDateTime } from '@/lib/movezw';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export default function DriverDeliveryPanel({ jobs }) {
@@ -22,7 +22,7 @@ export default function DriverDeliveryPanel({ jobs }) {
     <h2 className="text-lg font-bold">Current deliver{jobs.length === 1 ? 'y' : 'ies'}</h2>
     {jobs.map((job) => {
       const current = STATUS_FLOW.indexOf(job.status);
-      const next = STATUS_FLOW[current + 1];
+      const next = nextJobStep(job.status);
       return <div key={job.id} className="rounded-2xl border-2 border-primary bg-card p-4 space-y-4 shadow-md">
         <p className="font-semibold break-words">{job.pickup_location} → {job.destination}</p>
         <p className="text-sm text-muted-foreground">{job.cargo_type} · {STATUS_LABELS[job.status]}</p>

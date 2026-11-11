@@ -1,13 +1,11 @@
 import { supabase } from "@/api/supabaseClient";
-import { STATUS_FLOW, notifyJobStatusChange } from "@/lib/movezw";
+import { nextJobStep, notifyJobStatusChange } from "@/lib/movezw";
 import { processJobCompletion } from "@/lib/payments";
 
 export const ADMIN_ACTIVE_STATUSES = ["confirmed", "en_route_pickup", "collected", "in_transit", "delivered"];
 
 export async function advanceAdminJob(job, nextStatus, actorId) {
-  const expectedNext = job.status === "delivered"
-    ? "completed"
-    : STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1];
+  const expectedNext = nextJobStep(job.status);
   if (expectedNext !== nextStatus) {
     throw new Error("This is not the next delivery stage.");
   }

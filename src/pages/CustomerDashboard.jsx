@@ -1,3 +1,4 @@
+import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/api/supabaseClient";
@@ -19,7 +20,6 @@ export default function CustomerDashboard() {
   const [onlineDrivers, setOnlineDrivers] = useState(null);
   const [locationRetryToken, setLocationRetryToken] = useState(0);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
-  const [tripPhone, setTripPhone] = useState(null);
   const [acceptedDriverLocation, setAcceptedDriverLocation] = useState(null);
   const [offerCounts, setOfferCounts] = useState({});
   // Customers now sign up and land straight on this page (see Register.jsx's
@@ -168,14 +168,6 @@ export default function CustomerDashboard() {
     return () => { mounted = false; supabase.removeChannel(channel); };
   }, [user?.id, openRequestKey]);
 
-  useEffect(() => {
-    if (!inTransit?.id) { setTripPhone(null); return; }
-    let cancelled = false;
-    supabase.rpc("fn_get_trip_contact_phone", { p_request_id: inTransit.id })
-      .then(({ data, error }) => { if (!cancelled && !error) setTripPhone(data || null); });
-    return () => { cancelled = true; };
-  }, [inTransit?.id]);
-
   // An active delivery turns Home into the tracking screen. Because this
   // stays inside AppLayout, the normal Home / Request / Me navigation is
   // always visible instead of being covered by a separate full-screen page.
@@ -241,10 +233,10 @@ export default function CustomerDashboard() {
           <Link to={`/customer/request/${inTransit.id}?details=1`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 px-1 text-[11px] font-bold text-slate-900">
             <Truck className="w-5 h-5 text-primary" /> View offer
           </Link>
-          {tripPhone && (
-            <a href={`tel:${tripPhone}`} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
+          {inTransit.accepted_driver_id && (
+            <button type="button" onClick={() => requestJobCall(inTransit.id)} className="w-16 min-h-16 rounded-2xl bg-white/95 shadow-lg border border-border flex flex-col items-center justify-center gap-1 text-[11px] font-bold text-slate-900">
               <Phone className="w-5 h-5 text-primary" /> Call
-            </a>
+            </button>
           )}
         </div>
 

@@ -35,6 +35,6 @@ export default function JobContactActions({ request, recipientId }) {
   };
   return <button type="button" disabled={busy || (!accepted && !activeRing && Date.now() < cooldown)} onClick={accepted ? () => requestJobCall(request.id) : activeRing ? stop : ring}
     className="inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50">
-    {accepted ? <Phone className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}{accepted ? 'In-app call' : activeRing ? 'Stop ringing' : 'Ring'}
+    {accepted ? <Phone className="h-4 w-4" /> : <BellRing className="h-4 w-4" />}{accepted ? 'Call' : activeRing ? 'Stop ringing' : 'Ring'}
   </button>;
 }
