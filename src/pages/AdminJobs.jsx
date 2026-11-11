@@ -132,7 +132,14 @@ export default function AdminJobs() {
       .channel(`admin-jobs-live-${filter}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "transport_requests" }, load)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const refreshVisible = () => { if (document.visibilityState === "visible") void load(); };
+    const timer = setInterval(refreshVisible, 60000);
+    document.addEventListener("visibilitychange", refreshVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshVisible);
+      supabase.removeChannel(channel);
+    };
   }, [filter, load]);
 
   const filtered = (jobs || []).filter((j) =>

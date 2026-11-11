@@ -16,12 +16,11 @@ if (Capacitor.isNativePlatform()) {
   }
 } else {
   import('virtual:pwa-register').then(({ registerSW }) => {
-    const updateSW = registerSW({
+    registerSW({
       immediate: true,
       onRegisteredSW(_url, registration) {
         if (registration) setInterval(() => { void registration.update().catch(console.error); }, 60 * 60 * 1000);
       },
-      onNeedRefresh() { void updateSW(true); },
     });
   }).catch((error) => console.error('Web update registration failed:', error));
 }
@@ -35,5 +34,7 @@ nativeReady.then(() => import('@/App.jsx')).then(({ default: App }) => {
 }).catch((error) => {
   console.error('MoveZW startup failed:', error);
   const startup = document.getElementById('startup-status');
+  const reload = document.getElementById('startup-reload');
+  if (reload) reload.hidden = false;
   if (startup) startup.textContent = 'MoveZW could not start. Close and reopen the app. If this continues, update MoveZW and Android System WebView.';
 });
