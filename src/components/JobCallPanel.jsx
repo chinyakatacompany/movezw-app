@@ -10,6 +10,16 @@ export default function JobCallPanel() {
   return user?.id ? <CallPanel key={user.id} userId={user.id} /> : null;
 }
 function CallPanel({ userId }) {
+  const [requestId, setRequestId] = useState(null);
+  const [contact, setContact] = useState({ id: null, phone: null });
+  useEffect(() => {
+    if (!requestId) return;
+    let active = true;
+    supabase.rpc('fn_get_trip_contact_phone', { p_request_id: requestId }).then(({ data, error }) => {
+      if (active) setContact({ id: requestId, phone: !error && data ? data.trim() : null });
+    });
+    return () => { active = false; };
+  }, [requestId]);
   const [call, setCall] = useState(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -18,6 +28,18 @@ function CallPanel({ userId }) {
   const media = useRef(null);
   const current = useRef(null);
   current.current = call;
+  const start = async (id) => {
+      if (document.documentElement.dataset.movezwGroupAudio === 'joined') { setMessage('Leave the group call first.'); return; }
+      if (current.current) { setMessage('Finish the current call first.'); return; }
+      setMessage('');
+      setBusy(true);
+      try {
+        const { data, error } = await supabase.rpc('start_job_call', { p_request: id });
+        if (error) throw error;
+        setCall(data);
+      } catch (error) { setMessage(error.message || 'Could not start call.'); }
+      finally { setBusy(false); }
+    };
   useEffect(() => {
     let alive = true;
     let refreshing = false;
@@ -29,23 +51,15 @@ function CallPanel({ userId }) {
         if (!error && alive) setCall(data?.[0] || null);
       } finally { refreshing = false; }
     };
-    const start = async (event) => {
-      if (document.documentElement.dataset.movezwGroupAudio === 'joined') { setMessage('Leave the group call first.'); return; }
-      if (current.current) { setMessage('Finish the current call first.'); return; }
-      setMessage('');
-      setBusy(true);
-      try {
-        const { data, error } = await supabase.rpc('start_job_call', { p_request: event.detail.requestId });
-        if (error) throw error;
-        if (alive) setCall(data);
-      } catch (error) { if (alive) setMessage(error.message || 'Could not start call.'); }
-      finally { if (alive) setBusy(false); }
-    };
     void refresh();
     const timer = setInterval(() => void refresh(), 2000);
     const channel = supabase.channel(`calls-${userId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'job_calls' }, refresh).subscribe();
-    window.addEventListener('movezw:start-call', start);
-    return () => { alive = false; clearInterval(timer); window.removeEventListener('movezw:start-call', start); supabase.removeChannel(channel); };
+    const choose = event => {
+      setContact({ id: null, phone: null });
+      setRequestId(event.detail.requestId);
+    };
+    window.addEventListener('movezw:start-call', choose);
+    return () => { alive = false; clearInterval(timer); window.removeEventListener('movezw:start-call', choose); supabase.removeChannel(channel); };
   }, [userId]);
   useEffect(() => {
     if (!call?.expires_at) return;
@@ -90,6 +104,18 @@ function CallPanel({ userId }) {
     else { media.current?.close(); media.current = null; setCall(null); setMessage(''); }
   };
   return <>
+    <Dialog open={Boolean(requestId) && !call} onOpenChange={open => { if (!open) setRequestId(null); }}>
+      <DialogContent className="max-w-sm rounded-2xl">
+        <DialogTitle>Call job contact</DialogTitle>
+        <DialogDescription>{contact.id !== requestId ? 'Loading phone number…' : contact.phone || 'Phone number unavailable.'}</DialogDescription>
+        <button type="button" disabled={busy} className="rounded-xl bg-primary p-3 text-primary-foreground" onClick={() => {
+          setRequestId(null);
+          void start(requestId);
+        }}>Call in MoveZW</button>
+        {contact.id === requestId && contact.phone && <a className="rounded-xl border p-3 text-center"
+          href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`} onClick={() => setRequestId(null)}>Call by phone</a>}
+      </DialogContent>
+    </Dialog>
     <audio ref={audio} autoPlay />
     {!call && message && <div role="alert" className="fixed bottom-24 inset-x-4 z-[80] rounded-xl bg-background border p-4 shadow-lg">{message}<button className="ml-3 underline" onClick={() => setMessage('')}>Dismiss</button></div>}
     <Dialog open={Boolean(call)} onOpenChange={() => { /* Use explicit answer/end buttons. */ }}>

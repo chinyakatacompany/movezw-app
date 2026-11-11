@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, MapPin, Navigation, Loader2, Check, DollarSign, Package, MessageCircle, Phone, Clock, Users, Weight, Map as MapIcon, Truck } from "lucide-react";
-import { StatusBadge, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState, getPaymentTerms } from "@/lib/movezw";
+import { StatusBadge, nextJobStep, STATUS_FLOW, STATUS_LABELS, formatMoney, timeAgo, formatDateTime, createNotification, notifyJobStatusChange, EmptyState, getPaymentTerms } from "@/lib/movezw";
 import { getOrCreateConversation } from "@/lib/messaging";
 import { notifyCustomersAlongRoute, distanceKm, fetchRoadDistanceKm } from "@/lib/matching";
 import { processJobCompletion, ensureWallet, getCommissionConfig } from "@/lib/payments";
@@ -36,7 +36,7 @@ const LOCATION_REPORT_INTERVAL_MS = 30 * 1000;
 
 const DRIVER_ACTION_LABELS = {
   en_route_pickup: "Start trip to pickup",
-  collected: "Confirm goods collected",
+  collected: "Goods collected",
   in_transit: "Start delivery",
   completed: "Complete job",
 };
@@ -425,9 +425,7 @@ export default function DriverJobDetail() {
 
   const updateStatus = async (newStatus) => {
     if (updating || request.accepted_driver_id !== user.id) return;
-    const expectedNext = request.status === "delivered"
-      ? "completed"
-      : STATUS_FLOW[STATUS_FLOW.indexOf(request.status) + 1];
+    const expectedNext = nextJobStep(request.status);
     if (expectedNext !== newStatus) return;
     // Collecting the goods means the delivery has started. Persist the final
     // in-transit state in the same update so driver, customer and admin tiles
@@ -520,7 +518,7 @@ export default function DriverJobDetail() {
   const activeStep = request.status === "delivered"
     ? STATUS_FLOW.indexOf("in_transit")
     : STATUS_FLOW.indexOf(request.status);
-  const nextStep = request.status === "delivered" ? "completed" : STATUS_FLOW[activeStep + 1];
+  const nextStep = nextJobStep(request.status);
   const isOpen = request.status === "open";
   const headedToDestination = ["collected", "in_transit", "delivered"].includes(request.status);
   // Real turn-by-turn (voice guidance, auto-advance, re-routing) isn't

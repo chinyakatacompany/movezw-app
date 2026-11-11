@@ -71,6 +71,13 @@ export const STATUS_FLOW = [
   "completed",
 ];
 
+export function nextJobStep(status) {
+  if (status === "confirmed" || status === "en_route_pickup") return "collected";
+  if (status === "delivered") return "completed";
+  const index = STATUS_FLOW.indexOf(status);
+  return index >= 0 ? STATUS_FLOW[index + 1] : undefined;
+}
+
 const statusStyles = {
   open: "bg-blue-50 text-blue-700 border-blue-200",
   confirmed: "bg-indigo-50 text-indigo-700 border-indigo-200",

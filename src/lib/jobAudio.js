@@ -26,6 +26,11 @@ export async function createJobAudio(call, userId, onState, remoteAudio) {
     if (['failed', 'disconnected'].includes(pc.connectionState)) onState('Connection interrupted. Try calling again.');
   };
   pc.onicecandidate = ({ candidate }) => { if (candidate) void send('ice', candidate.toJSON()).catch(() => onState('Connection interrupted.')); };
+  // A rejected candidate must not block the SDP answer or later candidates.
+  const addCandidate = async candidate => {
+    try { await pc.addIceCandidate(candidate); }
+    catch (error) { console.warn('Could not use call network candidate:', error.name); }
+  };
   const poll = async () => {
     if (stopped || polling) return;
     polling = true;
@@ -35,10 +40,10 @@ export async function createJobAudio(call, userId, onState, remoteAudio) {
       for (const signal of signals || []) {
         if (stopped || seen.has(signal.id)) continue;
         if (signal.kind === 'ice') {
-          if (pc.remoteDescription) await pc.addIceCandidate(signal.payload); else pendingIce.push(signal.payload);
+          if (pc.remoteDescription) await addCandidate(signal.payload); else pendingIce.push(signal.payload);
         } else {
           await pc.setRemoteDescription(signal.payload);
-          for (const candidate of pendingIce.splice(0)) await pc.addIceCandidate(candidate);
+          for (const candidate of pendingIce.splice(0)) await addCandidate(candidate);
           if (signal.kind === 'offer') {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);

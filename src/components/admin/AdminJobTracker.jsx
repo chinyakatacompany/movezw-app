@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Navigation, Radio } from "lucide-react";
 import { geocodeAddress } from "@/lib/geo";
-import { STATUS_FLOW, STATUS_LABELS, timeAgo } from "@/lib/movezw";
+import { nextJobStep, STATUS_LABELS, timeAgo } from "@/lib/movezw";
 
 const RouteMap = React.lazy(() => import("@/components/RouteMap"));
 const TrackingMap = React.lazy(() => import("@/components/TrackingMap"));
@@ -39,9 +39,7 @@ export default function AdminJobTracker({ job, busy = false, onAdvance }) {
   const hasFullRoute = pickup.lat != null && pickup.lng != null && destination.lat != null && destination.lng != null;
   const showLiveMap = hasDriverLocation && job.status !== "delivered";
   const showPlannedMap = !showLiveMap && hasFullRoute;
-  const nextStatus = job.status === "delivered"
-    ? "completed"
-    : STATUS_FLOW[STATUS_FLOW.indexOf(job.status) + 1];
+  const nextStatus = nextJobStep(job.status);
 
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 space-y-3">
