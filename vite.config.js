@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       // Registered manually in main.jsx via virtual:pwa-register instead —
       // the auto-injected script is a bare `serviceWorker.register()` with
       // no update-detection, so an already-open tab (or an installed
@@ -52,8 +52,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#0b2d68',
-        theme_color: '#0b2d68',
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
