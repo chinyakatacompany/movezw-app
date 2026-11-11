@@ -106,14 +106,16 @@ function CallPanel({ userId }) {
   return <>
     <Dialog open={Boolean(requestId) && !call} onOpenChange={open => { if (!open) setRequestId(null); }}>
       <DialogContent className="max-w-sm rounded-2xl">
-        <DialogTitle>Call job contact</DialogTitle>
+        <DialogTitle>How would you like to call?</DialogTitle>
         <DialogDescription>{contact.id !== requestId ? 'Loading phone number…' : contact.phone || 'Phone number unavailable.'}</DialogDescription>
+        {contact.id === requestId && contact.phone ? <a className="rounded-xl border p-3 text-center"
+          href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`} onClick={() => setRequestId(null)}>Call with phone</a> :
+          <button type="button" disabled className="rounded-xl border p-3 opacity-50">Call with phone</button>}
         <button type="button" disabled={busy} className="rounded-xl bg-primary p-3 text-primary-foreground" onClick={() => {
           setRequestId(null);
           void start(requestId);
-        }}>Call in MoveZW</button>
-        {contact.id === requestId && contact.phone && <a className="rounded-xl border p-3 text-center"
-          href={`tel:${contact.phone.replace(/[^+0-9]/g, '')}`} onClick={() => setRequestId(null)}>Call by phone</a>}
+        }}>Call with MoveZW</button>
+
       </DialogContent>
     </Dialog>
     <audio ref={audio} autoPlay />
