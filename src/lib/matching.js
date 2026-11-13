@@ -52,19 +52,43 @@ export function distanceKm(lat1, lng1, lat2, lng2) {
 // of times before giving up rather than immediately handing back null —
 // callers should show a retry/unavailable state on null, not silently
 // substitute a straight-line estimate as if it were the real distance.
-export async function fetchRoadDistanceKm(from, to, retries = 2) {
+// Cache route distances across cards and page visits, avoiding repeated network calls.
+// A bounded timeout keeps slow public routing servers from delaying the job screen.
+const roadDistanceCache = new Map();
+const ROAD_CACHE_TTL_MS = 15 * 60 * 1000;
+const ROAD_REQUEST_TIMEOUT_MS = 4500;
+
+export async function fetchRoadDistanceKm(from, to, retries = 1) {
+  if (![from?.lat, from?.lng, to?.lat, to?.lng].every(Number.isFinite)) return null;
+  const key = [from.lat, from.lng, to.lat, to.lng].map((value) => value.toFixed(5)).join(":");
+  const cached = roadDistanceCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.value;
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`
-      );
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), ROAD_REQUEST_TIMEOUT_MS);
+      let res;
+      try {
+        res = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`,
+          { signal: controller.signal }
+        );
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) throw new Error("Routing service unavailable");
       const data = await res.json();
       const route = data?.routes?.[0];
-      if (data.code === "Ok" && route) return route.distance / 1000;
+      if (data.code === "Ok" && Number.isFinite(route?.distance)) {
+        const km = route.distance / 1000;
+        if (roadDistanceCache.size >= 100) roadDistanceCache.delete(roadDistanceCache.keys().next().value);
+        roadDistanceCache.set(key, { value: km, expires: Date.now() + ROAD_CACHE_TTL_MS });
+        return km;
+      }
     } catch {
-      // fall through to retry
+      // The route remains accessible in Google Maps if this service is unavailable.
     }
-    if (attempt < retries) await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
   }
   return null;
 }
