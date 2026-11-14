@@ -3,6 +3,8 @@ package com.movezw.app;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.graphics.Color;
+import android.media.AudioAttributes;
+import android.provider.Settings;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -50,6 +52,15 @@ public class MainActivity extends BridgeActivity {
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (manager != null) {
             manager.createNotificationChannel(channel);
+            NotificationChannel jobs = new NotificationChannel(
+                    "job_requests_v3", "New job requests", NotificationManager.IMPORTANCE_HIGH);
+            jobs.setSound(Settings.System.DEFAULT_NOTIFICATION_URI, new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build());
+            jobs.enableVibration(true);
+            jobs.setVibrationPattern(new long[]{0, 600, 200, 600});
+            manager.createNotificationChannel(jobs);
         }
     }
 }
