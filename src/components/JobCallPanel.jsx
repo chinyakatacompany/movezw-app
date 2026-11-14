@@ -23,6 +23,8 @@ function CallPanel({ userId }) {
   const [call, setCall] = useState(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [audioAttempt, setAudioAttempt] = useState(0);
+  const [failedAudioId, setFailedAudioId] = useState(null);
   const [muted, setMuted] = useState(false);
   const audio = useRef(null);
   const media = useRef(null);
@@ -67,24 +69,26 @@ function CallPanel({ userId }) {
     return () => clearTimeout(timer);
   }, [call?.id, call?.expires_at]);
   const incoming = call?.callee_id === userId;
-  const ready = call && (!incoming || call.status === 'connecting');
+  const ready = call?.status === 'connecting';
   useEffect(() => {
     if (!ready || !call) return;
     let cancelled = false;
     setMuted(false);
-    setMessage(incoming ? 'Connecting…' : 'Calling…');
+    setFailedAudioId(null);
+    setMessage('Connecting audio…');
     void createJobAudio(call, userId, value => { if (!cancelled) setMessage(value); }, audio.current).then(controller => {
       if (cancelled) controller.close(); else media.current = controller;
-    }).catch(async error => {
+    }).catch(error => {
       if (!cancelled) {
-        setMessage(error.message || 'Microphone unavailable. Check device permissions.');
-        await supabase.rpc('respond_job_call', { p_call: call.id, p_action: 'end' });
+        setFailedAudioId(call.id);
+        setMessage(error.name === 'NotAllowedError'
+          ? 'Allow microphone access for MoveZW in your app or browser settings, then tap Retry audio.'
+          : error.message || 'Audio setup failed. Tap Retry audio.');
       }
     });
     return () => { cancelled = true; media.current?.close(); media.current = null; };
-    // The same connection survives the ringing → connecting transition.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [call?.id, Boolean(ready), userId]);
+  }, [call?.id, ready, userId, audioAttempt]);
   useEffect(() => {
     if (!incoming || call?.status !== 'ringing') return;
     const ring = () => {
@@ -125,6 +129,10 @@ function CallPanel({ userId }) {
         <DialogTitle>{incoming && call?.status === 'ringing' ? 'Incoming MoveZW call' : 'MoveZW audio call'}</DialogTitle>
         <DialogDescription>Private audio for your accepted job. Your telephone number is not shared by this call.</DialogDescription>
         <p role="status">{message || (incoming ? 'Answer to connect your microphone.' : 'Calling…')}</p>
+        {ready && failedAudioId === call?.id && <button type="button" className="rounded-xl border p-3" onClick={() => {
+          setFailedAudioId(null);
+          setAudioAttempt(n => n + 1);
+        }}>Retry audio</button>}
         {incoming && call?.status === 'ringing' ? <button disabled={busy} className="rounded-xl bg-green-600 text-white p-3" onClick={() => void respond('accept')}>Answer</button> : <>
           <button className="rounded-xl border p-3" onClick={() => { const next = !muted; media.current?.mute(next); setMuted(next); }}>{muted ? 'Unmute' : 'Mute'}</button>
           <button className="rounded-xl border p-3" onClick={() => void audio.current?.play().catch(() => setMessage('Audio playback is blocked on this device.'))}>Play audio</button>
