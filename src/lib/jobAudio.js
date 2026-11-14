@@ -3,7 +3,18 @@ import { supabase } from '@/api/supabaseClient';
 // No telephone numbers or dialer links enter the audio transport.
 export async function createJobAudio(call, userId, onState, remoteAudio) {
   if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) throw new Error('Audio calls are unavailable on this device.');
-  const { data, error } = await supabase.functions.invoke('call-ice', { body: { requestId: call.request_id } });
+  const requestServers = token => supabase.functions.invoke('call-ice', {
+    body: { requestId: call.request_id },
+    ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+  });
+  let { data, error } = await requestServers();
+  if (error?.context?.status === 401) {
+    const refreshed = await supabase.auth.refreshSession();
+    const token = refreshed.data?.session?.access_token;
+    if (!token || refreshed.error) throw new Error('Your session expired. Sign in again to call.');
+    ({ data, error } = await requestServers(token));
+    if (error?.context?.status === 401) throw new Error('Call authentication failed. Sign in again to call.');
+  }
   if (error || !data?.iceServers) throw new Error('Could not prepare a secure audio call.');
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   let pc;
