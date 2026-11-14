@@ -28,6 +28,7 @@ function CallPanel({ userId }) {
   const [muted, setMuted] = useState(false);
   const audio = useRef(null);
   const media = useRef(null);
+  const revision = useRef(0);
   const current = useRef(null);
   current.current = call;
   const start = async (id) => {
@@ -38,6 +39,7 @@ function CallPanel({ userId }) {
       try {
         const { data, error } = await supabase.rpc('start_job_call', { p_request: id });
         if (error) throw error;
+        revision.current++;
         setCall(data);
       } catch (error) { setMessage(error.message || 'Could not start call.'); }
       finally { setBusy(false); }
@@ -48,9 +50,10 @@ function CallPanel({ userId }) {
     const refresh = async () => {
       if (refreshing) return;
       refreshing = true;
+      const before = revision.current;
       try {
         const { data, error } = await supabase.from('job_calls').select('*').in('status', ['ringing', 'connecting']).gt('expires_at', new Date().toISOString()).or(`caller_id.eq.${userId},callee_id.eq.${userId}`).order('created_at', { ascending: false }).limit(1);
-        if (!error && alive) setCall(data?.[0] || null);
+        if (!error && alive && before === revision.current) setCall(data?.[0] || null);
       } finally { refreshing = false; }
     };
     void refresh();
@@ -104,7 +107,8 @@ function CallPanel({ userId }) {
     const { error } = await supabase.rpc('respond_job_call', { p_call: call.id, p_action: action });
     setBusy(false);
     if (error) { setMessage(error.message); return; }
-    if (action === 'accept') setCall(value => ({ ...value, status: 'connecting' }));
+    revision.current++;
+    if (action === 'accept') setCall(value => value?.id === call.id ? { ...value, status: 'connecting' } : value);
     else { media.current?.close(); media.current = null; setCall(null); setMessage(''); }
   };
   return <>
