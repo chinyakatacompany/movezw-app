@@ -76,7 +76,8 @@ function bearingBetween(from, to) {
 // Routes come from OSRM's free public routing server (no API key, no paid
 // tier). The road line refreshes at a lower cadence than the moving marker
 // so tracking stays smooth without overloading the public router.
-export default function RouteMap({ from, to, height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669", immersive = false }) {
+export default function RouteMap({ from, to, waypoints = [], height = 260, fromLabel = "You", toLabel = "Pickup", fromColor = "#1e2f5e", toColor = "#059669", immersive = false }) {
+  const waypointKey = JSON.stringify(waypoints);
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const fromMarkerRef = useRef(null);
@@ -122,6 +123,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
         .addTo(map);
     }
 
+    waypoints.forEach((s,i) => new maplibregl.Marker({element:markerEl("#d97706"),anchor:"bottom"}).setLngLat([s.lng,s.lat]).setPopup(new maplibregl.Popup().setText(s.label || `Stop ${i+1}`)).addTo(map));
     return () => {
       if (markerAnimationRef.current != null) {
         cancelAnimationFrame(markerAnimationRef.current);
@@ -132,7 +134,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       map.remove();
     };
      
-  }, [mapAttempt]);
+  }, [mapAttempt, waypointKey]);
 
   // The map instance stays mounted while a driver's GPS point changes. Ease
   // the truck marker between reports so the customer sees movement instead
@@ -196,12 +198,12 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
     const previousRequest = lastRouteRequestRef.current;
     const sameTarget = previousRequest
       && previousRequest.toLat === to.lat
-      && previousRequest.toLng === to.lng;
+      && previousRequest.toLng === to.lng && previousRequest.waypointKey === waypointKey;
     if (routeRef.current && sameTarget && now - previousRequest.at < ROUTE_REFRESH_INTERVAL_MS) {
       return () => { cancelled = true; };
     }
-    lastRouteRequestRef.current = { at: now, toLat: to.lat, toLng: to.lng };
-    fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`)
+    lastRouteRequestRef.current = { at: now, toLat: to.lat, toLng: to.lng, waypointKey };
+    fetch(`https://router.project-osrm.org/route/v1/driving/${[from,...waypoints,to].map(p => `${p.lng},${p.lat}`).join(";")}?overview=full&geometries=geojson&steps=true`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
@@ -214,7 +216,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
           coordinates: r.geometry.coordinates, // [lng, lat] pairs, matches GeoJSON/MapLibre order
           distanceKm: r.distance / 1000,
           durationMin: r.duration / 60,
-          steps: summarizeSteps(r.legs?.[0]?.steps || []),
+          steps: summarizeSteps(r.legs?.flatMap(leg => leg.steps || []) || []),
         };
         routeRef.current = nextRoute;
         setRoute(nextRoute);
@@ -222,7 +224,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
       })
       .catch(() => { if (!cancelled && !routeRef.current) setStatus("error"); });
     return () => { cancelled = true; };
-  }, [from.lat, from.lng, to?.lat, to?.lng]);
+  }, [from.lat, from.lng, to?.lat, to?.lng, waypointKey]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -345,7 +347,7 @@ export default function RouteMap({ from, to, height = 260, fromLabel = "You", to
                   <span className="w-6 h-6 rounded-full bg-muted text-muted-foreground text-[11px] font-bold flex items-center justify-center shrink-0">
                     {s.arrive ? <Flag className="w-3 h-3" /> : i + 1}
                   </span>
-                  <span className="flex-1 text-sm font-medium truncate">{s.arrive ? `Arrive at ${toLabel}` : s.name}</span>
+                  <span className="flex-1 text-sm font-medium truncate">{s.arrive ? "Arrive at stop or destination" : s.name}</span>
                   {!s.arrive && (
                     <span className="text-xs text-muted-foreground shrink-0">
                       {s.distanceKm < 1 ? `${Math.round(s.distanceKm * 1000)} m` : `${s.distanceKm.toFixed(1)} km`}
