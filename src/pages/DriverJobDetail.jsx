@@ -1,3 +1,4 @@
+import RouteStops from "@/components/RouteStops";
 import JobContactActions from '@/components/JobContactActions';
 import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useRef, useState } from "react";
@@ -122,14 +123,14 @@ export default function DriverJobDetail() {
     setRoadDistanceStatus("loading");
     fetchRoadDistanceKm(
       { lat: effPickupLat, lng: effPickupLng },
-      { lat: effDestLat, lng: effDestLng }
+      { lat: effDestLat, lng: effDestLng }, 2, request?.intermediate_stops || []
     ).then((km) => {
       if (cancelled) return;
       setRoadDistanceKm(km);
       setRoadDistanceStatus(km != null ? "ready" : "error");
     });
     return () => { cancelled = true; };
-  }, [effPickupLat, effPickupLng, effDestLat, effDestLng, roadDistanceRetryTick]);
+  }, [effPickupLat, effPickupLng, effDestLat, effDestLng, roadDistanceRetryTick, request?.intermediate_stops]);
 
   const fetchDriverLocation = () => {
     const reason = geolocationUnavailableReason();
@@ -792,6 +793,7 @@ export default function DriverJobDetail() {
             <div>
               <p className="text-[11px] tracking-wide text-muted-foreground">DESTINATION</p>
               <p className="text-base font-bold text-emerald-700">{request.destination}</p>
+              <RouteStops request={request} />
             </div>
           </div>
         </div>
@@ -873,6 +875,7 @@ export default function DriverJobDetail() {
             {showRouteMap && (
               <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse mt-2" />}>
                 <RouteMap
+                  waypoints={request.intermediate_stops || []}
                   from={{ lat: effPickupLat, lng: effPickupLng }}
                   to={{ lat: effDestLat, lng: effDestLng }}
                   fromLabel="Pickup"
