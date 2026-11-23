@@ -1,3 +1,4 @@
+import RouteStops from "@/components/RouteStops";
 import DriverBidCard from '@/components/DriverBidCard';
 import { requestJobCall } from '@/lib/jobAudio';
 import React, { useEffect, useState } from "react";
@@ -407,9 +408,11 @@ export default function RequestDetail() {
             <div><p className="text-[11px] text-muted-foreground">DESTINATION</p><p className="text-sm font-medium">{request.destination}</p></div>
           </div>
         </div>
+        <RouteStops request={request} />
         {hasFullRoute && (
           <React.Suspense fallback={<div className="h-[260px] rounded-xl bg-muted animate-pulse" />}>
             <RouteMap
+              waypoints={request.intermediate_stops || []}
               from={{ lat: request.pickup_lat, lng: request.pickup_lng }}
               to={{ lat: request.destination_lat, lng: request.destination_lng }}
               fromLabel="Pickup"
