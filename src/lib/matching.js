@@ -52,11 +52,11 @@ export function distanceKm(lat1, lng1, lat2, lng2) {
 // of times before giving up rather than immediately handing back null —
 // callers should show a retry/unavailable state on null, not silently
 // substitute a straight-line estimate as if it were the real distance.
-export async function fetchRoadDistanceKm(from, to, retries = 2) {
+export async function fetchRoadDistanceKm(from, to, retries = 2, waypoints = []) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`
+        `https://router.project-osrm.org/route/v1/driving/${[from, ...waypoints, to].map(p => `${p.lng},${p.lat}`).join(";")}?overview=false`
       );
       const data = await res.json();
       const route = data?.routes?.[0];
