@@ -79,7 +79,8 @@ export function GooglePinDropMap({ settings, initial = undefined, onConfirm, onC
   </div>;
 }
 
-export function GoogleRouteMap({ settings, from, to = undefined, height = 260, fromLabel = 'You', toLabel = 'Pickup', fromColor = '#1e2f5e', toColor = '#059669', immersive = false }) {
+export function GoogleRouteMap({ settings, from, to = undefined, waypoints = [], height = 260, fromLabel = 'You', toLabel = 'Pickup', fromColor = '#1e2f5e', toColor = '#059669', immersive = false }) {
+  const waypointKey = JSON.stringify(waypoints);
   const latestFrom = useRef(from);
   latestFrom.current = from;
   const [route, setRoute] = useState(null);
@@ -101,7 +102,7 @@ export function GoogleRouteMap({ settings, from, to = undefined, height = 260, f
         const p = latestFrom.current;
         // Keep the existing OSRM road-distance/ETA source consistent with
         // booking estimates. Google supplies the interactive basemap.
-        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${p.lng},${p.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true`, { signal: controller.signal });
+        const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${[p, ...waypoints, to].map(point => `${point.lng},${point.lat}`).join(";")}?overview=full&geometries=geojson&steps=true`, { signal: controller.signal });
         const data = await response.json();
         if (data.code !== 'Ok' || !data.routes?.[0]) throw new Error('Route unavailable');
         if (active) { setRoute(data.routes[0]); setError(false); }
@@ -111,8 +112,9 @@ export function GoogleRouteMap({ settings, from, to = undefined, height = 260, f
     void refresh();
     const timer = setInterval(refresh, 30000);
     return () => { active = false; controller?.abort(); clearInterval(timer); };
-  }, [to?.lat, to?.lng]);
+  }, [to?.lat, to?.lng, waypointKey]);
   const markers = [{ id: 'from', ...from, label: fromLabel, color: fromColor, icon: '🚚' }];
+  waypoints.forEach((s,i) => markers.push({id:`stop-${i}`,lat:s.lat,lng:s.lng,label:s.label || `Stop ${i+1}`,icon:'📍'}));
   if (to) markers.push({ id: 'to', ...to, label: toLabel, color: toColor, icon: '📍' });
   return <div className={immersive ? 'h-full w-full overflow-hidden' : 'rounded-xl overflow-hidden border'}>
     <div className="relative" style={{ height }}>
@@ -124,7 +126,7 @@ export function GoogleRouteMap({ settings, from, to = undefined, height = 260, f
     </div>
     {!immersive && route?.legs?.[0]?.steps?.length > 0 && <div className="border-t">
       <button type="button" onClick={() => setShowSteps((v) => !v)} className="p-3 text-sm font-semibold text-primary">{showSteps ? 'Hide' : 'Show'} turn-by-turn directions</button>
-      {showSteps && <ol className="max-h-56 overflow-auto divide-y">{route.legs[0].steps.map((step, i) => <li key={i} className="px-3 py-2 text-sm">{i + 1}. {step.maneuver?.type === 'arrive' ? `Arrive at ${toLabel}` : step.name || 'Unnamed road'} · {Math.round(step.distance)} m</li>)}</ol>}
+      {showSteps && <ol className="max-h-56 overflow-auto divide-y">{route.legs.flatMap(leg => leg.steps || []).map((step, i) => <li key={i} className="px-3 py-2 text-sm">{i + 1}. {step.maneuver?.type === 'arrive' ? 'Arrive at stop or destination' : step.name || 'Unnamed road'} · {Math.round(step.distance)} m</li>)}</ol>}
     </div>}
   </div>;
 }
