@@ -63,6 +63,9 @@ export default function CreateRequest() {
     payment_split: "",
   });
   const [loads, setLoads] = useState(1);
+  const [stops, setStops] = useState([]);
+  const changeStop = (id, patch) => setStops(items => items.map(s => s.id === id ? {...s, ...patch} : s));
+  const moveStop = (index, offset) => setStops(items => { const next = [...items]; [next[index], next[index+offset]] = [next[index+offset], next[index]]; return next; });
   const [showRouteMap, setShowRouteMap] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -86,23 +89,25 @@ export default function CreateRequest() {
   // that's hard for a customer to notice. On failure this shows a
   // retry affordance rather than silently falling back to a worse number.
   useEffect(() => {
-    if (!pickupCoords || !destinationCoords) {
+    if (!pickupCoords || !destinationCoords || stops.some(s => s.lat == null || s.lng == null)) {
+      setDistanceLoading(false);
       setTripKm(null);
       setDistanceFailed(false);
       return;
     }
     let active = true;
+    setTripKm(null);
     setDistanceLoading(true);
     setDistanceFailed(false);
     (async () => {
-      const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords);
+      const roadKm = await fetchRoadDistanceKm(pickupCoords, destinationCoords, 2, stops);
       if (!active) return;
       setDistanceLoading(false);
       if (roadKm != null) setTripKm(roadKm);
       else setDistanceFailed(true);
     })();
     return () => { active = false; };
-  }, [pickupCoords, destinationCoords, distanceRetryToken]);
+  }, [pickupCoords, destinationCoords, distanceRetryToken, stops]);
 
   const recommendedRate = RATE_PER_KM[form.vehicle_type] ?? 1.2;
   const recommendedPrice = tripKm != null ? Math.round(recommendedRate * tripKm) : null;
@@ -139,6 +144,7 @@ export default function CreateRequest() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (stops.some(s => !s.label.trim() || s.lat == null || s.lng == null)) { toast({title: "Select an exact location for every stop", variant: "destructive"}); return; }
     const paymentSplit = form.payment_terms === "split" ? normalizePaymentSplit(form.payment_split) : null;
     if (form.payment_terms === "split" && !paymentSplit) {
       toast({
@@ -159,6 +165,7 @@ export default function CreateRequest() {
         destination: form.destination,
         destination_lat: destinationCoords?.lat ?? null,
         destination_lng: destinationCoords?.lng ?? null,
+        ...(stops.length ? { intermediate_stops: stops.map(({id, ...stop}) => stop) } : {}),
         cargo_type: form.cargo_type,
         vehicle_category: form.vehicle_type,
         cargo_weight: form.cargo_weight || null,
@@ -250,8 +257,18 @@ export default function CreateRequest() {
               {locating ? "Getting your location..." : pickupCoords ? "Exact location captured ✓" : "Use my current location"}
             </button>
           </div>
+          {stops.map((stop, index) => <div key={stop.id} className="space-y-2 rounded-xl border p-3">
+            <div className="flex items-center justify-between gap-2"><Label htmlFor={stop.id}>Stop {index + 1}</Label><div className="flex gap-3">
+              <button type="button" disabled={!index} onClick={() => moveStop(index, -1)} aria-label="Move stop up">↑</button>
+              <button type="button" disabled={index === stops.length - 1} onClick={() => moveStop(index, 1)} aria-label="Move stop down">↓</button>
+              <button type="button" className="text-destructive text-xs" onClick={() => setStops(items => items.filter(s => s.id !== stop.id))}>Remove</button>
+            </div></div>
+            <AddressSearchInput id={stop.id} icon={MapPin} placeholder="Search or pin stop" value={stop.label} onChange={label => changeStop(stop.id, {label, lat:null, lng:null})} onSelect={({label,lat,lng}) => changeStop(stop.id,{label,lat,lng})} required />
+            <select aria-label="Stop purpose" className="w-full rounded-md border bg-background p-2 text-sm" value={stop.type} onChange={e => changeStop(stop.id,{type:e.target.value})}><option value="pickup">Collect goods</option><option value="dropoff">Drop off goods</option><option value="both">Collect and drop off</option></select>
+          </div>)}
+          {stops.length < 8 && <Button type="button" variant="outline" className="w-full" onClick={() => setStops(items => [...items, {id:crypto.randomUUID(),label:"",lat:null,lng:null,type:"dropoff"}])}><Plus className="w-4 h-4 mr-2"/> Add another stop (optional)</Button>}
           <div className="space-y-2">
-            <Label htmlFor="dest">Destination</Label>
+            <Label htmlFor="dest">Final destination</Label>
             <AddressSearchInput
               id="dest"
               icon={Navigation}
@@ -262,18 +279,18 @@ export default function CreateRequest() {
               required
             />
           </div>
-          {pickupCoords && destinationCoords && (
+          {pickupCoords && destinationCoords && stops.every(s => s.lat != null && s.lng != null) && (
             <>
               <button
                 type="button"
                 onClick={() => setShowRouteMap((v) => !v)}
                 className="w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-primary/10 border-2 border-primary/30 text-primary font-semibold text-sm hover:bg-primary/15 transition-colors"
               >
-                <MapIcon className="w-4 h-4" /> {showRouteMap ? "Hide route map" : "Show route: pickup → destination"}
+                <MapIcon className="w-4 h-4" /> {showRouteMap ? "Hide route map" : "Show complete route"}
               </button>
               {showRouteMap && (
                 <React.Suspense fallback={<div className="h-[220px] rounded-xl bg-muted animate-pulse" />}>
-                  <RouteMap from={pickupCoords} to={destinationCoords} fromLabel="Pickup" toLabel="Destination" height={220} />
+                  <RouteMap from={pickupCoords} to={destinationCoords} waypoints={stops} fromLabel="Pickup" toLabel="Destination" height={220} />
                 </React.Suspense>
               )}
             </>
