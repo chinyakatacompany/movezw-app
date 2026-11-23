@@ -277,7 +277,7 @@ export default function AdminJobs() {
                     <Package className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{j.cargo_type} · {j.pickup_location} → {j.destination}</p>
+                    <p className="text-sm font-semibold truncate">{j.cargo_type} · {[j.pickup_location, ...(j.intermediate_stops || []).map(s => s.label), j.destination].join(" → ")}</p>
                     <p className="text-xs text-muted-foreground">{j.customer_name || "Customer"} · {formatDate(j.created_at)}</p>
                     <p className="mt-1 text-xs font-medium text-primary">{getPaymentTerms(j.payment_terms).label} · {getPaymentTerms(j.payment_terms).description}</p>
                     {j.status === "cancelled" && j.expired_at && (
