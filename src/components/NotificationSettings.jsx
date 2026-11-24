@@ -124,7 +124,7 @@ export default function NotificationSettings({ description }) {
       setNativeEnabled(true);
       setNativePermission(granted ? "granted" : "denied");
       toast(granted
-        ? { title: "Alerts enabled", description: "New jobs and offers will use the long buzz by default." }
+        ? { title: "Alerts enabled", description: "New jobs use a notification tone and vibration." }
         : { title: "Notification permission needed", description: "Allow MoveZW notifications in Android Settings, then try again.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -151,7 +151,7 @@ export default function NotificationSettings({ description }) {
           {checking
             ? "Checking Android notification access…"
             : active
-              ? "On — new jobs and offers use a strong long buzz, even if MoveZW is closed. Android settings can override the vibration."
+              ? "On — new job alerts use sound and vibration. Check notification volume and the New job requests channel in Android settings."
               : nativeEnabled
                 ? "MoveZW alerts are on, but Android notification permission is blocked. Allow it in your phone settings."
                 : "Alerts are off on this device."}

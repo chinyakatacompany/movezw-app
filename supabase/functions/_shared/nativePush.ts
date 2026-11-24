@@ -103,9 +103,10 @@ export async function sendNativePushToUsers(
           android: {
             priority: "high",
             notification: {
-              channel_id: "job_alerts_v2",
+              channel_id: payload.tag.startsWith("movezw-job-") ? "job_requests_v3" : "job_alerts_v2",
               color: "#DC2626",
               default_sound: true,
+              default_vibrate_timings: true,
               notification_count: 1,
               notification_priority: "PRIORITY_MAX",
               tag: payload.tag,
